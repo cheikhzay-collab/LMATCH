@@ -137,6 +137,9 @@ export default function AdminAIImport() {
   const [pdfName, setPdfName] = useState('');
   const [pageFrom, setPageFrom] = useState(1);
   const [pageTo, setPageTo] = useState(10);
+  const [mode, setMode] = useState(draft?.mode || 'simple');
+  const [correctionPageFrom, setCorrectionPageFrom] = useState(draft?.correctionPageFrom || 1);
+  const [correctionPageTo, setCorrectionPageTo] = useState(draft?.correctionPageTo || 1);
   const [totalPages, setTotalPages] = useState(null);
   const [school, setSchool] = useState(draft?.school || schools[0] || 'Médecine / Pharmacie');
   const [year, setYear] = useState(draft?.year || '2024');
@@ -177,14 +180,17 @@ export default function AdminAIImport() {
   useEffect(() => {
     if (phase === 3) { localStorage.removeItem(DRAFT_KEY); return; } // clear after publish
     if (phase === 1 && questions.length === 0) return; // nothing to save yet
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ phase, questions, examName, school, year, tier }));
-  }, [phase, questions, examName, school, year, tier]);
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ phase, questions, examName, school, year, tier, mode, correctionPageFrom, correctionPageTo }));
+  }, [phase, questions, examName, school, year, tier, mode, correctionPageFrom, correctionPageTo]);
 
   const clearDraft = () => {
     localStorage.removeItem(DRAFT_KEY);
     setPhase(1);
     setQuestions([]);
     setExamName('');
+    setMode('simple');
+    setCorrectionPageFrom(1);
+    setCorrectionPageTo(1);
     setError('');
     setProgress('');
   };
@@ -203,9 +209,27 @@ export default function AdminAIImport() {
 
   // Stream PDF to Claude using SSE streaming API
   const streamClaudeWithPdf = async (base64Pdf) => {
-    const pageNote = totalPages && (pageFrom > 1 || pageTo < totalPages)
-      ? `Concentre-toi uniquement sur les pages ${pageFrom} à ${pageTo} du document (ignore les autres).\n`
-      : '';
+    let pageNote = '';
+    let userPromptText = '';
+
+    if (mode === 'with_correction') {
+      pageNote = `IMPORTANT : Le fichier PDF fourni contient à la fois les questions de l'examen et la correction officielle/grille de réponses.
+- Les questions QCM à extraire se trouvent sur les pages ${pageFrom} à ${pageTo}.
+- La grille de réponses correctes ou les pages de correction se trouvent sur les pages ${correctionPageFrom} à ${correctionPageTo}.
+
+Tu dois :
+1. Parcourir les questions se trouvant sur les pages ${pageFrom} à ${pageTo}.
+2. Pour chaque question, trouver la réponse officielle correspondante sur les pages de correction/grille de réponses se trouvant sur les pages ${correctionPageFrom} à ${correctionPageTo}. Ne résous pas la question toi-même si elle est présente dans le corrigé, extrait strictement la réponse indiquée dans la grille ou le texte de correction (A, B, C, D ou E).
+3. Remplir le champ "correct_answer" avec la lettre correspondante de la grille de correction.
+4. Remplir le champ "astuce" en résumant l'explication/justification du corrigé officiel de la question pour aider l'élève à comprendre.
+`;
+      userPromptText = `${pageNote}\n\nExtrais toutes les questions en associant les réponses du corrigé et retourne le JSON demandé.`;
+    } else {
+      pageNote = totalPages && (pageFrom > 1 || pageTo < totalPages)
+        ? `Concentre-toi uniquement sur les pages ${pageFrom} à ${pageTo} du document (ignore les autres).\n`
+        : '';
+      userPromptText = `${pageNote}Extrais TOUTES les questions QCM de ce document et retourne le JSON demandé.`;
+    }
 
     // Create fresh AbortController for this request
     abortRef.current = new AbortController();
@@ -227,7 +251,7 @@ export default function AdminAIImport() {
           role: 'user',
           content: [
             { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Pdf } },
-            { type: 'text', text: `${pageNote}Extrais TOUTES les questions QCM de ce document et retourne le JSON demandé.` }
+            { type: 'text', text: userPromptText }
           ]
         }]
       })
@@ -556,20 +580,93 @@ export default function AdminAIImport() {
             </label>
           </div>
 
+          {/* Mode Selector */}
+          {totalPages && (
+            <div className="input-group" style={{ marginBottom: '1.5rem' }}>
+              <label>Mode d'extraction</label>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+                <button
+                  type="button"
+                  onClick={() => setMode('simple')}
+                  style={{
+                    flex: 1,
+                    padding: '0.6rem 1rem',
+                    borderRadius: '10px',
+                    border: '1px solid',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    borderColor: mode === 'simple' ? 'var(--violet)' : 'var(--border)',
+                    background: mode === 'simple' ? 'rgba(124,58,237,0.12)' : 'var(--bg-glass)',
+                    color: mode === 'simple' ? 'var(--violet)' : 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <span>🧠</span>
+                  Mode Simple (L'IA résout)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('with_correction')}
+                  style={{
+                    flex: 1,
+                    padding: '0.6rem 1rem',
+                    borderRadius: '10px',
+                    border: '1px solid',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    borderColor: mode === 'with_correction' ? 'var(--emerald)' : 'var(--border)',
+                    background: mode === 'with_correction' ? 'rgba(16,185,129,0.12)' : 'var(--bg-glass)',
+                    color: mode === 'with_correction' ? 'var(--emerald)' : 'var(--text-muted)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <span>🎯</span>
+                  Avec Grille/Corrigé (Depuis le fichier)
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Page range */}
           {totalPages && (
-            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem' }}>
-              <div className="input-group" style={{ flex: 1 }}>
-                <label>Page de début</label>
-                <input type="number" className="input-control" min={1} max={totalPages} value={pageFrom} onChange={e => setPageFrom(+e.target.value)} />
+            <div style={{ display: 'flex', gap: '1rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+              <div style={{ flex: '1 1 300px', display: 'flex', gap: '1rem' }}>
+                <div className="input-group" style={{ flex: 1 }}>
+                  <label>Pages questions (Début)</label>
+                  <input type="number" className="input-control" min={1} max={totalPages} value={pageFrom} onChange={e => setPageFrom(+e.target.value)} />
+                </div>
+                <div className="input-group" style={{ flex: 1 }}>
+                  <label>Pages questions (Fin)</label>
+                  <input type="number" className="input-control" min={1} max={totalPages} value={pageTo} onChange={e => setPageTo(+e.target.value)} />
+                </div>
               </div>
-              <div className="input-group" style={{ flex: 1 }}>
-                <label>Page de fin</label>
-                <input type="number" className="input-control" min={1} max={totalPages} value={pageTo} onChange={e => setPageTo(+e.target.value)} />
-              </div>
-              <div style={{ flex: 2, padding: '0.5rem 1rem', borderRadius: 10, background: 'var(--bg-glass)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-muted)', gap: '0.4rem' }}>
-                💡 Sélectionnez uniquement les pages des questions pour réduire le coût API.
-              </div>
+              
+              {mode === 'with_correction' ? (
+                <div style={{ flex: '1 1 300px', display: 'flex', gap: '1rem' }}>
+                  <div className="input-group" style={{ flex: 1 }}>
+                    <label style={{ color: 'var(--emerald)', fontWeight: 700 }}>Pages corrigé (Début)</label>
+                    <input type="number" className="input-control" style={{ borderColor: 'rgba(16,185,129,0.4)' }} min={1} max={totalPages} value={correctionPageFrom} onChange={e => setCorrectionPageFrom(+e.target.value)} />
+                  </div>
+                  <div className="input-group" style={{ flex: 1 }}>
+                    <label style={{ color: 'var(--emerald)', fontWeight: 700 }}>Pages corrigé (Fin)</label>
+                    <input type="number" className="input-control" style={{ borderColor: 'rgba(16,185,129,0.4)' }} min={1} max={totalPages} value={correctionPageTo} onChange={e => setCorrectionPageTo(+e.target.value)} />
+                  </div>
+                </div>
+              ) : (
+                <div style={{ flex: 2, minWidth: '250px', padding: '0.5rem 1rem', borderRadius: 10, background: 'var(--bg-glass)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', fontSize: '0.82rem', color: 'var(--text-muted)', gap: '0.4rem' }}>
+                  💡 Sélectionnez uniquement les pages des questions pour réduire le coût API.
+                </div>
+              )}
             </div>
           )}
 
