@@ -68,7 +68,7 @@ export class MathErrorBoundary extends React.Component {
  *  trust: false    → security: no \href etc.
  */
 const KATEX_SETTINGS = {
-  strict: false,
+  strict: "ignore",
   throwOnError: false,
   trust: false,
 };

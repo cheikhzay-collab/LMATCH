@@ -10,18 +10,7 @@ import { renderWithMath } from '../utils/mathRenderer';
 
 const CHOICES = ['A', 'B', 'C', 'D', 'E'];
 
-/* ── Math Rendering Helper ───────────────────────────────────────── */
-const cleanControlChars = (text) => {
-  if (typeof text !== 'string') return text;
-  return text
-    .replace(/\u0009/g, '\\t')  // Tab -> \t
-    .replace(/\u000c/g, '\\f')  // Form Feed -> \f
-    .replace(/\u000d/g, '\\r')  // Carriage Return -> \r
-    .replace(/\u0008/g, '\\b')  // Backspace -> \b
-    .replace(/\u000b/g, '\\v')  // Vertical Tab -> \v
-    .replace(/\u0000/g, '\\0')  // Null -> \0
-    .replace(/[\u200B-\u200D\uFEFF]/g, ''); // strip zero-width spaces/invisible characters
-};
+
 
 function renderMathSnippet(text) {
   return renderWithMath(text);
