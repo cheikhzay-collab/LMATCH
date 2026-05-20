@@ -48,12 +48,15 @@ export class MathErrorBoundary extends React.Component {
   }
 }
 
+// KaTeX settings: disable strict mode to suppress accent warnings from imperfect data
+const KATEX_SETTINGS = { strict: false, trust: false, throwOnError: false };
+
 /* ─── 3. Safe KaTeX wrappers (error-boundary aware) ────────────────────────── */
 export function SafeInlineMath({ math }) {
   return (
     <MathErrorBoundary math={math}>
       <span className="notranslate" translate="no" style={{ display: 'inline-block' }}>
-        <InlineMath math={math} />
+        <InlineMath math={math} settings={KATEX_SETTINGS} />
       </span>
     </MathErrorBoundary>
   );
@@ -63,7 +66,7 @@ export function SafeBlockMath({ math }) {
   return (
     <MathErrorBoundary math={math}>
       <div className="notranslate" translate="no" style={{ display: 'block', margin: '1em 0' }}>
-        <BlockMath math={math} />
+        <BlockMath math={math} settings={KATEX_SETTINGS} />
       </div>
     </MathErrorBoundary>
   );
