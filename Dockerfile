@@ -1,5 +1,5 @@
 # Étape 1 : Construction de l'application React avec Node
-FROM node:20-alpine AS build
+FROM node:22-alpine AS build
 
 WORKDIR /app
 

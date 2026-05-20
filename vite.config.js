@@ -71,4 +71,31 @@ export default defineConfig({
       },
     }),
   ],
+
+  build: {
+    rollupOptions: {
+      output: {
+        // ── Manual chunk splitting ──────────────────────────────────────────
+        // Splits large vendor libraries into separate cacheable files.
+        // Users re-download only the chunk that changed between deploys.
+        manualChunks(id) {
+          // KaTeX — math rendering (fonts + CSS loaded separately)
+          if (id.includes('node_modules/katex')) return 'vendor-katex';
+          // Recharts — dashboard charts
+          if (id.includes('node_modules/recharts') || id.includes('node_modules/d3')) return 'vendor-charts';
+          // PDF.js — heavy PDF processing library
+          if (id.includes('node_modules/pdfjs-dist')) return 'vendor-pdfjs';
+          // html2canvas — screenshot/export feature
+          if (id.includes('node_modules/html2canvas')) return 'vendor-canvas';
+          // DOMPurify — HTML sanitisation
+          if (id.includes('node_modules/dompurify')) return 'vendor-purify';
+          // React ecosystem
+          if (id.includes('node_modules/react') || id.includes('node_modules/react-dom') || id.includes('node_modules/react-router')) return 'vendor-react';
+          // Everything else in node_modules → vendor-misc
+          if (id.includes('node_modules')) return 'vendor-misc';
+        },
+      },
+    },
+  },
 })
+
