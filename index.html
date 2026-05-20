@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+
+    <!-- ── Viewport & Mobile ─────────────────────────────────────────── -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- ── SEO & Description ──────────────────────────────────────────── -->
+    <title>L'Match — Prépare ton Concours Médecine</title>
+    <meta name="description" content="La plateforme SRS gamifiée pour préparer les concours de médecine au Maroc. Révise intelligemment avec L'Match." />
+    <meta name="keywords" content="concours médecine, Maroc, SRS, QCM, révision, prépa médecine" />
+    <meta name="author" content="L'Match" />
+
+    <!-- ── PWA / Manifest ─────────────────────────────────────────────── -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#5254F0" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#5254F0" media="(prefers-color-scheme: light)" />
+
+    <!-- ── iOS PWA (Safari) ───────────────────────────────────────────── -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="L'Match" />
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
+    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
+
+    <!-- iOS Splash Screens (portrait) -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <!-- ── Android / Chrome ───────────────────────────────────────────── -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="L'Match" />
+
+    <!-- ── Microsoft Tiles ────────────────────────────────────────────── -->
+    <meta name="msapplication-TileColor" content="#5254F0" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144.png" />
+    <meta name="msapplication-tap-highlight" content="no" />
+
+    <!-- ── Open Graph (sharing) ───────────────────────────────────────── -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="L'Match — Prépare ton Concours Médecine" />
+    <meta property="og:description" content="La plateforme SRS gamifiée pour les concours de médecine au Maroc." />
+    <meta property="og:image" content="/icons/icon-512.png" />
+
+    <!-- ── Favicon ────────────────────────────────────────────────────── -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="shortcut icon" href="/favicon.svg" />
+
+    <!-- ── Google Fonts ───────────────────────────────────────────────── -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <!-- ── Splash Screen style (instant, before React loads) ─────────── -->
+    <style>
+      /* Hide body until React mounts to avoid FOUC */
+      body { margin: 0; background: #0D1117; }
+
+      /* Splash screen shown before #root is hydrated */
+      #splash {
+        position: fixed;
+        inset: 0;
+        background: #0D1117;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        transition: opacity 0.5s ease, transform 0.5s ease;
+      }
+      #splash.hidden {
+        opacity: 0;
+        transform: scale(1.05);
+        pointer-events: none;
+      }
+      #splash svg {
+        width: 80px;
+        height: auto;
+        animation: splashPulse 1.8s ease-in-out infinite;
+        filter: drop-shadow(0 0 24px rgba(82, 84, 240, 0.6));
+      }
+      #splash-name {
+        margin-top: 1.5rem;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 900;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, #818cf8, #5254F0);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      #splash-tagline {
+        margin-top: 0.4rem;
+        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-size: 0.78rem;
+        color: rgba(255,255,255,0.35);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      #splash-dots {
+        margin-top: 2.5rem;
+        display: flex;
+        gap: 0.4rem;
+      }
+      #splash-dots span {
+        width: 6px; height: 6px;
+        border-radius: 50%;
+        background: #5254F0;
+        animation: dotBounce 1.2s ease-in-out infinite;
+      }
+      #splash-dots span:nth-child(2) { animation-delay: 0.15s; }
+      #splash-dots span:nth-child(3) { animation-delay: 0.30s; }
+
+      @keyframes splashPulse {
+        0%, 100% { transform: scale(1);    opacity: 1; }
+        50%       { transform: scale(1.06); opacity: 0.85; }
+      }
+      @keyframes dotBounce {
+        0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+        40%           { transform: scale(1.2); opacity: 1; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- ── Splash Screen (visible before React mounts) ──────────────── -->
+    <div id="splash">
+      <!-- Inline SVG logo for zero-latency display -->
+      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="46" fill="none" viewBox="0 0 48 46">
+        <path fill="#5254F0" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z"/>
+      </svg>
+      <div id="splash-name">L'Match</div>
+      <div id="splash-tagline">Concours Médecine · Maroc</div>
+      <div id="splash-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- ── React root ─────────────────────────────────────────────────── -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- ── Hide splash once React is ready ───────────────────────────── -->
+    <script>
+      // Hide splash screen as soon as the page is interactive
+      window.addEventListener('DOMContentLoaded', () => {
+        const splash = document.getElementById('splash');
+        // Give React a moment to mount (200ms buffer)
+        const hideSplash = () => {
+          if (splash) {
+            splash.classList.add('hidden');
+            setTimeout(() => splash.remove(), 600);
+          }
+        };
+        // Fallback: always hide after 3s max
+        const fallback = setTimeout(hideSplash, 3000);
+        // Primary: hide when React signals it's ready
+        window.__hideSplash = () => {
+          clearTimeout(fallback);
+          hideSplash();
+        };
+      });
+    </script>
+  </body>
+</html>
