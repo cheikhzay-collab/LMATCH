@@ -75,15 +75,16 @@ Langue : Français (termes mathématiques en LaTeX)`;
       header: true,
       skipEmptyLines: true,
       complete: (results) => {
+        const stripCR = (s) => typeof s === 'string' ? s.replace(/[\r\n\t]+/g, ' ').trim() : s;
         const parsedQuestions = results.data.map(row => ({
           id: Math.random().toString(36).substr(2, 9),
-          topic: row['Sujet'] || row['Topic'] || 'Général',
-          context: row['Context'] || null,
-          question: row['Question'] || '',
+          topic: stripCR(row['Sujet'] || row['Topic'] || 'Général'),
+          context: row['Context'] ? stripCR(row['Context']) : null,
+          question: stripCR(row['Question'] || ''),
           options: row['Options'] ? parseOptions(row['Options']) : [],
-          correct_answer: row['Réponse'] || row['Correct'] || '',
-          astuce: row['Astuce'] || '',
-          trick: row['Trick'] || null   // Dual-Astuce tab — optional elimination trick
+          correct_answer: stripCR(row['Réponse'] || row['Correct'] || ''),
+          astuce: stripCR(row['Astuce'] || ''),
+          trick: row['Trick'] ? stripCR(row['Trick']) : null
         }));
         
         setFileData(parsedQuestions);
@@ -103,10 +104,12 @@ Langue : Français (termes mathématiques en LaTeX)`;
 
   const parseOptions = (optionsStr) => {
     if (!optionsStr) return [];
+    // Strip CR/LF embedded in option text (from Windows CSV line endings)
+    const cleanStr = optionsStr.replace(/[\r\n]+/g, ' ');
     const regex = /([A-E])\)\s+/g;
     const matches = [];
     let match;
-    while ((match = regex.exec(optionsStr)) !== null) {
+    while ((match = regex.exec(cleanStr)) !== null) {
       matches.push({
         id: match[1],
         index: match.index,
@@ -118,13 +121,13 @@ Langue : Français (termes mathématiques en LaTeX)`;
       const current = matches[i];
       const next = matches[i + 1];
       const startIndex = current.index + current.length;
-      const endIndex = next ? next.index : optionsStr.length;
-      let text = optionsStr.substring(startIndex, endIndex).trim();
+      const endIndex = next ? next.index : cleanStr.length;
+      let text = cleanStr.substring(startIndex, endIndex).trim();
       text = text.replace(/[,;]\s*$/, '').trim();
       options.push({ id: current.id, text });
     }
     if (options.length === 0) {
-      return [{ id: 'A', text: optionsStr.trim() }];
+      return [{ id: 'A', text: cleanStr.trim() }];
     }
     return options;
   };

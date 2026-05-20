@@ -2,6 +2,30 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext();
 
+/**
+ * Strip embedded CR/LF/Tab characters from LaTeX text fields.
+ * CR (\r) was previously converted to '\r' (ring-accent command) which
+ * breaks KaTeX rendering in math mode. This migration fixes existing data.
+ */
+const stripCR = (str) => typeof str === 'string' ? str.replace(/[\r\n\t]+/g, ' ').trim() : str;
+
+const sanitizeExamData = (exams) => {
+  if (!Array.isArray(exams)) return [];
+  return exams.map(exam => ({
+    ...exam,
+    questions: Array.isArray(exam.questions) ? exam.questions.map(q => ({
+      ...q,
+      question: stripCR(q.question),
+      context:  stripCR(q.context),
+      astuce:   stripCR(q.astuce),
+      trick:    stripCR(q.trick),
+      options:  Array.isArray(q.options)
+        ? q.options.map(opt => ({ ...opt, text: stripCR(opt.text) }))
+        : q.options,
+    })) : exam.questions,
+  }));
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('user');
@@ -10,7 +34,12 @@ export function AuthProvider({ children }) {
 
   const [exams, setExams] = useState(() => {
     const saved = localStorage.getItem('exams');
-    return saved ? JSON.parse(saved) : [];
+    if (!saved) return [];
+    try {
+      // Run sanitizeExamData to strip embedded CR/LF from all text fields
+      // (fixes data corrupted by previous CSV uploads with Windows line endings)
+      return sanitizeExamData(JSON.parse(saved));
+    } catch { return []; }
   });
 
   useEffect(() => {

@@ -15,12 +15,14 @@ import { InlineMath, BlockMath } from 'react-katex';
 export const cleanControlChars = (text) => {
   if (typeof text !== 'string') return text;
   return text
-    .replace(/\u0009/g, '\\t')   // Tab → \t
-    .replace(/\u000c/g, '\\f')   // Form Feed → \f
-    .replace(/\u000d/g, '\\r')   // Carriage Return → \r  (fixes broken \right in some CSVs)
-    .replace(/\u0008/g, '\\b')   // Backspace → \b
-    .replace(/\u000b/g, '\\v')   // Vertical Tab → \v
-    .replace(/\u0000/g, '\\0')   // Null → \0
+    // IMPORTANT: Strip CR (\u000d) and LF (\u000a) entirely — do NOT convert to \r / \n strings
+    // because \r inside KaTeX math mode is the ring-accent command and breaks rendering.
+    .replace(/[\u000d\u000a]+/g, ' ')  // CR / LF → single space (preserves word boundaries)
+    .replace(/\u0009/g, ' ')           // Tab → space
+    .replace(/\u000c/g, '')            // Form Feed → strip
+    .replace(/\u0008/g, '')            // Backspace → strip
+    .replace(/\u000b/g, '')            // Vertical Tab → strip
+    .replace(/\u0000/g, '')            // Null → strip
     .replace(/[\u200B-\u200D\uFEFF]/g, ''); // strip zero-width / invisible chars
 };
 
@@ -81,7 +83,7 @@ export function SafeBlockMath({ math }) {
  *
  *  Space-lookahead alternative also updated to accept − and ∞.
  */
-const MATH_REGEX = /(\\(?:lim|frac|left|right|to|ln|log|sin|cos|tan|infty|pi|alpha|beta|theta|sum|int|vec|begin|end|sigma|mu|lambda|delta|epsilon|omega|phi|gamma|chi|psi|tau|eta|zeta|kappa|rho|xi|nu|mathbb|mathcal|mathbf|sqrt|le|ge|neq|approx|text|in|notin|cap|cup|times|div|circ|forall|exists|rightarrow|Leftrightarrow|Rightarrow|bar|overline|hat|tilde|cdot|pm|mp|dfrac|displaystyle|partial|nabla|max|min|sup|inf|\{|\})(?:[\\a-zA-Z0-9{}()\[\]_^\-+=\/*<>.,;!&|\u2212\u221E\u2264\u2265\u2260\u00D7\u00F7\u00B2\u00B3\u00B9]|(?:\s+(?=[\\0-9+\-*\/=<>_^{}()\[\]&|\u2212\u221E]))|(?:\s+\b[a-zA-Z]\b))+(?:[a-zA-Z0-9{}()\[\]_^\-+=\/*<>])?)/g;
+const MATH_REGEX = /(\\(?:lim|frac|left|right|to|ln|log|sin|cos|tan|infty|pi|alpha|beta|theta|sum|int|vec|begin|end|sigma|mu|lambda|delta|epsilon|omega|phi|gamma|chi|psi|tau|eta|zeta|kappa|rho|xi|nu|mathbb|mathcal|mathbf|sqrt|le|ge|neq|approx|text|in|notin|cap|cup|times|div|circ|forall|exists|rightarrow|Leftrightarrow|Rightarrow|bar|overline|hat|tilde|cdot|pm|mp|dfrac|displaystyle|partial|nabla|max|min|sup|inf|ell|mathbb|mathbb|mathcal|mathbf|not|quad|qquad|vert|Vert|\{|\})(?:[\\a-zA-Z0-9{}()\[\]_^\-+=\/*<>.,;!&|\u2212\u221E\u2264\u2265\u2260\u00D7\u00F7\u00B2\u00B3\u00B9]|(?:\s+(?=[\\0-9+\-*\/=<>_^{}()\[\]&|\u2212\u221E]))|(?:\s+\b[a-zA-Z]\b))+(?:[a-zA-Z0-9{}()\[\]_^\-+=\/*<>])?)/g;
 
 /* ─── 5. Main render function ───────────────────────────────────────────────── */
 export function renderWithMath(text) {
