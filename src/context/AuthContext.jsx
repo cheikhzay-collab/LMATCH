@@ -2,28 +2,72 @@ import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext();
 
-/**
- * Strip embedded CR/LF/Tab characters from LaTeX text fields.
- * CR (\r) was previously converted to '\r' (ring-accent command) which
- * breaks KaTeX rendering in math mode. This migration fixes existing data.
+/* ─── Data Schema Version ────────────────────────────────────────────────────
+ *  Bump this number whenever a migration is needed.
+ *  On app load, if stored version < SCHEMA_VERSION, the migration runs
+ *  automatically and saves the cleaned data back to localStorage.
  */
-const stripCR = (str) => typeof str === 'string' ? str.replace(/[\r\n\t]+/g, ' ').trim() : str;
+const SCHEMA_VERSION = 3;
 
-const sanitizeExamData = (exams) => {
+/**
+ * Master text sanitizer — strips ALL control characters from a string.
+ * Prevents CR/LF/Tab from corrupting LaTeX expressions when stored data
+ * comes from CSV files with Windows line endings.
+ */
+const sanitizeText = (s) => {
+  if (typeof s !== 'string') return s;
+  return s
+    .replace(/\r\n/g, ' ')   // Windows CRLF
+    .replace(/[\r\n]/g, ' ') // lone CR or LF
+    .replace(/\t/g, ' ')     // Tab
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // other control chars
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')              // zero-width / BOM
+    .replace(/ {2,}/g, ' ')  // collapse spaces
+    .trim();
+};
+
+/**
+ * Sanitizes ALL text fields of every question in every exam.
+ * Safe to run multiple times (idempotent).
+ */
+const sanitizeExams = (exams) => {
   if (!Array.isArray(exams)) return [];
   return exams.map(exam => ({
     ...exam,
-    questions: Array.isArray(exam.questions) ? exam.questions.map(q => ({
-      ...q,
-      question: stripCR(q.question),
-      context:  stripCR(q.context),
-      astuce:   stripCR(q.astuce),
-      trick:    stripCR(q.trick),
-      options:  Array.isArray(q.options)
-        ? q.options.map(opt => ({ ...opt, text: stripCR(opt.text) }))
-        : q.options,
-    })) : exam.questions,
+    questions: Array.isArray(exam.questions)
+      ? exam.questions.map(q => ({
+          ...q,
+          question: sanitizeText(q.question),
+          context:  sanitizeText(q.context),
+          astuce:   sanitizeText(q.astuce),
+          trick:    sanitizeText(q.trick),
+          options:  Array.isArray(q.options)
+            ? q.options.map(opt => ({ ...opt, text: sanitizeText(opt.text) }))
+            : q.options,
+        }))
+      : exam.questions,
   }));
+};
+
+/**
+ * Loads exams from localStorage, runs migration if schema version is outdated.
+ * Returns { exams, needsSave } — needsSave=true when data was migrated.
+ */
+const loadAndMigrateExams = () => {
+  try {
+    const raw = localStorage.getItem('exams');
+    const version = parseInt(localStorage.getItem('examsSchemaVersion') || '0', 10);
+    if (!raw) return { exams: [], needsSave: false };
+    const parsed = JSON.parse(raw);
+    if (version >= SCHEMA_VERSION) {
+      return { exams: Array.isArray(parsed) ? parsed : [], needsSave: false };
+    }
+    // Migration needed — sanitize all text fields
+    const migrated = sanitizeExams(parsed);
+    return { exams: migrated, needsSave: true };
+  } catch {
+    return { exams: [], needsSave: false };
+  }
 };
 
 export function AuthProvider({ children }) {
@@ -32,15 +76,17 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : null;
   });
 
-  const [exams, setExams] = useState(() => {
-    const saved = localStorage.getItem('exams');
-    if (!saved) return [];
-    try {
-      // Run sanitizeExamData to strip embedded CR/LF from all text fields
-      // (fixes data corrupted by previous CSV uploads with Windows line endings)
-      return sanitizeExamData(JSON.parse(saved));
-    } catch { return []; }
-  });
+  const { exams: initialExams, needsSave } = loadAndMigrateExams();
+  const [exams, setExams] = useState(initialExams);
+
+  // Persist migration result immediately if schema was upgraded
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  React.useEffect(() => {
+    if (needsSave) {
+      localStorage.setItem('exams', JSON.stringify(initialExams));
+      localStorage.setItem('examsSchemaVersion', String(SCHEMA_VERSION));
+    }
+  }, []); // run once on mount
 
   useEffect(() => {
     localStorage.setItem('user', JSON.stringify(user));
@@ -48,7 +94,9 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     localStorage.setItem('exams', JSON.stringify(exams));
+    localStorage.setItem('examsSchemaVersion', String(SCHEMA_VERSION));
   }, [exams]);
+
   
   // Theme Management
   const [theme, setTheme] = useState(() => {
@@ -102,13 +150,15 @@ export function AuthProvider({ children }) {
   };
 
   const addExam = (name, school, year, tier, questions, pdfUrl = null) => {
+    // Sanitize all question text fields at storage time to prevent CR/LF corruption
+    const cleanQuestions = sanitizeExams([{ questions }])[0].questions;
     setExams([...exams, {
       id: Math.random().toString(36).substr(2, 9),
       name,
       school,
       year,
       tier,
-      questions,
+      questions: cleanQuestions,
       pdfUrl,
       isActive: true,
       dateAdded: new Date().toISOString()

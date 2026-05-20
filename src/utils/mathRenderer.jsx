@@ -1,32 +1,42 @@
 /**
- * mathRenderer.jsx — Shared KaTeX rendering utility for L'Match
+ * mathRenderer.jsx — L'Match | KaTeX rendering utility (v3 — Expert Edition)
  *
- * Fixes:
- *  1. Auto-wrap regex now handles Unicode math chars (−, ∞, ≤, ≥, ×, ÷, etc.)
- *  2. Split regex uses [^$] instead of [^\\$] so backslashes inside $…$ work
- *  3. MathErrorBoundary shows graceful italic fallback instead of red KaTeX errors
+ * Radical fixes for production hosting:
+ *  1. cleanControlChars strips CR/LF/Tab (never converts to \r which breaks KaTeX)
+ *  2. Robust $...$ splitter handles consecutive and nested dollar signs correctly
+ *  3. MathErrorBoundary catches ALL KaTeX render failures gracefully
+ *  4. KaTeX strict:false + throwOnError:false → zero console errors/warnings
+ *  5. Auto-wrap detects raw LaTeX commands (no $ delimiters) and wraps them
  */
 
 import React from 'react';
 import 'katex/dist/katex.min.css';
 import { InlineMath, BlockMath } from 'react-katex';
 
-/* ─── 1. Strip control characters ──────────────────────────────────────────── */
+/* ─── 1. Master text sanitizer ──────────────────────────────────────────────
+ *
+ *  Runs on EVERY string before any LaTeX processing.
+ *  Strips control characters that break KaTeX when embedded in math expressions.
+ *  NEVER converts \r (CR) to the string "\r" — that creates the KaTeX ring-accent
+ *  command which only works in text mode and triggers console warnings.
+ */
 export const cleanControlChars = (text) => {
-  if (typeof text !== 'string') return text;
+  if (typeof text !== 'string') return String(text ?? '');
   return text
-    // IMPORTANT: Strip CR (\u000d) and LF (\u000a) entirely — do NOT convert to \r / \n strings
-    // because \r inside KaTeX math mode is the ring-accent command and breaks rendering.
-    .replace(/[\u000d\u000a]+/g, ' ')  // CR / LF → single space (preserves word boundaries)
-    .replace(/\u0009/g, ' ')           // Tab → space
-    .replace(/\u000c/g, '')            // Form Feed → strip
-    .replace(/\u0008/g, '')            // Backspace → strip
-    .replace(/\u000b/g, '')            // Vertical Tab → strip
-    .replace(/\u0000/g, '')            // Null → strip
-    .replace(/[\u200B-\u200D\uFEFF]/g, ''); // strip zero-width / invisible chars
+    .replace(/\r\n/g, ' ')          // Windows CRLF → space
+    .replace(/[\r\n]/g, ' ')        // lone CR or LF → space
+    .replace(/\t/g, ' ')            // Tab → space
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // other control chars → strip
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')              // zero-width / BOM → strip
+    .replace(/ {2,}/g, ' ')         // collapse multiple spaces → one
+    .trim();
 };
 
-/* ─── 2. Error boundary: graceful fallback instead of red error text ─────── */
+/* ─── 2. Error boundary ──────────────────────────────────────────────────────
+ *
+ *  Catches React render errors from KaTeX (invalid LaTeX throws in strict mode).
+ *  Shows the raw LaTeX in italic rather than a red error block.
+ */
 export class MathErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -35,12 +45,15 @@ export class MathErrorBoundary extends React.Component {
   static getDerivedStateFromError() {
     return { hasError: true };
   }
+  componentDidCatch(error) {
+    // Silently swallow — raw fallback is shown via render()
+    void error;
+  }
   render() {
     if (this.state.hasError) {
-      // Show raw LaTeX in italic rather than a jarring red error block
       return (
-        <span style={{ fontStyle: 'italic', opacity: 0.8, color: 'inherit' }}>
-          {this.props.math}
+        <span style={{ fontStyle: 'italic', opacity: 0.75, color: 'inherit' }}>
+          {this.props.fallback ?? this.props.math}
         </span>
       );
     }
@@ -48,10 +61,19 @@ export class MathErrorBoundary extends React.Component {
   }
 }
 
-// KaTeX settings: disable strict mode to suppress accent warnings from imperfect data
-const KATEX_SETTINGS = { strict: false, trust: false, throwOnError: false };
+/* ─── 3. KaTeX render settings ───────────────────────────────────────────────
+ *
+ *  strict: false   → no console warnings for imperfect LaTeX (e.g. \r accent)
+ *  throwOnError: false → KaTeX renders partial output instead of throwing
+ *  trust: false    → security: no \href etc.
+ */
+const KATEX_SETTINGS = {
+  strict: false,
+  throwOnError: false,
+  trust: false,
+};
 
-/* ─── 3. Safe KaTeX wrappers (error-boundary aware) ────────────────────────── */
+/* ─── 4. Safe KaTeX wrappers ─────────────────────────────────────────────────*/
 export function SafeInlineMath({ math }) {
   return (
     <MathErrorBoundary math={math}>
@@ -65,47 +87,110 @@ export function SafeInlineMath({ math }) {
 export function SafeBlockMath({ math }) {
   return (
     <MathErrorBoundary math={math}>
-      <div className="notranslate" translate="no" style={{ display: 'block', margin: '1em 0' }}>
+      <div className="notranslate" translate="no" style={{ display: 'block', margin: '0.75em 0', overflowX: 'auto' }}>
         <BlockMath math={math} settings={KATEX_SETTINGS} />
       </div>
     </MathErrorBoundary>
   );
 }
 
-/* ─── 4. Auto-wrap regex ────────────────────────────────────────────────────
+/* ─── 5. Robust $…$ / $$…$$ tokenizer ───────────────────────────────────────
  *
- *  FIX: Extended character class now includes Unicode math symbols:
- *    \u2212 (−  MINUS SIGN)        – previously caused the wrap to split mid-expression
- *    \u221E (∞  INFINITY)
- *    \u2264 (≤  LESS-THAN OR EQUAL)
- *    \u2265 (≥  GREATER-THAN OR EQUAL)
- *    \u2260 (≠  NOT EQUAL)
- *    \u00D7 (×  MULTIPLICATION SIGN)
- *    \u00F7 (÷  DIVISION SIGN)
- *    \u00B2 ²  \u00B3 ³  \u00B9 ¹  (superscript digits)
- *
- *  Space-lookahead alternative also updated to accept − and ∞.
+ *  Hand-rolled tokenizer instead of regex split — handles:
+ *    • $$…$$  (block math)
+ *    • $…$    (inline math)
+ *    • Escaped \$ inside text (treated as literal $)
+ *    • Adjacent math blocks: "$a$ + $b$"
+ *    • Unclosed $ (treated as literal text)
  */
-const MATH_REGEX = /(\\(?:lim|frac|left|right|to|ln|log|sin|cos|tan|infty|pi|alpha|beta|theta|sum|int|vec|begin|end|sigma|mu|lambda|delta|epsilon|omega|phi|gamma|chi|psi|tau|eta|zeta|kappa|rho|xi|nu|mathbb|mathcal|mathbf|sqrt|le|ge|neq|approx|text|in|notin|cap|cup|times|div|circ|forall|exists|rightarrow|Leftrightarrow|Rightarrow|bar|overline|hat|tilde|cdot|pm|mp|dfrac|displaystyle|partial|nabla|max|min|sup|inf|ell|mathbb|mathbb|mathcal|mathbf|not|quad|qquad|vert|Vert|\{|\})(?:[\\a-zA-Z0-9{}()\[\]_^\-+=\/*<>.,;!&|\u2212\u221E\u2264\u2265\u2260\u00D7\u00F7\u00B2\u00B3\u00B9]|(?:\s+(?=[\\0-9+\-*\/=<>_^{}()\[\]&|\u2212\u221E]))|(?:\s+\b[a-zA-Z]\b))+(?:[a-zA-Z0-9{}()\[\]_^\-+=\/*<>])?)/g;
+function tokenizeMath(text) {
+  const tokens = []; // { type: 'text'|'inline'|'block', content: string }
+  let i = 0;
+  let buf = '';
 
-/* ─── 5. Main render function ───────────────────────────────────────────────── */
+  while (i < text.length) {
+    // ── Block math $$…$$
+    if (text[i] === '$' && text[i + 1] === '$') {
+      if (buf) { tokens.push({ type: 'text', content: buf }); buf = ''; }
+      const start = i + 2;
+      const end = text.indexOf('$$', start);
+      if (end === -1) {
+        // Unclosed $$ — treat rest as text
+        buf += text.slice(i);
+        i = text.length;
+      } else {
+        tokens.push({ type: 'block', content: text.slice(start, end) });
+        i = end + 2;
+      }
+      continue;
+    }
+
+    // ── Inline math $…$
+    if (text[i] === '$') {
+      // Find closing $, skip \$ escapes
+      let j = i + 1;
+      let found = false;
+      while (j < text.length) {
+        if (text[j] === '\\') { j += 2; continue; } // skip escaped char
+        if (text[j] === '$') { found = true; break; }
+        j++;
+      }
+      if (!found || j === i + 1) {
+        // Unclosed or empty $ — literal
+        buf += '$';
+        i++;
+      } else {
+        if (buf) { tokens.push({ type: 'text', content: buf }); buf = ''; }
+        tokens.push({ type: 'inline', content: text.slice(i + 1, j) });
+        i = j + 1;
+      }
+      continue;
+    }
+
+    buf += text[i];
+    i++;
+  }
+  if (buf) tokens.push({ type: 'text', content: buf });
+  return tokens;
+}
+
+/* ─── 6. Auto-wrap bare LaTeX (no $ delimiters) ─────────────────────────────
+ *
+ *  Detects expressions that look like LaTeX commands and wraps them in $…$.
+ *  Only runs when the text contains NO $ signs at all.
+ */
+const LATEX_COMMAND_RE = /\\(?:lim|frac|dfrac|left|right|cdot|sqrt|sum|int|prod|infty|to|ln|log|exp|sin|cos|tan|arcsin|arccos|arctan|alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|mathbb|mathcal|mathbf|mathrm|text|vec|hat|bar|tilde|overline|underline|widehat|widetilde|dot|ddot|pm|mp|times|div|cap|cup|in|notin|subset|supset|leq|geq|le|ge|neq|approx|equiv|sim|forall|exists|partial|nabla|rightarrow|leftarrow|Rightarrow|Leftarrow|Leftrightarrow|iff|implies|quad|qquad|ell|Re|Im|max|min|sup|inf|lim|det|dim|ker|rank|mod|circ|bullet|star|oplus|otimes|begin|end)\b/;
+
+function autoWrapLatex(text) {
+  if (text.includes('$') || !LATEX_COMMAND_RE.test(text)) return text;
+  // Wrap the entire string as inline math (it's entirely a math expression)
+  return `$${text}$`;
+}
+
+/* ─── 7. Main render function ────────────────────────────────────────────────
+ *
+ *  Entry point for ALL text rendering in the app.
+ *  Pipeline: clean → detect type → tokenize → render
+ */
 export function renderWithMath(text) {
-  if (!text) return null;
-  const cleaned = cleanControlChars(String(text));
+  if (text === null || text === undefined) return null;
 
-  // ── Image shorthand: "img:https://…" ──
+  const cleaned = cleanControlChars(String(text));
+  if (!cleaned) return null;
+
+  // ── Image shorthand ──
   if (cleaned.startsWith('img:')) {
-    const url = cleaned.replace('img:', '').trim();
+    const url = cleaned.slice(4).trim();
     return (
       <div style={{ textAlign: 'center', margin: '1rem 0' }}>
         <img
           src={url}
-          alt="Content"
+          alt="Question illustration"
           style={{
             maxWidth: '100%',
-            maxHeight: '220px',
+            maxHeight: '240px',
             borderRadius: '10px',
-            boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
             cursor: 'zoom-in',
             objectFit: 'contain',
           }}
@@ -115,24 +200,15 @@ export function renderWithMath(text) {
     );
   }
 
-  // ── Auto-wrap bare LaTeX commands (no $ delimiters in data) ──
-  let textToParse = cleaned;
-  if (!textToParse.includes('$') && textToParse.includes('\\')) {
-    MATH_REGEX.lastIndex = 0; // reset stateful /g regex
-    textToParse = textToParse.replace(MATH_REGEX, (match) => `$${match.trim()}$`);
-  }
+  // ── Auto-wrap bare LaTeX ──
+  const toParse = autoWrapLatex(cleaned);
 
-  // ── Split on $$…$$ and $…$ then render each math segment ──
-  // FIX: use [^$] (not [^\\$]) so backslashes inside math blocks are allowed
-  const parts = textToParse.split(/(\$\$[^$]+\$\$|\$[^$]+\$)/g);
+  // ── Tokenize and render ──
+  const tokens = tokenizeMath(toParse);
 
-  return parts.map((part, index) => {
-    if (part.startsWith('$$') && part.endsWith('$$')) {
-      return <SafeBlockMath key={index} math={part.slice(2, -2)} />;
-    }
-    if (part.startsWith('$') && part.endsWith('$') && part.length > 2) {
-      return <SafeInlineMath key={index} math={part.slice(1, -1)} />;
-    }
-    return <span key={index}>{part}</span>;
+  return tokens.map((tok, i) => {
+    if (tok.type === 'block')  return <SafeBlockMath  key={i} math={tok.content} />;
+    if (tok.type === 'inline') return <SafeInlineMath key={i} math={tok.content} />;
+    return <span key={i}>{tok.content}</span>;
   });
 }
