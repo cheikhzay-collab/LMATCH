@@ -7,51 +7,13 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { scanAnswerSheet, readQRCodeFromImage } from '../utils/OMRScanner';
 import DiagnosticReport from '../components/DiagnosticReport';
-import 'katex/dist/katex.min.css';
-import { InlineMath } from 'react-katex';
+import { renderWithMath } from '../utils/mathRenderer';
 
 const CHOICES = ['A', 'B', 'C', 'D', 'E'];
 
-/* ── Math Helper ────────────────────────────────────────────────── */
-const cleanControlChars = (text) => {
-  if (typeof text !== 'string') return text;
-  return text
-    .replace(/\u0009/g, '\\t')  // Tab -> \t
-    .replace(/\u000c/g, '\\f')  // Form Feed -> \f
-    .replace(/\u000d/g, '\\r')  // Carriage Return -> \r
-    .replace(/\u0008/g, '\\b')  // Backspace -> \b
-    .replace(/\u000b/g, '\\v')  // Vertical Tab -> \v
-    .replace(/\u0000/g, '\\0')  // Null -> \0
-    .replace(/[\u200B-\u200D\uFEFF]/g, ''); // strip zero-width spaces/invisible characters
-};
-
+/* ── Math Helper ──────────────────────────────────────────────── */
 function renderMathSnippet(text) {
-  if (!text) return null;
-  const cleaned = cleanControlChars(text);
-  if (cleaned.startsWith('img:')) return <span style={{ fontStyle: 'italic' }}>[Image]</span>;
-  
-  // Smart wrapping: if the text contains LaTeX backslash commands but has NO dollar signs ($),
-  // we automatically wrap those LaTeX commands and equations in dollar signs ($) so they can render.
-  let textToParse = cleaned.replace(/\$\$/g, '$');
-  if (typeof textToParse === 'string' && !textToParse.includes('$') && textToParse.includes('\\')) {
-    const mathRegex = /(\\(?:lim|frac|left|right|to|ln|log|sin|cos|tan|infty|pi|alpha|beta|theta|sum|int|vec|begin|end|sigma|mu|lambda|delta|epsilon|omega|phi|gamma|chi|psi|tau|eta|zeta|kappa|rho|xi|mathbb|mathcal|mathbf|sqrt|le|ge|neq|approx|text|in|notin|cap|cup|times|div|circ|forall|exists|rightarrow|Leftrightarrow|Rightarrow|bar|overline|hat|tilde|nu|\{|\})(?:[\\a-zA-Z0-9{}()\[\]_^\-+=\/*<>.,;!&|]|(?:\s+(?=[\\0-9+\-*\/=<>_^{}()\[\]&|]))|(?:\s+\b[a-zA-Z]\b))+(?:[a-zA-Z0-9{}()\[\]_^\-+=\/*<>])?)/g;
-    textToParse = textToParse.replace(mathRegex, (match) => `$${match.trim()}$`);
-  }
-
-  const parts = textToParse.split(/(\$[^\$]+\$)/g);
-  return parts.map((part, idx) => {
-    if (part.startsWith('$') && part.endsWith('$')) {
-      return (
-        <span key={idx} className="notranslate" translate="no" style={{ display: 'inline-block' }}>
-          <InlineMath 
-            math={part.slice(1, -1)} 
-            renderError={() => <span>{part}</span>} 
-          />
-        </span>
-      );
-    }
-    return <span key={idx}>{part}</span>;
-  });
+  return renderWithMath(text);
 }
 
 /* ── Confidence Indicator ────────────────────────────────────────── */
