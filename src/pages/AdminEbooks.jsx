@@ -62,7 +62,7 @@ export default function AdminEbooks() {
     // Inject branding from AdminSettings (localStorage)
     s.profName  = localStorage.getItem('profName')  || '';
     s.profPhone = localStorage.getItem('profPhone') || '';
-    s.profSite  = localStorage.getItem('profSite')  || 'www.lmatch.ma';
+    s.profSite  = localStorage.getItem('profSite')  || 'www.lconq.ma';
     const html = generateEbookHTML(topic, questions, s);
     openPrintWindow(html, `ebook-${topic}`);
     setGenerated(prev => ({ ...prev, [topic]: Date.now() }));

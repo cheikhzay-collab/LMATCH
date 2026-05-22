@@ -859,7 +859,7 @@ Tu dois :
             {/* PDF buttons */}
             <div style={{ display: 'flex', gap: '0.5rem' }}>
               <button
-                onClick={() => openPrintWindow(generateSubjectHTML(examName || 'Examen', school, year, questions), 'sujet')}
+                onClick={() => openPrintWindow(generateSubjectHTML(examName || 'Examen', school, year, questions, { examId: 'PREVIEW' }), 'sujet')}
                 disabled={!examName.trim()}
                 style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.75rem 1rem', borderRadius: 10, background: 'rgba(30,86,219,0.12)', border: '1px solid rgba(30,86,219,0.3)', color: '#1a56db', fontWeight: 700, fontSize: '0.83rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
                 title="Télécharger le sujet blanc (impression)"

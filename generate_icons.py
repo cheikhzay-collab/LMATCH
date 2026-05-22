@@ -1,5 +1,5 @@
 """
-Generate PWA icons for L'Match from the favicon SVG.
+Generate PWA icons for L'Conq from the favicon SVG.
 Uses only Python stdlib — no external packages needed.
 Run: python generate_icons.py
 """
@@ -12,7 +12,7 @@ import math
 OUTPUT_DIR = os.path.join(os.path.dirname(__file__), "public", "icons")
 SIZES = [72, 96, 128, 144, 152, 192, 384, 512]
 
-# L'Match brand colors (RGBA)
+# L'Conq brand colors (RGBA)
 BG_COLOR     = (13, 17, 23, 255)       # #0D1117
 VIOLET       = (82, 84, 240, 255)      # #5254F0
 VIOLET_LIGHT = (129, 140, 248, 255)    # #818CF8
@@ -84,7 +84,7 @@ def draw_gradient_bg(canvas, size, radius):
 
 def draw_bolt(canvas, size):
     """
-    Draw the L'Match lightning bolt shape.
+    Draw the L'Conq lightning bolt shape.
     The original SVG viewBox is 48×46, scaled to fit the icon.
     """
     pad = size * 0.15

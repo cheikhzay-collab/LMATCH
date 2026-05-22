@@ -40,7 +40,7 @@ export default function AdminOverview() {
             </div>
             <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>Vue d'ensemble</h1>
           </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>Bienvenue dans le centre de contrôle de L'Match.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>Bienvenue dans le centre de contrôle de L'Conq.</p>
         </div>
         
         {/* Quick OMR Scan Button */}
@@ -66,7 +66,7 @@ export default function AdminOverview() {
         </button>
       </header>
 
-      <div className="dashboard-grid">
+      <div className="dashboard-grid stats-row">
         <div className="col-span-3 glass-panel stat-card">
           <div className="stat-icon primary"><Users size={24} /></div>
           <div>

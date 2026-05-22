@@ -4,9 +4,9 @@ import { BrainCircuit, Eye, EyeOff, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const TEST_ACCOUNTS = [
-  { label: 'Admin',        email: 'admin@lmatch.ma',   role: 'admin', color: 'var(--violet)' },
-  { label: 'Élève Premium', email: 'premium@lmatch.ma', role: 'student', color: 'var(--emerald)' },
-  { label: 'Élève Free',   email: 'free@lmatch.ma',    role: 'student', color: 'var(--text-muted)' },
+  { label: 'Admin',        email: 'admin@lconq.ma',   role: 'admin', color: 'var(--violet)' },
+  { label: 'Élève Premium', email: 'premium@lconq.ma', role: 'student', color: 'var(--emerald)' },
+  { label: 'Élève Free',   email: 'free@lconq.ma',    role: 'student', color: 'var(--text-muted)' },
 ];
 
 export default function Login() {
@@ -19,7 +19,7 @@ export default function Login() {
   const handleLogin = (e) => {
     e.preventDefault();
     login(email, password);
-    navigate(email === 'admin@lmatch.ma' ? '/admin/dashboard' : '/dashboard');
+    navigate(email === 'admin@lconq.ma' ? '/admin/dashboard' : '/dashboard');
   };
 
   const fillAccount = (acc) => {
@@ -32,12 +32,12 @@ export default function Login() {
       minHeight: '100vh', display: 'flex',
       background: 'var(--bg-base)',
     }}>
-      {/* Left — decorative panel (hidden on small screens conceptually) */}
+      {/* Left — decorative panel (hidden on mobile) */}
       <div style={{
         flex: '0 0 40%', background: 'linear-gradient(145deg, var(--violet) 0%, #312e81 100%)',
         display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
         padding: '3rem', position: 'relative', overflow: 'hidden'
-      }}>
+      }} className="login-left-panel">
         {/* Ambient blobs */}
         <div style={{ position: 'absolute', top: '-60px', right: '-60px', width: 240, height: 240, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
         <div style={{ position: 'absolute', bottom: '-40px', left: '-40px', width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.06)', pointerEvents: 'none' }} />
@@ -46,7 +46,7 @@ export default function Login() {
           <div style={{ width: 64, height: 64, borderRadius: '18px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
             <BrainCircuit size={34} color="#fff" />
           </div>
-          <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '1rem', letterSpacing: '-0.03em' }}>L'Match</h2>
+          <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '1rem', letterSpacing: '-0.03em' }}>L'Conq</h2>
           <p style={{ opacity: 0.75, fontSize: '1rem', lineHeight: 1.65, maxWidth: 260 }}>
             La plateforme de préparation aux concours propulsée par l'IA — Médecine, ENSA, ENSAM.
           </p>

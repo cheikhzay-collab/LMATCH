@@ -251,7 +251,7 @@ function ResultsScreen({ questions, answers, exam, onReturn }) {
   }));
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: 900, margin: '0 auto', padding: '2rem 1.5rem 4rem' }}>
+    <div className="animate-fade-in" style={{ maxWidth: 900, margin: '0 auto', padding: 'clamp(1rem, 4vw, 2rem) clamp(0.875rem, 4vw, 1.5rem) 4rem' }}>
       {/* Trophy card */}
       <div className="glass-panel text-center" style={{ padding: '2.5rem 2rem', marginBottom: '1.5rem' }}>
         <div style={{
@@ -284,8 +284,8 @@ function ResultsScreen({ questions, answers, exam, onReturn }) {
       </div>
 
       {/* Tab switcher */}
-      <div style={{ display:'flex', gap:'0.5rem', marginBottom:'1.5rem', background:'var(--bg-glass)', padding:'0.35rem', borderRadius:'var(--radius-md)', border:'1px solid var(--border)', width:'fit-content' }}>
-        {[{id:'correction', label:'Correction détaillée', icon:<CheckCircle2 size={15}/>},{id:'diagnostic', label:'Rapport diagnostique', icon:<TrendingUp size={15}/>}].map(t => (
+      <div style={{ display:'flex', gap:'0.5rem', marginBottom:'1.5rem', background:'var(--bg-glass)', padding:'0.35rem', borderRadius:'var(--radius-md)', border:'1px solid var(--border)', width:'fit-content', maxWidth:'100%', flexWrap:'wrap' }}>
+        {[{id:'correction', label:'Correction', icon:<CheckCircle2 size={15}/>},{id:'diagnostic', label:'Diagnostic', icon:<TrendingUp size={15}/>}].map(t => (
           <button key={t.id} onClick={()=>setTab(t.id)}
             style={{ display:'flex', alignItems:'center', gap:'0.4rem', padding:'0.5rem 1rem', borderRadius:'calc(var(--radius-md) - 3px)', border:'none', cursor:'pointer', fontWeight:700, fontSize:'0.85rem', fontFamily:'inherit', transition:'all 0.2s',
               background: tab===t.id ? 'var(--violet)' : 'transparent',
@@ -319,7 +319,7 @@ function ResultsScreen({ questions, answers, exam, onReturn }) {
                 <div style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: 500 }}>
                   {renderWithMath(q.question)}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
                   <div style={{ background: 'var(--bg-glass)', padding: '0.875rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', marginBottom: '0.4rem', fontWeight: 600 }}>VOTRE RÉPONSE</p>
                     {userAns
@@ -357,7 +357,7 @@ function ResultsScreen({ questions, answers, exam, onReturn }) {
 
 /* ─── Main Component ────────────────────────────────────────────── */
 export default function MockExamMode() {
-  const { exams } = useAuth();
+  const { exams, saveMockExamResult, schoolBranding } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const navigate = useNavigate();
@@ -373,6 +373,8 @@ export default function MockExamMode() {
   const [combo, setCombo]               = useState(0);
   const [selectedImageZoom, setSelectedImageZoom] = useState(null);
 
+  const hasSavedResult = React.useRef(false);
+
   useEffect(() => {
     if (!questions.length || isFinished) return;
     const t = setInterval(() => {
@@ -380,6 +382,51 @@ export default function MockExamMode() {
     }, 1000);
     return () => clearInterval(t);
   }, [isFinished, questions]);
+
+  useEffect(() => {
+    if (isFinished && !hasSavedResult.current && currentExam) {
+      hasSavedResult.current = true;
+
+      // Get school scoring rules
+      const brand = schoolBranding[currentExam.school] || { scoring: { correct: 1, wrong: -0.25, empty: 0 } };
+      const rules = brand.scoring || { correct: 1, wrong: -0.25, empty: 0 };
+
+      let pts = 0;
+      let correctCount = 0;
+      let wrongCount = 0;
+      let emptyCount = 0;
+
+      questions.forEach(q => {
+        const ans = answers[q.id];
+        if (ans === q.correct_answer) {
+          pts += rules.correct;
+          correctCount++;
+        } else if (!ans) {
+          pts += rules.empty;
+          emptyCount++;
+        } else {
+          pts += rules.wrong;
+          wrongCount++;
+        }
+      });
+
+      const maxPossible = questions.length * rules.correct;
+      const pct = maxPossible > 0 ? Math.max(0, Math.round((pts / maxPossible) * 100)) : 0;
+
+      saveMockExamResult({
+        examId: currentExam.id,
+        examName: currentExam.name,
+        school: currentExam.school,
+        score: pts,
+        maxScore: questions.length,
+        correctCount,
+        wrongCount,
+        emptyCount,
+        pct,
+        mode: 'online'
+      });
+    }
+  }, [isFinished, answers, currentExam, questions, saveMockExamResult, schoolBranding]);
 
   const handleSelect = useCallback((optId) => {
     if (answers[questions[currentIndex]?.id]) return; // already answered in mock? allow re-select
@@ -431,20 +478,20 @@ export default function MockExamMode() {
   const answeredCount = Object.keys(answers).length;
 
   return (
-    <div className="focus-layout" style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+    <div className="focus-layout" style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* ── Header ── */}
-      <div className="focus-header" style={{ padding: '0.6rem 1.5rem', height: '55px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+      <div className="focus-header" style={{ padding: '0.6rem clamp(0.75rem, 3vw, 1.5rem)', height: '55px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <button
           className="btn-ghost"
           onClick={() => navigate('/dashboard')}
           style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}
         >
-          <ArrowLeft size={16} /> Quitter
+          <ArrowLeft size={16} /> <span className="hide-xs">Quitter</span>
         </button>
 
         <div style={{ textAlign: 'center' }}>
-          <p style={{ fontWeight: 700, fontSize: '0.9rem', margin: 0 }}>{currentExam.name}</p>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: 0 }}>{currentExam.year} · Concours Blanc</p>
+          <p style={{ fontWeight: 700, fontSize: '0.9rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 'clamp(120px, 30vw, 300px)' }}>{currentExam.name}</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', margin: 0 }} className="hide-xs">{currentExam.year} · Concours Blanc</p>
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>

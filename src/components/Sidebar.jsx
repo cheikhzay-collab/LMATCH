@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BrainCircuit, BookOpen, UploadCloud,
-  LogOut, Trophy, Library, Users, Settings, Zap, Sun, Moon, GraduationCap, Sparkles, BookMarked, Camera
+  LogOut, Trophy, Library, Users, Settings, Zap, Sun, Moon, GraduationCap, Sparkles, BookMarked, Camera, Megaphone
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -27,7 +27,7 @@ export default function Sidebar() {
         }}>
           <BrainCircuit size={20} color="#fff" />
         </div>
-        <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em' }}>L'Match</span>
+        <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em' }}>L'Conq</span>
       </div>
 
       {/* Navigation */}
@@ -91,6 +91,14 @@ export default function Sidebar() {
             </NavLink>
             <NavLink to="/admin/ebooks" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
               <BookMarked size={18} /> E-Books
+            </NavLink>
+            <NavLink to="/admin/marketing" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
+              style={({ isActive }) => ({
+                background: isActive ? 'linear-gradient(90deg, rgba(236,72,153,0.12) 0%, transparent 100%)' : undefined,
+                color: isActive ? '#EC4899' : undefined,
+              })}
+            >
+              <Megaphone size={18} /> Studio Marketing
             </NavLink>
             <NavLink to="/admin/settings" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
               <Settings size={18} /> Paramètres

@@ -14,7 +14,7 @@ const SCHOOL_BRANDS_DEFAULTS = {
   'ENSAM':                 { emoji:'🔩', gradient:'linear-gradient(135deg,#0F4C75,#1B262C)', accent:'#38BDF8', accentSoft:'rgba(56,189,248,0.1)',  tag:'Arts & Métiers' },
   'ENCG':                  { emoji:'📊', gradient:'linear-gradient(135deg,#065F46,#022C22)', accent:'var(--emerald)', accentSoft:'rgba(16,185,129,0.1)',  tag:'Commerce & Gestion' },
   'INPT':                  { emoji:'📡', gradient:'linear-gradient(135deg,#C2410C,#7C2D12)', accent:'#F97316', accentSoft:'rgba(249,115,22,0.1)',  tag:'Télécommunications' },
-  'INSEA':                 { emoji:'📈', gradient:'linear-gradient(135deg,#0F766E,#134E4A)', accent:'#14B8A6', accentSoft:'rgba(20,184,166,0.1)',  tag:'Statistiques & Économية' },
+  'INSEA':                 { emoji:'📈', gradient:'linear-gradient(135deg,#0F766E,#134E4A)', accent:'#14B8A6', accentSoft:'rgba(20,184,166,0.1)',  tag:'Statistiques & Économie' },
   'Général (Prépa)':       { emoji:'📐', gradient:'linear-gradient(135deg,#6D28D9,#3B0764)', accent:'#A78BFA', accentSoft:'rgba(167,139,250,0.1)', tag:'Classes Préparatoires' },
 };
 
@@ -53,7 +53,7 @@ export default function SchoolExamsPage() {
         {/* Gradient Hero Section */}
         <div style={{
           background: brand.gradient,
-          padding: '3rem 2.5rem',
+          padding: 'clamp(1.5rem, 5vw, 3rem) clamp(1.25rem, 4vw, 2.5rem)',
           position: 'relative',
           overflow: 'hidden',
         }}>
@@ -90,7 +90,7 @@ export default function SchoolExamsPage() {
               <ArrowLeft size={16} /> Retour aux écoles
             </button>
 
-            <div style={{ display:'flex', alignItems:'center', gap:'2rem' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', flexWrap:'wrap' }}>
               {brand.logoUrl ? (
                 <img src={brand.logoUrl} alt="" style={{ width:100, height:100, objectFit:'contain', filter:'drop-shadow(0 12px 24px rgba(0,0,0,0.3))' }} />
               ) : (
@@ -121,8 +121,9 @@ export default function SchoolExamsPage() {
 
         {/* Stats footer */}
         <div style={{
-          background:'var(--bg-card)', padding:'1rem 2rem',
-          display:'flex', gap:'2rem', borderTop:'1px solid var(--border)',
+          background:'var(--bg-card)', padding:'0.875rem 1.25rem',
+          display:'flex', gap:'1.25rem', borderTop:'1px solid var(--border)',
+          flexWrap:'wrap',
         }}>
           {[
             { icon: BookOpen, label: 'Examens', value: schoolExams.length, color: brand.accent },

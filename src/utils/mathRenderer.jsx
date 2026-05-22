@@ -1,5 +1,5 @@
 /**
- * mathRenderer.jsx — L'Match | KaTeX rendering utility (v4 — Direct KaTeX)
+ * mathRenderer.jsx — L'Conq | KaTeX rendering utility (v4 — Direct KaTeX)
  *
  * ROOT CAUSE FIX:
  *   react-katex@3.1.0 does NOT support the `settings` prop — it ignores it

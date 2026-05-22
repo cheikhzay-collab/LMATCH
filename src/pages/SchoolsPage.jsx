@@ -475,7 +475,7 @@ export default function SchoolsPage() {
   return (
     <div className="animate-fade-in">
       {/* Header */}
-      <header style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'2rem', flexWrap:'wrap', gap:'1rem' }}>
+      <header style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'1.5rem', flexWrap:'wrap', gap:'0.875rem' }}>
         <div>
           <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'0.4rem' }}>
             <div style={{ width:40, height:40, borderRadius:'12px', background:'linear-gradient(135deg,var(--violet),var(--emerald))', display:'flex', alignItems:'center', justifyContent: 'center' }}>
@@ -521,8 +521,8 @@ export default function SchoolsPage() {
       )}
 
       {/* Search & Stats */}
-      <div style={{ display:'flex', gap:'1rem', alignItems:'center', marginBottom:'2rem', flexWrap:'wrap' }}>
-        <div style={{ position:'relative', flex:'0 0 320px' }}>
+      <div style={{ display:'flex', gap:'0.875rem', alignItems:'center', marginBottom:'1.5rem', flexWrap:'wrap' }}>
+        <div style={{ position:'relative', flex:'1 1 200px', minWidth:'180px' }}>
           <Search size={16} style={{ position:'absolute', left:'0.875rem', top:'50%', transform:'translateY(-50%)', color:'var(--text-subtle)', pointerEvents:'none' }} />
           <input className="input-control" placeholder="Rechercher une école..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft:'2.5rem', width:'100%' }} />
         </div>

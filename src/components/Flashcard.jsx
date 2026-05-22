@@ -3,6 +3,14 @@ import { renderWithMath } from '../utils/mathRenderer';
 import { Lightbulb, CheckCircle2, XCircle, Frown, Meh, Smile, BrainCircuit, Zap, Clock } from 'lucide-react';
 
 export default function Flashcard({ card, onNext }) {
+  // ── Card display settings — read once at mount (component remounts per card via key=id) ──
+  const [cardRevealMode]  = useState(() => localStorage.getItem('card_reveal_mode')    || 'flip');
+  const [cardFlipEnabled] = useState(() => localStorage.getItem('card_flip_animation') !== 'false');
+  const [cardSwipeEnabled]= useState(() => localStorage.getItem('card_swipe_gesture')  !== 'false');
+
+  const isFlipMode    = cardRevealMode === 'flip' && cardFlipEnabled;
+  const isInstantMode = cardRevealMode === 'instant';
+
   const [selectedOption, setSelectedOption] = useState(null);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isShowingBack, setIsShowingBack] = useState(false);
@@ -14,24 +22,24 @@ export default function Flashcard({ card, onNext }) {
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef(0);
 
-  const handleOptionClick = (optionId) => {
-    if (selectedOption) return; // Prevent multiple clicks
+  const revealCard = (optionId) => {
+    if (selectedOption) return;
     setSelectedOption(optionId);
-    setIsFlipped(true);
-    // Switch contents midway through the 3D flip rotation (600ms total)
-    setTimeout(() => {
+    if (cardFlipEnabled && cardRevealMode === 'flip') {
+      // 3D flip — switch content midway (220ms into the 600ms flip)
+      setIsFlipped(true);
+      setTimeout(() => setIsShowingBack(true), 220);
+    } else if (cardRevealMode === 'fade') {
+      // Fade — no rotation, instant content swap with CSS opacity
       setIsShowingBack(true);
-    }, 220);
+    } else {
+      // Instant — no animation at all
+      setIsShowingBack(true);
+    }
   };
 
-  const handleReveal = () => {
-    if (selectedOption) return;
-    setSelectedOption('skipped');
-    setIsFlipped(true);
-    setTimeout(() => {
-      setIsShowingBack(true);
-    }, 220);
-  };
+  const handleOptionClick = (optionId) => revealCard(optionId);
+  const handleReveal      = ()         => revealCard('skipped');
 
   const isCorrect = selectedOption === card.correct_answer;
 
@@ -44,14 +52,16 @@ export default function Flashcard({ card, onNext }) {
     
     setSwipeClass(swipeDir);
     
-    // Call the callback after swipe animation completes
+    // Call the callback after exit animation completes
     setTimeout(() => {
       onNext(card.id, finalQuality);
-    }, 350);
+    }, 300);
   };
 
   // ── Drag Gestures handlers ──
   const handleMouseDown = (e) => {
+    if (!cardSwipeEnabled) return;      // swipe disabled in settings
+    if (isInstantMode) return;          // calm mode: no drag
     if (!isShowingBack) return; // Only allow drag-to-rate on the back/review side
     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('img')) return;
     setIsDragging(true);
@@ -78,6 +88,8 @@ export default function Flashcard({ card, onNext }) {
   };
 
   const handleTouchStart = (e) => {
+    if (!cardSwipeEnabled) return;
+    if (isInstantMode) return;  // calm mode: no drag
     if (!isShowingBack) return;
     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('img')) return;
     setIsDragging(true);
@@ -103,13 +115,48 @@ export default function Flashcard({ card, onNext }) {
     }
   };
 
-  const cardStyle = {
-    transform: isDragging 
-      ? `translateX(${dragX}px) rotate(${dragX * 0.04}deg) ${isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'}`
-      : `translateX(0px) rotate(0deg) ${isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'}`,
-    transition: isDragging ? 'none' : 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease',
-    cursor: isShowingBack ? (isDragging ? 'grabbing' : 'grab') : 'default'
-  };
+  // Whether we are running in 3D flip mode
+  // (isFlipMode already defined at the top)
+
+  const cardStyle = (() => {
+    // Shared base
+    const base = {
+      transformStyle: isFlipMode ? 'preserve-3d' : 'flat',
+      cursor: isShowingBack && cardSwipeEnabled ? (isDragging ? 'grabbing' : 'grab') : 'default',
+    };
+
+    // ── Swipe-exit animation (inline for non-flip modes to bypass CSS !important) ──
+    if (!isFlipMode && swipeClass === 'swipe-right') {
+      return { ...base, transform: 'translateX(48px) scale(0.93)', opacity: 0, transition: 'transform 0.28s ease, opacity 0.22s ease' };
+    }
+    if (!isFlipMode && swipeClass === 'swipe-left') {
+      return { ...base, transform: 'translateX(-48px) scale(0.93)', opacity: 0, transition: 'transform 0.28s ease, opacity 0.22s ease' };
+    }
+
+    if (isFlipMode) {
+      // Standard 3D flip: CSS classes handle is-flipped & swipe-right/left
+      return {
+        ...base,
+        transform: isDragging
+          ? `translateX(${dragX}px) rotate(${dragX * 0.04}deg) ${isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'}`
+          : `translateX(0px) rotate(0deg) ${isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'}`,
+        transition: isDragging
+          ? 'none'
+          : 'transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease',
+      };
+    }
+
+    // Fade / Instant: no rotation at all
+    return {
+      ...base,
+      // Instantané = zero drag transforms, completely still
+      transform: (!isInstantMode && isDragging && cardSwipeEnabled)
+        ? `translateX(${dragX}px) rotate(${dragX * 0.025}deg)`
+        : 'none',
+      transition: 'none',
+      opacity: 1,
+    };
+  })();
 
   return (
     <div 
@@ -123,11 +170,16 @@ export default function Flashcard({ card, onNext }) {
       onTouchEnd={handleTouchEnd}
     >
       <div 
-        className={`flashcard-3d ${card.context ? 'has-context' : ''} ${isFlipped ? 'is-flipped' : ''} ${swipeClass}`}
+        className={`flashcard-3d
+          ${card.context ? 'has-context' : ''}
+          ${isFlipMode && isFlipped ? 'is-flipped' : ''}
+          ${!isFlipMode && isShowingBack ? 'no-flip-revealed' : ''}
+          ${isFlipMode ? swipeClass : ''}
+        `}
         style={cardStyle}
       >
-        {/* Swipe Rating Overlay Indicators */}
-        {isShowingBack && dragX !== 0 && (
+        {/* Swipe Rating Overlay Indicators — not shown in instant mode */}
+        {isShowingBack && dragX !== 0 && !isInstantMode && (
           <div style={{
             position: 'absolute',
             top: '2rem',
@@ -167,67 +219,23 @@ export default function Flashcard({ card, onNext }) {
 
         {/* FRONT SIDE */}
         {!isShowingBack ? (
-          <div className="glass-card" style={{ 
-            padding: 0, 
-            display: 'flex', 
-            flexDirection: card.context ? 'row' : 'column',
-            overflow: 'hidden',
-            minHeight: card.context ? '450px' : 'auto',
-            alignItems: 'stretch'
-          }}>
+          <div className={`glass-card flashcard-card flashcard-main-layout ${card.context ? 'has-context-layout' : 'no-context-layout'}`}>
             {/* Left Context Pane (only if context exists) */}
             {card.context && (
-              <div style={{ 
-                flex: '0 0 45%', 
-                background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)', 
-                borderRight: '1px solid var(--border)',
-                padding: '1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center'
-              }}>
-                <div style={{ 
-                  alignSelf: 'flex-start',
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.5rem', 
-                  marginBottom: '2rem', 
-                  color: 'var(--emerald)', 
-                  fontWeight: 900, 
-                  textTransform: 'uppercase', 
-                  fontSize: '0.7rem', 
-                  letterSpacing: '0.15em',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  padding: '0.4rem 0.8rem',
-                  borderRadius: '2rem'
-                }}>
+              <div className="flashcard-context-pane">
+                <div className="flashcard-context-title">
                   <Lightbulb size={14} />
-                  Données / السياق
+                  Données
                 </div>
                 
-                <div style={{ 
-                  fontSize: '1.35rem', 
-                  lineHeight: '1.8', 
-                  color: 'var(--text-main)', 
-                  width: '100%',
-                  fontWeight: 500,
-                  textShadow: '0 2px 10px rgba(0,0,0,0.2)'
-                }}>
+                <div className="flashcard-context-text">
                   {renderWithMath(card.context)}
                 </div>
               </div>
             )}
 
             {/* Right Pane (Question & Options) */}
-            <div style={{ 
-              flex: '1', 
-              padding: '1.5rem', 
-              display: 'flex', 
-              flexDirection: 'column',
-              justifyContent: 'center'
-            }}>
+            <div className="flashcard-content-pane">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                 <div className="topic-badge" style={{ margin: 0, padding: '0.35rem 0.75rem', fontSize: '0.7rem', background: 'var(--violet-soft)', color: 'var(--violet)', fontWeight: 800 }}>
                   <BrainCircuit size={14} style={{ marginRight: '0.5rem' }} />
@@ -235,14 +243,14 @@ export default function Flashcard({ card, onNext }) {
                 </div>
               </div>
               
-              <div className="question-box" style={{ fontSize: '1.25rem', marginBottom: '1.25rem', border: 'none', padding: 0, background: 'transparent', lineHeight: '1.7', fontWeight: 400 }}>
+              <div className="flashcard-question-box">
                  {renderWithMath(card.question)}
               </div>
 
-              <div className="options-grid" style={{ gap: '0.4rem', marginBottom: '1.25rem' }}>
-                 {card.options.map((opt) => (
+              <div className="options-grid" style={{ marginBottom: '1.25rem' }}>
+                 {card.options.map((opt, optIdx) => (
                    <button 
-                     key={opt.id}
+                     key={`${opt.id}-${optIdx}`}
                      className="option-btn"
                      onClick={() => handleOptionClick(opt.id)}
                    >
@@ -257,23 +265,8 @@ export default function Flashcard({ card, onNext }) {
               </div>
 
               <button 
-                className="btn-outline" 
+                className="flashcard-reveal-btn" 
                 onClick={handleReveal}
-                style={{
-                  width: '100%',
-                  padding: '0.6rem 1rem',
-                  borderRadius: '10px',
-                  borderColor: 'var(--violet)',
-                  color: 'var(--violet)',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.4rem',
-                  justifyContent: 'center',
-                  marginTop: 'auto'
-                }}
               >
                 <Lightbulb size={15} />
                 Révéler la réponse (Je ne sais pas)
@@ -281,69 +274,28 @@ export default function Flashcard({ card, onNext }) {
             </div>
           </div>
         ) : (
-          /* BACK SIDE (Mirrored Y-axis rotation canceled out) */
-          <div className="glass-card" style={{ 
-            padding: 0, 
-            display: 'flex', 
-            flexDirection: card.context ? 'row' : 'column',
-            overflow: 'hidden',
-            minHeight: card.context ? '450px' : 'auto',
-            alignItems: 'stretch',
-            transform: 'rotateY(180deg)'
+          /* BACK SIDE */
+          <div className={`glass-card flashcard-card flashcard-main-layout ${card.context ? 'has-context-layout' : 'no-context-layout'}`} style={{
+            // Counter-rotate only in flip mode; in fade/instant just show normally
+            transform: isFlipMode ? 'rotateY(180deg)' : 'none',
+            animation: cardRevealMode === 'fade' ? 'fadeReveal 0.3s ease forwards' : 'none',
           }}>
             {/* Left Context Pane (Persisted for continuity) */}
             {card.context && (
-              <div style={{ 
-                flex: '0 0 45%', 
-                background: 'linear-gradient(145deg, rgba(255,255,255,0.03) 0%, rgba(255,255,255,0.01) 100%)', 
-                borderRight: '1px solid var(--border)',
-                padding: '1.5rem',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                textAlign: 'center'
-              }}>
-                <div style={{ 
-                  alignSelf: 'flex-start',
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.5rem', 
-                  marginBottom: '2rem', 
-                  color: 'var(--emerald)', 
-                  fontWeight: 900, 
-                  textTransform: 'uppercase', 
-                  fontSize: '0.7rem', 
-                  letterSpacing: '0.15em',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  padding: '0.4rem 0.8rem',
-                  borderRadius: '2rem'
-                }}>
+              <div className="flashcard-context-pane">
+                <div className="flashcard-context-title">
                   <Lightbulb size={14} />
-                  Données / السياق
+                  Données
                 </div>
                 
-                <div style={{ 
-                  fontSize: '1.35rem', 
-                  lineHeight: '1.8', 
-                  color: 'var(--text-main)', 
-                  width: '100%',
-                  fontWeight: 500
-                }}>
+                <div className="flashcard-context-text">
                   {renderWithMath(card.context)}
                 </div>
               </div>
             )}
 
             {/* Right Pane (Evaluation & Explanation) */}
-            <div style={{ 
-              flex: '1', 
-              padding: '1.5rem', 
-              display: 'flex', 
-              flexDirection: 'column',
-              justifyContent: 'center',
-              overflowY: 'auto'
-            }}>
+            <div className="flashcard-content-pane">
               {/* Correctness validation banner */}
               <div style={{ 
                 marginBottom: '1rem',
@@ -393,20 +345,20 @@ export default function Flashcard({ card, onNext }) {
               </div>
 
               {/* Minimal question reference */}
-              <div style={{ fontSize: '0.95rem', color: 'var(--text-muted)', marginBottom: '0.8rem', fontWeight: 500, lineHeight: 1.5 }}>
+              <div className="flashcard-question-ref">
                 {renderWithMath(card.question)}
               </div>
 
               {/* Disabled options list showing correct vs chosen answer */}
-              <div className="options-grid" style={{ gap: '0.35rem', marginBottom: '0.8rem' }}>
-                 {card.options.map((opt) => {
+              <div className="options-grid" style={{ marginBottom: '0.8rem' }}>
+                 {card.options.map((opt, optIdx) => {
                    let btnClass = "option-btn";
                    if (opt.id === card.correct_answer) btnClass += " correct";
                    else if (opt.id === selectedOption) btnClass += " wrong";
 
                    return (
                      <button 
-                       key={opt.id}
+                       key={`${opt.id}-${optIdx}`}
                        className={btnClass}
                        disabled
                      >
@@ -455,18 +407,18 @@ export default function Flashcard({ card, onNext }) {
 
                 <div className="astuce-match-content" key={astuceTab}>
                   {astuceTab === 'rule' ? (
-                    <p style={{ margin: 0, lineHeight: '1.65', color: 'var(--text-main)', fontSize: '0.88rem' }}>
+                    <div style={{ margin: 0, lineHeight: '1.65', color: 'var(--text-main)', fontSize: '0.88rem' }}>
                       {renderWithMath(card.astuce)}
-                    </p>
+                    </div>
                   ) : (
-                    <p style={{ margin: 0, lineHeight: '1.65', color: 'var(--text-main)', fontSize: '0.88rem', opacity: 0.6, fontStyle: 'italic' }}>
+                    <div style={{ margin: 0, lineHeight: '1.65', color: 'var(--text-main)', fontSize: '0.88rem', opacity: 0.6, fontStyle: 'italic' }}>
                       {card.trick ? renderWithMath(card.trick) : 'Astuce du temps — bientôt disponible ✨'}
-                    </p>
+                    </div>
                   )}
                 </div>
               </div>
 
-              {/* SRS Rating Actions (or drag instruction) */}
+              {/* SRS Rating Actions */}
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
                 {selectedOption === 'skipped' || selectedOption !== card.correct_answer ? (
                   <button className="btn" style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem' }} onClick={() => handleEvaluation(0)}>
@@ -474,13 +426,13 @@ export default function Flashcard({ card, onNext }) {
                   </button>
                 ) : (
                   <>
-                    <button className="eval-btn eval-hard" onClick={() => handleEvaluation(3)} style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>
+                    <button className="eval-btn eval-hard" onClick={() => handleEvaluation(3)}>
                       <Frown size={16} /> <span>Dur</span>
                     </button>
-                    <button className="eval-btn eval-medium" onClick={() => handleEvaluation(4)} style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>
+                    <button className="eval-btn eval-medium" onClick={() => handleEvaluation(4)}>
                       <Meh size={16} /> <span>Moyen</span>
                     </button>
-                    <button className="eval-btn eval-easy" onClick={() => handleEvaluation(5)} style={{ flex: 1, padding: '0.6rem', fontSize: '0.85rem' }}>
+                    <button className="eval-btn eval-easy" onClick={() => handleEvaluation(5)}>
                       <Smile size={16} /> <span>Facile</span>
                     </button>
                   </>

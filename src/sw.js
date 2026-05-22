@@ -1,5 +1,5 @@
 /**
- * L'Match — Custom Service Worker
+ * L'Conq — Custom Service Worker
  * Strategy: injectManifest (Vite Plugin PWA)
  * 
  * The precache manifest is injected by vite-plugin-pwa at build time
@@ -46,7 +46,7 @@ registerRoute(
     url.origin === 'https://fonts.googleapis.com' ||
     url.origin === 'https://fonts.gstatic.com',
   new CacheFirst({
-    cacheName: 'lmatch-fonts',
+    cacheName: 'lconq-fonts',
     plugins: [
       new CacheableResponsePlugin({ statuses: [0, 200] }),
       new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 }),
@@ -58,7 +58,7 @@ registerRoute(
 registerRoute(
   ({ request }) => request.destination === 'image',
   new StaleWhileRevalidate({
-    cacheName: 'lmatch-images',
+    cacheName: 'lconq-images',
     plugins: [
       new CacheableResponsePlugin({ statuses: [0, 200] }),
       new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 }),
@@ -71,7 +71,7 @@ registerRoute(
   ({ request }) =>
     request.destination === 'script' || request.destination === 'style',
   new StaleWhileRevalidate({
-    cacheName: 'lmatch-assets',
+    cacheName: 'lconq-assets',
     plugins: [
       new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 60 * 60 * 24 * 7 }),
     ],

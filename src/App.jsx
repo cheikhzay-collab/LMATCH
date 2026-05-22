@@ -18,6 +18,7 @@ import SchoolExamsPage from './pages/SchoolExamsPage';
 import AdminStudentDetail from './pages/AdminStudentDetail';
 import AdminAIImport from './pages/AdminAIImport';
 import AdminEbooks from './pages/AdminEbooks';
+import AdminMarketing from './pages/AdminMarketing';
 
 import OMRScannerPage from './pages/OMRScannerPage';
 
@@ -46,6 +47,7 @@ function AppContent() {
         <Route path="/admin/upload" element={<AdminUpload />} />
         <Route path="/admin/ai-import" element={<AdminAIImport />} />
         <Route path="/admin/ebooks" element={<AdminEbooks />} />
+        <Route path="/admin/marketing" element={<AdminMarketing />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
       </Route>
 

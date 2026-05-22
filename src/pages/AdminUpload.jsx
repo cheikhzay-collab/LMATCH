@@ -160,7 +160,7 @@ Langue : Français (termes mathématiques en LaTeX)`;
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'modele_examen_lmatch.csv');
+    link.setAttribute('download', 'modele_examen_lconq.csv');
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();

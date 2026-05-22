@@ -20,8 +20,8 @@ export default defineConfig({
 
       // ── Manifest ──────────────────────────────────────────────────────────
       manifest: {
-        name: "L'Match — Concours Médecine",
-        short_name: "L'Match",
+        name: "L'Conq — Concours Médecine",
+        short_name: "L'Conq",
         description: "La plateforme SRS gamifiée pour préparer les concours de médecine au Maroc.",
         start_url: '/',
         scope: '/',

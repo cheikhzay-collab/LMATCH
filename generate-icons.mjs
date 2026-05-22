@@ -18,7 +18,7 @@ if (!fs.existsSync(iconsDir)) {
 
 const sizes = [72, 96, 128, 144, 152, 192, 384, 512];
 
-// L'Match brand colors
+// L'Conq brand colors
 const BG_DARK  = '#0D1117';
 const VIOLET   = '#5254F0';
 const VIOLET2  = '#818cf8';
@@ -47,7 +47,7 @@ function drawIcon(size) {
   ctx.fillStyle = grad;
   ctx.fill();
 
-  // Draw the bolt/lightning shape (L'Match logo simplified)
+  // Draw the bolt/lightning shape (L'Conq logo simplified)
   const pad = size * 0.15;
   const w = size - pad * 2;
   const h = size - pad * 2;

@@ -53,7 +53,7 @@ export default function LandingPage() {
         backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border)',
         boxShadow: isLight ? '0 1px 8px rgba(15,23,42,0.08)' : 'none',
-        padding: '0 2rem', height: '64px',
+        padding: '0 1.25rem', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         maxWidth: '100%',
         transition: 'background 0.3s, box-shadow 0.3s',
@@ -66,9 +66,9 @@ export default function LandingPage() {
           }}>
             <BrainCircuit size={18} color="#fff" />
           </div>
-          <span style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.02em' }}>L'Match</span>
+          <span style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.02em' }}>L'Conq</span>
         </div>
-        <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
@@ -82,11 +82,12 @@ export default function LandingPage() {
           >
             {isLight ? <Moon size={16} /> : <Sun size={16} />}
           </button>
-          <Link to="/login" className="btn-ghost" style={{ textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>
+          {/* Hide Connexion on very small screens */}
+          <Link to="/login" className="btn-ghost landing-nav-cta" style={{ textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>
             Connexion
           </Link>
-          <Link to="/login" className="btn" style={{ textDecoration: 'none' }}>
-            Commencer <ArrowRight size={15} />
+          <Link to="/login" className="btn" style={{ textDecoration: 'none', padding: '0.6rem 1rem', fontSize: '0.88rem' }}>
+            Commencer <ArrowRight size={14} />
           </Link>
         </div>
       </header>
@@ -94,7 +95,7 @@ export default function LandingPage() {
       {/* ── Hero ── */}
       <section style={{
         maxWidth: '900px', margin: '0 auto',
-        padding: '7rem 2rem 6rem',
+        padding: 'clamp(3.5rem, 10vw, 7rem) 1.25rem clamp(3rem, 8vw, 6rem)',
         textAlign: 'center',
         position: 'relative',
       }}>
@@ -127,7 +128,7 @@ export default function LandingPage() {
             Médecine, ENSA, ENSAM. Transformez les annales en sessions interactives avec des astuces de résolution rapide et un algorithme SRS qui s'adapte à vous.
           </p>
 
-          <div style={{ display: 'flex', gap: '0.875rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap', padding: '0 0.5rem' }}>
             <Link to="/login" className="btn-emerald" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
               <Zap size={18} /> Démarrer gratuitement
             </Link>
@@ -144,16 +145,16 @@ export default function LandingPage() {
       </section>
 
       {/* ── Features ── */}
-      <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem 2rem 6rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.75rem' }}>
+      <section style={{ maxWidth: '1100px', margin: '0 auto', padding: '2rem 1.25rem 4rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 800, marginBottom: '0.75rem' }}>
             La méthode qui fonctionne
           </h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '1rem' }}>
             Conçu par des étudiants admis, optimisé par l'IA.
           </p>
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
           {features.map(({ icon: Icon, iconColor, bg, title, desc }) => (
             <div key={title} className="glass-panel" style={{
               transition: 'transform 0.25s ease, box-shadow 0.25s ease',
@@ -173,13 +174,13 @@ export default function LandingPage() {
       </section>
 
       {/* ── Pricing ── */}
-      <section style={{ maxWidth: '860px', margin: '0 auto', padding: '2rem 2rem 8rem' }}>
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <h2 style={{ fontSize: '2rem', fontWeight: 800, marginBottom: '0.75rem' }}>Choisissez votre plan</h2>
+      <section style={{ maxWidth: '860px', margin: '0 auto', padding: '2rem 1.25rem 6rem' }}>
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 800, marginBottom: '0.75rem' }}>Choisissez votre plan</h2>
           <p className="text-muted">Commencez gratuitement. Passez Pro quand vous êtes prêt.</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
           {/* Freemium */}
           <div className="glass-panel">
             <h3 style={{ fontWeight: 700, marginBottom: '0.25rem' }}>Freemium</h3>
@@ -217,7 +218,7 @@ export default function LandingPage() {
               background: 'linear-gradient(90deg, var(--violet), var(--emerald))',
             }} />
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-              <h3 style={{ fontWeight: 700 }} className="text-gradient">Premium L'Match</h3>
+              <h3 style={{ fontWeight: 700 }} className="text-gradient">Premium L'Conq</h3>
               <span className="badge badge-pro"><Zap size={9} /> Recommandé</span>
             </div>
             <div style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.25rem' }}>

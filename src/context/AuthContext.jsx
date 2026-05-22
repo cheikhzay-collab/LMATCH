@@ -126,14 +126,36 @@ export function AuthProvider({ children }) {
     localStorage.setItem('progress', JSON.stringify(progress));
   }, [progress]);
 
+  // Mock Exam History state: [ { id, date, examId, examName, school, score, maxScore, pct, correctCount, wrongCount, emptyCount, mode } ]
+  const [mockExamHistory, setMockExamHistory] = useState(() => {
+    const saved = localStorage.getItem('mockExamHistory');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('mockExamHistory', JSON.stringify(mockExamHistory));
+  }, [mockExamHistory]);
+
+  const saveMockExamResult = (result) => {
+    setMockExamHistory(prev => [
+      {
+        id: Math.random().toString(36).substr(2, 9),
+        date: new Date().toISOString(),
+        ...result
+      },
+      ...prev
+    ]);
+  };
+
+
   const [users, setUsers] = useState([
     { id: '1', name: 'Youssef Alaoui', email: 'youssef@massar.ma', tier: 'freemium', joined: '2026-05-10', xp: 450 },
-    { id: '2', name: 'Sara Bennani', email: 'premium@lmatch.ma', tier: 'premium', joined: '2026-05-01', xp: 8450 },
-    { id: '3', name: 'Aymane Idrissi', email: 'free@lmatch.ma', tier: 'freemium', joined: '2026-05-12', xp: 120 },
+    { id: '2', name: 'Sara Bennani', email: 'premium@lconq.ma', tier: 'premium', joined: '2026-05-01', xp: 8450 },
+    { id: '3', name: 'Aymane Idrissi', email: 'free@lconq.ma', tier: 'freemium', joined: '2026-05-12', xp: 120 },
   ]);
 
   const login = (email, password) => {
-    if (email === 'admin@lmatch.ma') {
+    if (email === 'admin@lconq.ma') {
       setUser({ name: 'Directeur', email: email, role: 'admin' });
     } else {
       const existingUser = users.find(u => u.email === email);
@@ -209,19 +231,106 @@ export function AuthProvider({ children }) {
 
       return {
         ...prev,
-        [questionId]: {
-          interval,
-          repetitions,
-          easeFactor,
-          nextReviewDate: nextReviewDate.toISOString()
-        }
+        [questionId]: { interval, repetitions, easeFactor, nextReviewDate: nextReviewDate.toISOString() }
       };
     });
 
-    // Reward XP for good answers (Moved OUTSIDE setProgress to avoid React StrictMode issues)
-    if (user && quality >= 3) {
-      setUser(u => ({ ...u, xp: u.xp + (quality * 10) }));
+    // ── Track daily activity for stats & streak ──────────────────────────────
+    const todayStr = new Date().toISOString().split('T')[0];
+    // reviewDates: sorted list of unique days with at least 1 review
+    const storedDates = JSON.parse(localStorage.getItem('reviewDates') || '[]');
+    if (!storedDates.includes(todayStr)) {
+      const updated = [...storedDates, todayStr].slice(-90); // keep last 90 days
+      localStorage.setItem('reviewDates', JSON.stringify(updated));
     }
+    // dailyActivity: { 'YYYY-MM-DD': count }
+    const dailyActivity = JSON.parse(localStorage.getItem('dailyActivity') || '{}');
+    dailyActivity[todayStr] = (dailyActivity[todayStr] || 0) + 1;
+    localStorage.setItem('dailyActivity', JSON.stringify(dailyActivity));
+
+    // Reward XP for good answers
+    if (user && quality >= 3) {
+      setUser(u => ({ ...u, xp: (u.xp || 0) + (quality * 10) }));
+    }
+  };
+
+  // ── Student Statistics (computed from real progress data) ─────────────────
+  const getStudentStats = () => {
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const activeExams = exams.filter(e => e.isActive !== false);
+    const allQuestions = activeExams.flatMap(e =>
+      (e.questions || []).map(q => ({ ...q, examName: e.name }))
+    );
+    const totalCards = allQuestions.length;
+
+    let masteredCards = 0;
+    let learningCards = 0;
+    let dueToday = 0;
+    const topicMap = {}; // topic -> { totalEF, count, mastered, total }
+
+    allQuestions.forEach(q => {
+      const p = progress[q.id];
+      const topic = q.topic || 'Général';
+      if (!topicMap[topic]) topicMap[topic] = { totalEF: 0, count: 0, mastered: 0, total: 0 };
+      topicMap[topic].total++;
+      if (!p) return;
+      const { repetitions, easeFactor, nextReviewDate } = p;
+      if (repetitions >= 3) { masteredCards++; topicMap[topic].mastered++; }
+      else if (repetitions > 0) learningCards++;
+      topicMap[topic].totalEF += easeFactor;
+      topicMap[topic].count++;
+      if (new Date(nextReviewDate) <= now) dueToday++;
+    });
+
+    // Topics sorted by avg ease factor (weakest first)
+    const topicsArr = Object.entries(topicMap)
+      .filter(([, s]) => s.count > 0)
+      .map(([name, s]) => ({
+        name,
+        avgEF: s.totalEF / s.count,
+        masteryPct: Math.round((s.mastered / s.total) * 100),
+        mastered: s.mastered,
+        total: s.total,
+      }))
+      .sort((a, b) => a.avgEF - b.avgEF);
+
+    const weakTopics  = topicsArr.filter(t => t.avgEF < 2.2).slice(0, 4);
+    const strongTopics = [...topicsArr].sort((a, b) => b.avgEF - a.avgEF).filter(t => t.avgEF >= 2.4).slice(0, 3);
+
+    // Weekly activity from dailyActivity store
+    const dailyActivity = JSON.parse(localStorage.getItem('dailyActivity') || '{}');
+    const weeklyActivity = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(now);
+      d.setDate(d.getDate() - (6 - i));
+      const key = d.toISOString().split('T')[0];
+      const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+      return { name: dayNames[d.getDay()], count: dailyActivity[key] || 0, isToday: key === todayStr };
+    });
+
+    // Streak: consecutive days with at least 1 review ending today or yesterday
+    const reviewDates = JSON.parse(localStorage.getItem('reviewDates') || '[]');
+    let streak = 0;
+    let checkDate = new Date(now);
+    for (let i = 0; i < 365; i++) {
+      const ds = checkDate.toISOString().split('T')[0];
+      if (reviewDates.includes(ds)) { streak++; checkDate.setDate(checkDate.getDate() - 1); }
+      else break;
+    }
+
+    const globalMasteryPct = totalCards > 0 ? Math.round((masteredCards / totalCards) * 100) : 0;
+
+    // Dynamic live rank based on XP
+    const totalStudents = user?.totalStudents || 1200;
+    const userXp = user?.xp || 0;
+    const rank = Math.max(1, Math.min(totalStudents, Math.round(totalStudents * Math.pow(0.9992, userXp))));
+
+    return {
+      totalCards, masteredCards, learningCards,
+      newCards: totalCards - masteredCards - learningCards,
+      dueToday, globalMasteryPct, weakTopics, strongTopics,
+      weeklyActivity, streak, rank, totalStudents,
+    };
   };
 
   const [schools, setSchools] = useState(() => {
@@ -274,11 +383,13 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ 
-      user, users, login, logout, exams, addExam, updateUserTier, 
+      user, users, login, logout, exams, addExam, updateUserTier,
       toggleExamStatus, updateExamDetails,
-      progress, updateCardProgress, theme, toggleTheme,
+      progress, updateCardProgress, getStudentStats,
+      theme, toggleTheme,
       schools, addSchool, removeSchool, renameSchool,
-      schoolBranding, updateSchoolBranding
+      schoolBranding, updateSchoolBranding,
+      mockExamHistory, saveMockExamResult
     }}>
       {children}
     </AuthContext.Provider>
