@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { scanAnswerSheet, readQRCodeFromImage } from '../utils/OMRScanner';
 import DiagnosticReport from './DiagnosticReport';
 import { renderWithMath } from '../utils/mathRenderer';
+import SmartCameraScanner from './SmartCameraScanner';
 
 const CHOICES = ['A', 'B', 'C', 'D', 'E'];
 
@@ -125,6 +126,7 @@ export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
   const rules = brand.scoring || { correct: 1, wrong: -0.25, empty: 0 };
 
   const [phase,        setPhase]        = useState('upload');
+  const [scanMethod,   setScanMethod]   = useState('camera');
   const [imagePreview, setImagePreview] = useState(null);
   const [scanned,      setScanned]      = useState([]);
   const [corrected,    setCorrected]    = useState([]);
@@ -223,6 +225,7 @@ export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
   const reset = () => {
     setPhase('upload'); setImagePreview(null); setScanned([]);
     setCorrected([]); setScore(null); setScanStep(0); setScanError(null); setResultsTab('list');
+    setScanMethod('camera');
   };
 
   const ambiguousCount = scanned.filter(r => r.confidence < 0.3).length;
@@ -267,23 +270,44 @@ export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
                   ⚠ {scanError}
                 </div>
               )}
-              <div
-                onDrop={handleDrop} onDragOver={e => e.preventDefault()}
-                onClick={() => fileRef.current?.click()}
-                style={{ border:'2px dashed var(--border)', borderRadius:'1.25rem', padding:'2.5rem 2rem', textAlign:'center', cursor:'pointer', transition:'all 0.2s', background:'var(--bg-glass)' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor='var(--violet)'; e.currentTarget.style.background='var(--violet-soft)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)';  e.currentTarget.style.background='var(--bg-glass)'; }}
-              >
-                <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={e => handleFile(e.target.files[0])} />
-                <div style={{ width:60, height:60, borderRadius:'50%', background:'var(--violet-soft)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.25rem' }}>
-                  <Upload size={26} color="var(--violet)" />
-                </div>
-                <h4 style={{ fontWeight:800, marginBottom:'0.4rem' }}>Déposez la photo ici</h4>
-                <p style={{ color:'var(--text-muted)', fontSize:'0.85rem', lineHeight:1.6 }}>
-                  Ou appuyez pour choisir un fichier / prendre une photo.<br/>
-                  <span style={{ color:'var(--violet)', fontWeight:600 }}>PNG, JPG, WebP</span> — cadrez toute la feuille.
-                </p>
-              </div>
+              
+              {scanMethod === 'camera' ? (
+                <SmartCameraScanner
+                  onCapture={handleFile}
+                  onCancel={() => setScanMethod('file')}
+                  activeExam={activeExam}
+                />
+              ) : (
+                <>
+                  <div
+                    onDrop={handleDrop} onDragOver={e => e.preventDefault()}
+                    onClick={() => fileRef.current?.click()}
+                    style={{ border:'2px dashed var(--border)', borderRadius:'1.25rem', padding:'2.5rem 2rem', textAlign:'center', cursor:'pointer', transition:'all 0.2s', background:'var(--bg-glass)' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor='var(--violet)'; e.currentTarget.style.background='var(--violet-soft)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)';  e.currentTarget.style.background='var(--bg-glass)'; }}
+                  >
+                    <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={e => handleFile(e.target.files[0])} />
+                    <div style={{ width:60, height:60, borderRadius:'50%', background:'var(--violet-soft)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.25rem' }}>
+                      <Upload size={26} color="var(--violet)" />
+                    </div>
+                    <h4 style={{ fontWeight:800, marginBottom:'0.4rem' }}>Déposez la photo ici</h4>
+                    <p style={{ color:'var(--text-muted)', fontSize:'0.85rem', lineHeight:1.6 }}>
+                      Ou appuyez pour choisir un fichier / prendre une photo.<br/>
+                      <span style={{ color:'var(--violet)', fontWeight:600 }}>PNG, JPG, WebP</span> — cadrez toute la feuille.
+                    </p>
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
+                    <button 
+                      className="btn" 
+                      onClick={() => setScanMethod('camera')}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
+                    >
+                      <Camera size={16} /> Activer la caméra intelligente
+                    </button>
+                  </div>
+                </>
+              )}
 
               {/* Tips */}
               <div style={{ marginTop:'1.25rem', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.625rem' }}>

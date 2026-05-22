@@ -8,6 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { scanAnswerSheet, readQRCodeFromImage } from '../utils/OMRScanner';
 import DiagnosticReport from '../components/DiagnosticReport';
 import { renderWithMath } from '../utils/mathRenderer';
+import SmartCameraScanner from '../components/SmartCameraScanner';
 
 const CHOICES = ['A', 'B', 'C', 'D', 'E'];
 
@@ -128,6 +129,7 @@ export default function OMRScannerPage() {
 
   const [activeExam,   setActiveExam]   = useState(null);
   const [phase,        setPhase]        = useState('upload');
+  const [scanMethod,   setScanMethod]   = useState('camera');
   const [imagePreview, setImagePreview] = useState(null);
   const [scanned,      setScanned]      = useState([]);
   const [corrected,    setCorrected]    = useState([]);
@@ -227,6 +229,7 @@ export default function OMRScannerPage() {
   const reset = () => {
     setPhase('upload'); setActiveExam(null); setImagePreview(null); setScanned([]);
     setCorrected([]); setScore(null); setScanStep(0); setScanError(null); setResultsTab('list');
+    setScanMethod('camera');
   };
 
   const ambiguousCount = scanned.filter(r => r.confidence < 0.3).length;
@@ -276,23 +279,43 @@ export default function OMRScannerPage() {
                 </div>
               )}
               
-              <div
-                onDrop={handleDrop} onDragOver={e => e.preventDefault()}
-                onClick={() => fileRef.current?.click()}
-                style={{ border:'2px dashed var(--border)', borderRadius:'1.5rem', padding:'4rem 2rem', textAlign:'center', cursor:'pointer', transition:'all 0.25s', background:'var(--bg-glass)' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor='var(--violet)'; e.currentTarget.style.background='var(--violet-soft)'; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)';  e.currentTarget.style.background='var(--bg-glass)'; }}
-              >
-                <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={e => handleFile(e.target.files[0])} />
-                <div style={{ width:70, height:70, borderRadius:'50%', background:'var(--violet-soft)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.5rem' }}>
-                  <Upload size={30} color="var(--violet)" />
-                </div>
-                <h3 style={{ fontWeight:800, marginBottom:'0.5rem', fontSize: '1.2rem' }}>Déposez votre feuille de réponses ici</h3>
-                <p style={{ color:'var(--text-muted)', fontSize:'0.9rem', lineHeight:1.6, maxWidth: 460, margin: '0 auto' }}>
-                  Ou cliquez pour sélectionner un fichier depuis votre appareil.<br/>
-                  <span style={{ color:'var(--violet)', fontWeight:700 }}>Détection automatique de l'examen via QR Code</span>
-                </p>
-              </div>
+              {scanMethod === 'camera' ? (
+                <SmartCameraScanner
+                  onCapture={handleFile}
+                  onCancel={() => setScanMethod('file')}
+                  activeExam={activeExam}
+                />
+              ) : (
+                <>
+                  <div
+                    onDrop={handleDrop} onDragOver={e => e.preventDefault()}
+                    onClick={() => fileRef.current?.click()}
+                    style={{ border:'2px dashed var(--border)', borderRadius:'1.5rem', padding:'4rem 2rem', textAlign:'center', cursor:'pointer', transition:'all 0.25s', background:'var(--bg-glass)' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor='var(--violet)'; e.currentTarget.style.background='var(--violet-soft)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)';  e.currentTarget.style.background='var(--bg-glass)'; }}
+                  >
+                    <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={e => handleFile(e.target.files[0])} />
+                    <div style={{ width:70, height:70, borderRadius:'50%', background:'var(--violet-soft)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.5rem' }}>
+                      <Upload size={30} color="var(--violet)" />
+                    </div>
+                    <h3 style={{ fontWeight:800, marginBottom:'0.5rem', fontSize: '1.2rem' }}>Déposez votre feuille de réponses ici</h3>
+                    <p style={{ color:'var(--text-muted)', fontSize:'0.9rem', lineHeight:1.6, maxWidth: 460, margin: '0 auto' }}>
+                      Ou cliquez pour sélectionner un fichier depuis votre appareil.<br/>
+                      <span style={{ color:'var(--violet)', fontWeight:700 }}>Détection automatique de l'examen via QR Code</span>
+                    </p>
+                  </div>
+                  
+                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
+                    <button 
+                      className="btn" 
+                      onClick={() => setScanMethod('camera')}
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
+                    >
+                      <Camera size={16} /> Activer la caméra intelligente
+                    </button>
+                  </div>
+                </>
+              )}
 
               {/* Pro Tips */}
               <div style={{ marginTop:'2.5rem' }}>
