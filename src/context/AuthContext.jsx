@@ -57,8 +57,46 @@ const loadAndMigrateExams = () => {
   try {
     const raw = localStorage.getItem('exams');
     const version = parseInt(localStorage.getItem('examsSchemaVersion') || '0', 10);
-    if (!raw) return { exams: [], needsSave: false };
+
+    const defaultSeed = [
+      {
+        id: "QVVOBFE7",
+        name: "Concours Médecine / Pharmacie 2024",
+        school: "Médecine / Pharmacie",
+        year: "2024",
+        tier: "freemium",
+        isActive: true,
+        dateAdded: new Date().toISOString(),
+        questions: Array.from({ length: 20 }, (_, i) => {
+          const answers = ["C", "A", "B", "D", "C", "A", "E", "B", "C", "D", "B", "B", "A", "C", "D", "E", "B", "A", "D", "C"];
+          const topics = ["Analyse", "Géométrie", "Algèbre", "Physique", "Chimie"];
+          const optTexts = ["Option A", "Option B", "Option C", "Option D", "Option E"];
+          return {
+            id: `qvvobfe7-q-${i + 1}`,
+            question: `Question ${i + 1} de concours Médecine/Pharmacie`,
+            topic: topics[i % topics.length],
+            correct_answer: answers[i],
+            options: optTexts.map((txt, oIdx) => ({
+              id: ["A", "B", "C", "D", "E"][oIdx],
+              text: txt
+            }))
+          };
+        })
+      }
+    ];
+
+    if (!raw) {
+      return { exams: defaultSeed, needsSave: true };
+    }
     const parsed = JSON.parse(raw);
+    
+    // Ensure QVVOBFE7 is always present in the loaded list for testing
+    const hasQVV = parsed.some(e => e.id === "QVVOBFE7");
+    if (!hasQVV) {
+      parsed.push(defaultSeed[0]);
+      return { exams: parsed, needsSave: true };
+    }
+
     if (version >= SCHEMA_VERSION) {
       return { exams: Array.isArray(parsed) ? parsed : [], needsSave: false };
     }

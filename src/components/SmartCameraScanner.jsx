@@ -9,6 +9,8 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
   const [torchOn, setTorchOn] = useState(false);
   const [scannerStatus, setScannerStatus] = useState('initializing'); // 'initializing' | 'scanning' | 'detected' | 'capturing'
   const [stabilityProgress, setStabilityProgress] = useState(0); // 0 to 100
+  const [tilt, setTilt] = useState({ beta: 0, gamma: 0, supported: false });
+  const [lowLight, setLowLight] = useState(false);
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -132,6 +134,22 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
         
         // Extract pixel data for jsQR
         const imgData = ctx.getImageData(0, 0, analysisWidth, analysisHeight);
+
+        // Option 5: Sample average frame brightness
+        let brightnessSum = 0;
+        const step = 8; // sample every 8th pixel
+        let count = 0;
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4 * step) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          brightnessSum += (0.299 * r + 0.587 * g + 0.114 * b);
+          count++;
+        }
+        const avgBrightness = count > 0 ? brightnessSum / count : 128;
+        setLowLight(avgBrightness < 75);
+
         const code = jsQR(imgData.data, analysisWidth, analysisHeight, {
           inversionAttempts: "dontInvert",
         });
@@ -243,6 +261,15 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
   useEffect(() => {
     initCamera();
 
+    // Option 5: Device Orientation listener
+    const handleOrientation = (e) => {
+      if (e.beta !== null && e.gamma !== null) {
+        setTilt({ beta: e.beta, gamma: e.gamma, supported: true });
+      }
+    };
+
+    window.addEventListener('deviceorientation', handleOrientation);
+
     return () => {
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
@@ -250,6 +277,7 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(t => t.stop());
       }
+      window.removeEventListener('deviceorientation', handleOrientation);
     };
   }, []);
 
@@ -332,14 +360,21 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
               const shadowColor = scannerStatus === 'detected' ? 'rgba(16, 163, 74, 0.6)' : 'rgba(99, 102, 241, 0.4)';
               return (
                 <g style={{ filter: `drop-shadow(0 0 6px ${shadowColor})` }}>
-                  {/* Top Left */}
-                  <path d="M 30,20 L 10,20 L 10,40" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
-                  {/* Top Right */}
-                  <path d="M calc(100% - 30),20 L calc(100% - 10),20 L calc(100% - 10),40" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
-                  {/* Bottom Left */}
-                  <path d="M 30,calc(100% - 20) L 10,calc(100% - 20) L 10,calc(100% - 40)" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
-                  {/* Bottom Right */}
-                  <path d="M calc(100% - 30),calc(100% - 20) L calc(100% - 10),calc(100% - 20) L calc(100% - 10),calc(100% - 40)" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
+                  {/* Top Left Corner Anchor Target */}
+                  <path d="M 40,20 L 20,20 L 20,40" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
+                  <path d="M 23,23 L 37,23 L 37,37 L 23,37 Z" fill="none" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3 2" />
+
+                  {/* Top Right Corner Anchor Target */}
+                  <path d="M calc(100% - 40),20 L calc(100% - 20),20 L calc(100% - 20),40" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
+                  <path d="M calc(100% - 37),23 L calc(100% - 23),23 L calc(100% - 23),37 L calc(100% - 37),37 Z" fill="none" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3 2" />
+
+                  {/* Bottom Left Corner Anchor Target */}
+                  <path d="M 40,calc(100% - 20) L 20,calc(100% - 20) L 20,calc(100% - 40)" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
+                  <path d="M 23,calc(100% - 37) L 37,calc(100% - 37) L 37,calc(100% - 23) L 23,calc(100% - 23) Z" fill="none" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3 2" />
+
+                  {/* Bottom Right Corner Anchor Target */}
+                  <path d="M calc(100% - 40),calc(100% - 20) L calc(100% - 20),calc(100% - 20) L calc(100% - 20),calc(100% - 40)" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
+                  <path d="M calc(100% - 37),calc(100% - 37) L calc(100% - 23),calc(100% - 37) L calc(100% - 23),calc(100% - 23) L calc(100% - 37),calc(100% - 23) Z" fill="none" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3 2" />
                 </g>
               );
             })()}
@@ -449,14 +484,112 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
             border: `2px dashed ${scannerStatus === 'detected' ? 'var(--emerald)' : 'rgba(255,255,255,0.25)'}`,
             borderRadius: '0.75rem',
             display: 'flex',
+            flexDirection: 'column',
             alignItems: 'center',
             justifyContent: 'center',
             transition: 'border-color 0.25s'
           }}>
-            {/* Center crosshair */}
-            <div style={{ width: 14, height: 2, background: 'rgba(255,255,255,0.3)' }} />
-            <div style={{ width: 2, height: 14, background: 'rgba(255,255,255,0.3)', position: 'absolute' }} />
+            {tilt.supported ? (
+              // Beautiful dynamic bubble level (Option 5)
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{
+                  position: 'relative',
+                  width: 70,
+                  height: 70,
+                  borderRadius: '50%',
+                  border: '2px solid rgba(255, 255, 255, 0.3)',
+                  background: 'rgba(0,0,0,0.3)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                }}>
+                  {/* Fixed Target Ring */}
+                  <div style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: '50%',
+                    border: '1px dashed rgba(255, 255, 255, 0.5)',
+                    position: 'absolute'
+                  }} />
+                  {/* Center Dot */}
+                  <div style={{
+                    width: 4,
+                    height: 4,
+                    borderRadius: '50%',
+                    background: 'rgba(255, 255, 255, 0.5)',
+                    position: 'absolute'
+                  }} />
+                  {/* Floating Bubble */}
+                  <div style={{
+                    width: 16,
+                    height: 16,
+                    borderRadius: '50%',
+                    position: 'absolute',
+                    transform: `translate(${Math.max(-25, Math.min(25, tilt.gamma * 2))}px, ${Math.max(-25, Math.min(25, tilt.beta * 2))}px)`,
+                    background: Math.sqrt(tilt.beta * tilt.beta + tilt.gamma * tilt.gamma) < 6 
+                      ? 'linear-gradient(135deg, #10b981, #059669)' // Glowing emerald
+                      : 'linear-gradient(135deg, #f59e0b, #d97706)', // Warning amber
+                    boxShadow: Math.sqrt(tilt.beta * tilt.beta + tilt.gamma * tilt.gamma) < 6 
+                      ? '0 0 10px #10b981' 
+                      : '0 0 8px #f59e0b',
+                    transition: 'background 0.25s, box-shadow 0.25s'
+                  }} />
+                </div>
+                <span style={{ 
+                  color: Math.sqrt(tilt.beta * tilt.beta + tilt.gamma * tilt.gamma) < 6 ? '#10b981' : '#f59e0b',
+                  fontSize: '0.72rem',
+                  fontWeight: 800,
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em',
+                  background: 'rgba(0,0,0,0.5)',
+                  padding: '0.2rem 0.6rem',
+                  borderRadius: '1rem',
+                  backdropFilter: 'blur(4px)'
+                }}>
+                  {Math.sqrt(tilt.beta * tilt.beta + tilt.gamma * tilt.gamma) < 6 ? 'Alignement correct' : 'Aplatissez le téléphone'}
+                </span>
+              </div>
+            ) : (
+              // Fallback center crosshair if tilt is not supported
+              <>
+                <div style={{ width: 14, height: 2, background: 'rgba(255,255,255,0.3)' }} />
+                <div style={{ width: 2, height: 14, background: 'rgba(255,255,255,0.3)', position: 'absolute' }} />
+              </>
+            )}
           </div>
+
+          {/* Low Light Warning Badge (Option 5) */}
+          {lowLight && (
+            <div style={{
+              position: 'absolute',
+              bottom: scannerStatus === 'detected' ? '2.5rem' : '1.25rem',
+              left: '1.5rem',
+              right: '1.5rem',
+              textAlign: 'center',
+              zIndex: 10,
+              pointerEvents: 'none'
+            }}>
+              <div style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.5rem 1rem',
+                borderRadius: '2rem',
+                backdropFilter: 'blur(10px)',
+                background: 'rgba(239, 68, 68, 0.85)',
+                border: '1px solid rgba(239, 68, 68, 0.4)',
+                color: '#fff',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                animation: 'pulse 1.5s infinite'
+              }}>
+                <AlertCircle size={14} />
+                💡 Éclairage faible — activez le flash ou déplacez-vous
+              </div>
+            </div>
+          )}
 
           {/* Bottom Countdown Progress Bar */}
           {scannerStatus === 'detected' && (
@@ -502,23 +635,102 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
         </div>
       )}
 
-      {/* Control Buttons */}
-      <div style={{ display: 'flex', gap: '0.75rem', width: '100%' }}>
+      {/* Premium Camera Shutter Control Bar */}
+      <div style={{ 
+        display: 'flex', 
+        alignItems: 'center', 
+        justifyContent: 'space-between', 
+        width: '100%',
+        padding: '0.5rem 1rem',
+        background: 'var(--bg-glass)',
+        borderRadius: '1.25rem',
+        border: '1px solid var(--border)'
+      }}>
+        {/* Left: Torch Toggle */}
+        <div style={{ width: 50, display: 'flex', justifyContent: 'center' }}>
+          {torchSupported ? (
+            <button
+              onClick={toggleTorch}
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: '50%',
+                border: '1px solid var(--border)',
+                background: torchOn ? 'var(--violet)' : 'rgba(255, 255, 255, 0.05)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: '#fff',
+                transition: 'all 0.2s',
+                boxShadow: torchOn ? '0 4px 14px var(--violet-glow)' : 'none'
+              }}
+              title="Activer le flash"
+            >
+              {torchOn ? <Zap size={16} /> : <ZapOff size={16} />}
+            </button>
+          ) : (
+            <div style={{ width: 40 }} />
+          )}
+        </div>
+
+        {/* Center: Large Shutter Capture Button */}
         <button 
-          className="btn-outline" 
-          onClick={onCancel}
-          style={{ flex: 1, fontSize: '0.82rem', padding: '0.65rem' }}
-        >
-          <Upload size={14} style={{ marginRight: '0.4rem' }} /> Importer un fichier
-        </button>
-        <button 
-          className="btn-emerald" 
           onClick={captureHighRes}
           disabled={scannerStatus === 'initializing' || scannerStatus === 'capturing'}
-          style={{ flex: 1, fontSize: '0.82rem', padding: '0.65rem' }}
+          style={{ 
+            width: 68, 
+            height: 68, 
+            borderRadius: '50%', 
+            border: '4px solid rgba(255, 255, 255, 0.3)', 
+            background: 'transparent',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            padding: 0,
+            transition: 'all 0.2s',
+            outline: 'none'
+          }}
+          onMouseDown={e => e.currentTarget.style.transform = 'scale(0.92)'}
+          onMouseUp={e => e.currentTarget.style.transform = 'scale(1)'}
+          onMouseEnter={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.8)'}
+          onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)'}
         >
-          <Camera size={14} style={{ marginRight: '0.4rem' }} /> Capturer manuellement
+          <div style={{
+            width: 50,
+            height: 50,
+            borderRadius: '50%',
+            background: scannerStatus === 'capturing' ? '#ef4444' : '#fff',
+            boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
+            transition: 'background-color 0.2s'
+          }} />
         </button>
+
+        {/* Right: Switch to Gallery Upload Button */}
+        <div style={{ width: 50, display: 'flex', justifyContent: 'center' }}>
+          <button 
+            onClick={onCancel}
+            style={{ 
+              width: 40, 
+              height: 40, 
+              borderRadius: '50%', 
+              border: '1px solid var(--border)',
+              background: 'rgba(255, 255, 255, 0.05)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'var(--text-muted)',
+              transition: 'all 0.2s'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; }}
+            title="Importer une image"
+          >
+            <Upload size={16} />
+          </button>
+        </div>
       </div>
 
       {/* Inject local stylesheet styles dynamically */}

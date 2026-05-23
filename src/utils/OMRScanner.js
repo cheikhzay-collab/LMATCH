@@ -69,23 +69,193 @@ function getBubblesMM(qIdx, total) {
   }));
 }
 
-/** Sample mean darkness (0–255) in a circular region */
-function sampleCircle(data, cx, cy, r, W, H) {
-  let sum = 0, n = 0;
+// Gaussian elimination solver for Ax = B (8x8 system for homography)
+function gaussianElimination(A, B) {
+  const n = B.length;
+  for (let i = 0; i < n; i++) {
+    let maxEl = Math.abs(A[i][i]);
+    let maxRow = i;
+    for (let k = i + 1; k < n; k++) {
+      if (Math.abs(A[k][i]) > maxEl) {
+        maxEl = Math.abs(A[k][i]);
+        maxRow = k;
+      }
+    }
+    for (let k = i; k < n; k++) {
+      const tmp = A[maxRow][k];
+      A[maxRow][k] = A[i][k];
+      A[i][k] = tmp;
+    }
+    const tmp = B[maxRow];
+    B[maxRow] = B[i];
+    B[i] = tmp;
+
+    if (Math.abs(A[i][i]) < 1e-10) return null; // Singular matrix
+
+    for (let k = i + 1; k < n; k++) {
+      const c = -A[k][i] / A[i][i];
+      for (let j = i; j < n; j++) {
+        if (i === j) {
+          A[k][j] = 0;
+        } else {
+          A[k][j] += c * A[i][j];
+        }
+      }
+      B[k] += c * B[i];
+    }
+  }
+
+  const x = new Array(n).fill(0);
+  for (let i = n - 1; i >= 0; i--) {
+    x[i] = B[i] / A[i][i];
+    for (let k = i - 1; k >= 0; k--) {
+      B[k] -= A[k][i] * x[i];
+    }
+  }
+  return x;
+}
+
+/** Solve for homography projection mapping 4 points from src to dst */
+export function solvePerspective(src, dst) {
+  const A = [];
+  const B = [];
+  for (let i = 0; i < 4; i++) {
+    const { x, y } = src[i];
+    const { x: u, y: v } = dst[i];
+    A.push([x, y, 1, 0, 0, 0, -x * u, -y * u]);
+    B.push(u);
+    A.push([0, 0, 0, x, y, 1, -x * v, -y * v]);
+    B.push(v);
+  }
+  
+  const coeffs = gaussianElimination(A, B);
+  if (!coeffs) return null;
+  
+  return function(x, y) {
+    const [a, b, c, d, e, f, g, h] = coeffs;
+    const den = g * x + h * y + 1;
+    return {
+      x: (a * x + b * y + c) / den,
+      y: (d * x + e * y + f) / den
+    };
+  };
+}
+
+/** Search locally around a projected coordinate for the centroid of a crop marker using connected components */
+function findFineMarker(data, coarsePx, searchRadius, W, H) {
+  const cx = Math.round(coarsePx.x);
+  const cy = Math.round(coarsePx.y);
+
+  // 1. Find the black pixel closest to (cx, cy) within searchRadius
+  let seedX = -1;
+  let seedY = -1;
+  let minBoxDist = Infinity;
+
+  const r = searchRadius;
+  const xStart = Math.max(0, cx - r);
+  const xEnd = Math.min(W - 1, cx + r);
+  const yStart = Math.max(0, cy - r);
+  const yEnd = Math.min(H - 1, cy + r);
+
+  for (let y = yStart; y <= yEnd; y++) {
+    for (let x = xStart; x <= xEnd; x++) {
+      const idx = (y * W + x) * 4;
+      if (data[idx] < 128) { // Black pixel in binarized image
+        const dist = Math.abs(x - cx) + Math.abs(y - cy);
+        if (dist < minBoxDist) {
+          minBoxDist = dist;
+          seedX = x;
+          seedY = y;
+        }
+      }
+    }
+  }
+
+  // If no seed black pixel is found, return coarsePx
+  if (seedX === -1) {
+    return coarsePx;
+  }
+
+  // 2. Perform BFS to collect the connected component of black pixels representing the marker
+  const queue = [{ x: seedX, y: seedY }];
+  const visited = new Uint8Array(W * H);
+  visited[seedY * W + seedX] = 1;
+
+  let sumX = 0;
+  let sumY = 0;
+  let count = 0;
+
+  let head = 0;
+  while (head < queue.length) {
+    const { x, y } = queue[head++];
+    sumX += x;
+    sumY += y;
+    count++;
+
+    // Prevent runaway flood filling on extremely large structures (e.g. boundary shadows)
+    if (count > 800) break; 
+
+    // Check 4-connected neighbors
+    const neighbors = [
+      { x: x + 1, y },
+      { x: x - 1, y },
+      { x, y: y + 1 },
+      { x, y: y - 1 }
+    ];
+
+    for (const n of neighbors) {
+      if (n.x >= xStart && n.x <= xEnd && n.y >= yStart && n.y <= yEnd) {
+        const nIdx = n.y * W + n.x;
+        if (!visited[nIdx]) {
+          visited[nIdx] = 1;
+          const pixelIdx = nIdx * 4;
+          if (data[pixelIdx] < 128) {
+            queue.push({ x: n.x, y: n.y });
+          }
+        }
+      }
+    }
+  }
+
+  if (count > 0) {
+    return { x: sumX / count, y: sumY / count };
+  }
+  return coarsePx;
+}
+
+/** Sample inner center core and overall bubble darkness */
+function sampleBubbleDetail(data, cx, cy, r, W, H) {
+  let innerSum = 0, innerN = 0;
+  let totalSum = 0, totalN = 0;
   const ri = Math.ceil(r);
+  const rInner = r * 0.40; // Core area inside the bubble
+
   for (let dy = -ri; dy <= ri; dy++) {
     for (let dx = -ri; dx <= ri; dx++) {
-      if (dx * dx + dy * dy > r * r) continue;
+      const distSq = dx * dx + dy * dy;
+      if (distSq > r * r) continue;
+      
       const px = Math.round(cx + dx);
       const py = Math.round(cy + dy);
       if (px < 0 || px >= W || py < 0 || py >= H) continue;
+      
       const i = (py * W + px) * 4;
       const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-      sum += 255 - gray;   // darkness: 255 = black ink, 0 = white paper
-      n++;
+      const darkness = 255 - gray;
+      
+      if (distSq <= rInner * rInner) {
+        innerSum += darkness;
+        innerN++;
+      }
+      totalSum += darkness;
+      totalN++;
     }
   }
-  return n > 0 ? sum / n : 0;
+
+  const innerDarkness = innerN > 0 ? innerSum / innerN : 0;
+  const overallDarkness = totalN > 0 ? totalSum / totalN : 0;
+
+  return { innerDarkness, overallDarkness };
 }
 
 /**
@@ -162,9 +332,151 @@ function adaptiveThreshold(data, W, H, windowSize = 31, C = 8) {
     }
   }
 }
+/** Find the largest solid black square component in a quadrant (A4 anchor square) */
+function findAnchorSquareInQuadrant(data, x1, x2, y1, y2, W, H, isTL = false, isTR = false) {
+  // Create an independent visited array to avoid cross-quadrant component blocking
+  const visited = new Uint8Array(W * H);
+  let maxCentroid = null;
+  let maxCount = -1;
+  let fallbackCentroid = null;
+  let maxFallbackSize = -1;
+
+  // Expected area in pixels of a 7x7mm square on an A4 sheet.
+  // A4 width is 210mm. Pixels per mm = W / 210.
+  // 7mm side = 7 * W / 210 = W / 30.
+  // Expected area = (W / 30) * (W / 30) = (W * W) / 900.
+  const expectedArea = (W * W) / 900;
+  const minArea = expectedArea * 0.40; // Require at least 40% size to avoid tiny noise
+  const maxArea = expectedArea * 2.2;  // Standard anchor cap
+
+  const mmPx = W / 210;
+
+  const step = 2; // Sample every 2nd pixel for speed and robustness
+  for (let y = y1; y < y2; y += step) {
+    for (let x = x1; x < x2; x += step) {
+      const idx = y * W + x;
+      if (visited[idx]) continue;
+      // In binarized data, a black pixel has data[idx*4] = 0 (low intensity)
+      if (data[idx * 4] < 128) {
+        const component = [];
+        const queue = [{ x, y }];
+        visited[idx] = 1;
+        let head = 0;
+
+        while (head < queue.length) {
+          const curr = queue[head++];
+          component.push(curr);
+          if (component.length > expectedArea * 15.0) break; // Allow larger for header band fallback
+
+          const neighbors = [
+            { x: curr.x + 1, y: curr.y },
+            { x: curr.x - 1, y: curr.y },
+            { x: curr.x, y: curr.y + 1 },
+            { x: curr.x, y: curr.y - 1 }
+          ];
+
+          for (const n of neighbors) {
+            if (n.x >= x1 && n.x < x2 && n.y >= y1 && n.y < y2) {
+              const nIdx = n.y * W + n.x;
+              if (!visited[nIdx]) {
+                visited[nIdx] = 1;
+                if (data[nIdx * 4] < 128) {
+                  queue.push(n);
+                }
+              }
+            }
+          }
+        }
+
+        let minX = Infinity, maxX = -Infinity;
+        let minY = Infinity, maxY = -Infinity;
+        for (const p of component) {
+          if (p.x < minX) minX = p.x;
+          if (p.x > maxX) maxX = p.x;
+          if (p.y < minY) minY = p.y;
+          if (p.y > maxY) maxY = p.y;
+        }
+        const wComp = maxX - minX + 1;
+        const hComp = maxY - minY + 1;
+        const aspect = wComp / hComp;
+        const fill = component.length / (wComp * hComp);
+
+        // Standard square check
+        if (component.length > minArea && component.length < maxArea) {
+          if (aspect >= 0.55 && aspect <= 1.8 && fill >= 0.6) {
+            if (component.length > maxCount) {
+              maxCount = component.length;
+              let sumX = 0, sumY = 0;
+              for (const p of component) {
+                sumX += p.x;
+                sumY += p.y;
+              }
+              maxCentroid = { x: sumX / component.length, y: sumY / component.length };
+            }
+          }
+        }
+
+        // Fallback check for merged header band
+        if (component.length >= maxArea) {
+          if (component.length > maxFallbackSize) {
+            maxFallbackSize = component.length;
+            if (isTL && minX < W * 0.15 && minY < H * 0.15) {
+              // Outer corner of merged TL component is the TL anchor center
+              fallbackCentroid = {
+                x: minX + 3.5 * mmPx,
+                y: minY + 3.5 * mmPx
+              };
+            } else if (isTR && maxX > W * 0.85 && minY < H * 0.15) {
+              // Outer corner of merged TR component is the TR anchor center
+              fallbackCentroid = {
+                x: maxX - 3.5 * mmPx,
+                y: minY + 3.5 * mmPx
+              };
+            }
+          }
+        }
+      }
+    }
+  }
+  return maxCentroid || fallbackCentroid;
+}
+
+/** Search locally for the centroid of the row timing track */
+function findTimingTrack(data, coarsePx, W, H) {
+  const cx = Math.round(coarsePx.x);
+  const cy = Math.round(coarsePx.y);
+  
+  // Timing track is 2x2mm. Calculate search window based on pixel-per-mm scale.
+  const mmPx = W / 210;
+  const rY = Math.round(4.0 * mmPx); // Allow up to 4mm vertical shift per row
+  const rX = Math.round(3.0 * mmPx); // Allow up to 3mm horizontal shift per row
+  
+  let sumX = 0, sumY = 0, count = 0;
+  for (let dy = -rY; dy <= rY; dy++) {
+    for (let dx = -rX; dx <= rX; dx++) {
+      const px = cx + dx;
+      const py = cy + dy;
+      if (px < 0 || px >= W || py < 0 || py >= H) continue;
+      const idx = (py * W + px) * 4;
+      if (data[idx] < 128) { // Black pixel
+        sumX += px;
+        sumY += py;
+        count++;
+      }
+    }
+  }
+  
+  // Verify if detected count matches a valid timing track size footprint
+  const expectedTrackArea = 4 * mmPx * mmPx; // 2mm x 2mm area
+  const minPixels = Math.round(expectedTrackArea * 0.10);
+  if (count > minPixels) {
+    return { x: sumX / count, y: sumY / count };
+  }
+  return coarsePx;
+}
 
 /**
- * Main scanner function.
+ * Main scanner function with quadrant anchor perspective homography and timing tracks correction.
  * @param {File|Blob} imageFile
  * @param {number}    questionCount
  * @returns {Promise<Array<{q, answer, confidence, darknesses}>>}
@@ -179,8 +491,6 @@ export function scanAnswerSheet(imageFile, questionCount) {
     img.onload = () => {
       URL.revokeObjectURL(url);
 
-      // Draw to canvas — 1500px is the sweet-spot: enough for sub-mm OMR
-      // precision AND fast enough for jsQR and adaptive thresholding on mobile.
       const canvas = document.createElement('canvas');
       const scale = Math.min(1, 1500 / img.naturalWidth);
       canvas.width  = Math.round(img.naturalWidth  * scale);
@@ -192,53 +502,185 @@ export function scanAnswerSheet(imageFile, questionCount) {
       const W = canvas.width;
       const H = canvas.height;
 
-      // ── STEP 1: Detect QR Code on RAW pixels (before any filtering) ──
-      // jsQR needs the original color/contrast — never run it after binarization.
+      // ── STEP 1: Detect QR Code on RAW pixels (before binarization) ──
       const code = jsQR(imgData.data, W, H, { inversionAttempts: 'dontInvert' });
 
-      // ── STEP 2: Adaptive Thresholding for bubble detection ──────────
-      // Window ~5 mm at 1500px (1500/210 ≈ 7.1 px/mm → 31px ≈ 4.4mm window)
-      // C=8 means a pixel must be 8 gray-levels darker than its neighborhood to count as ink.
-      adaptiveThreshold(imgData.data, W, H, 31, 8);
+      // ── STEP 2: Adaptive Thresholding (Binarize in place) ──────────
+      adaptiveThreshold(imgData.data, W, H, 61, 8);
 
-      // Bubble sample radius in pixels (scaled from mm)
+      // Establish default projection mapping (linear fallback)
+      let project = (x, y) => ({
+        x: (x / PAGE_W) * W,
+        y: (y / PAGE_H) * H
+      });
+
+      let alignedWithAnchors = false;
+
+      // ── STEP 3: Detect 4 Corner Solid Black Anchor Squares ──────────
+      // To prevent matching other page content (like student cards, legend, or text),
+      // we restrict the search area for each corner to 20% of the page borders.
+      const searchW = Math.round(W * 0.20);
+      const searchH = Math.round(H * 0.20);
+
+      const cTL = findAnchorSquareInQuadrant(imgData.data, 0, searchW, 0, searchH, W, H, true, false);
+      const cTR = findAnchorSquareInQuadrant(imgData.data, W - searchW, W, 0, searchH, W, H, false, true);
+      const cBR = findAnchorSquareInQuadrant(imgData.data, W - searchW, W, H - searchH, H, W, H, false, false);
+      const cBL = findAnchorSquareInQuadrant(imgData.data, 0, searchW, H - searchH, H, W, H, false, false);
+
+      let finalTL = cTL;
+      let finalTR = cTR;
+      let finalBR = cBR;
+      let finalBL = cBL;
+
+      // 3-point fallback: If exactly one corner is missing/obscured, estimate it mathematically.
+      let detectedCount = 0;
+      if (finalTL) detectedCount++;
+      if (finalTR) detectedCount++;
+      if (finalBR) detectedCount++;
+      if (finalBL) detectedCount++;
+
+      if (detectedCount === 3) {
+        if (!finalTL) {
+          finalTL = {
+            x: finalTR.x + finalBL.x - finalBR.x,
+            y: finalTR.y + finalBL.y - finalBR.y
+          };
+        } else if (!finalTR) {
+          finalTR = {
+            x: finalTL.x + finalBR.x - finalBL.x,
+            y: finalTL.y + finalBR.y - finalBL.y
+          };
+        } else if (!finalBR) {
+          finalBR = {
+            x: finalTR.x + finalBL.x - finalTL.x,
+            y: finalTR.y + finalBL.y - finalTL.y
+          };
+        } else if (!finalBL) {
+          finalBL = {
+            x: finalTL.x + finalBR.x - finalTR.x,
+            y: finalTL.y + finalBR.y - finalTR.y
+          };
+        }
+        detectedCount = 4;
+      }
+
+      if (detectedCount === 4) {
+        // Ideal anchor centers on the sheet (in mm)
+        const cIdeal = [
+          { x: 11.5, y: 11.5 },   // Top-Left
+          { x: 198.5, y: 11.5 },  // Top-Right
+          { x: 198.5, y: 285.5 }, // Bottom-Right
+          { x: 11.5, y: 285.5 }   // Bottom-Left
+        ];
+
+        const projectFine = solvePerspective(cIdeal, [finalTL, finalTR, finalBR, finalBL]);
+        if (projectFine) {
+          project = projectFine;
+          alignedWithAnchors = true;
+        }
+      }
+
+      // Fallback to QR code homography if anchors are not found
+      if (!alignedWithAnchors && code) {
+        const pTL = code.location.topLeftCorner;
+        const pTR = code.location.topRightCorner;
+        const pBR = code.location.bottomRightCorner;
+        const pBL = code.location.bottomLeftCorner;
+
+        // Ideal QR corners on the A4 sheet (in mm)
+        const qTL = { x: 166, y: 14 };
+        const qTR = { x: 192, y: 14 };
+        const qBR = { x: 192, y: 40 };
+        const qBL = { x: 166, y: 40 };
+
+        const projectCoarse = solvePerspective([qTL, qTR, qBR, qBL], [pTL, pTR, pBR, pBL]);
+        if (projectCoarse) {
+          project = projectCoarse;
+        }
+      }
+
+      // Bubble sample radius in pixels
       const bubbleRadiusPx = (2.6 / PAGE_W) * W;
+
+      // ── STEP 4: First Pass - Sample timing tracks and calibrate alignment ──
+      const rawResults = [];
+      const allOverall = [];
+      const allInner = [];
+      const rowYOffsets = new Array(questionCount).fill(0);
+      const half = Math.ceil(questionCount / 2);
+
+      for (let q = 0; q < questionCount; q++) {
+        const col = q < half ? 0 : 1;
+        const rowIdx = col === 0 ? q : q - half;
+        const cy = GRID_TOP + 7 + rowIdx * ROW_H + ROW_H / 2;
+
+        // Timing track center is at x = 9 for left column and x = 201 for right column
+        const trackX = col === 0 ? 9 : 201;
+        const coarseTrack = project(trackX, cy);
+        const fineTrack = findTimingTrack(imgData.data, coarseTrack, W, H);
+        rowYOffsets[q] = fineTrack.y - coarseTrack.y; // Vertical alignment correction
+      }
+
+      for (let q = 0; q < questionCount; q++) {
+        const bubbles = getBubblesMM(q, questionCount);
+        const qResults = {};
+        const dyShift = rowYOffsets[q];
+
+        for (const { opt, x, y } of bubbles) {
+          const { x: pxCoarse, y: pyCoarse } = project(x, y);
+          const px = pxCoarse;
+          const py = pyCoarse + dyShift;
+
+          const detail = sampleBubbleDetail(imgData.data, px, py, bubbleRadiusPx, W, H);
+          qResults[opt] = detail;
+          allOverall.push(detail.overallDarkness);
+          allInner.push(detail.innerDarkness);
+        }
+        rawResults.push(qResults);
+      }
+
+      // ── STEP 5: Dynamic Baseline Calibration ──
+      const sortedOverall = [...allOverall].sort((a, b) => a - b);
+      const sortedInner = [...allInner].sort((a, b) => a - b);
+
+      const emptyIdx = Math.floor(sortedOverall.length * 0.70);
+      const emptyBaselineOverall = sortedOverall[emptyIdx];
+      const emptyBaselineInner = sortedInner[emptyIdx];
+
+      const overallThreshold = Math.max(48, emptyBaselineOverall + 20);
+      const innerThreshold = Math.max(30, emptyBaselineInner + 25);
 
       const results = [];
 
       for (let q = 0; q < questionCount; q++) {
-        const bubbles = getBubblesMM(q, questionCount);
+        const qResults = rawResults[q];
         const darknesses = {};
+        const innerDarknesses = {};
 
-        for (const { opt, x, y } of bubbles) {
-          const px = (x / PAGE_W) * W;
-          const py = (y / PAGE_H) * H;
-          darknesses[opt] = sampleCircle(imgData.data, px, py, bubbleRadiusPx, W, H);
+        for (const opt of OPTS) {
+          darknesses[opt] = qResults[opt].overallDarkness;
+          innerDarknesses[opt] = qResults[opt].innerDarkness;
         }
 
-        // ── Decision Logic ──────────────────────────────────────────
-        // Pick the darkest bubble
+        // Pick the bubble with highest overall darkness
         let bestOpt = 'A', bestDark = -1;
         for (const [opt, dark] of Object.entries(darknesses)) {
-          if (dark > bestDark) { bestDark = dark; bestOpt = opt; }
+          if (dark > bestDark) {
+            bestDark = dark;
+            bestOpt = opt;
+          }
         }
 
-        /**
-         * After adaptive thresholding the image is binary (0 or 255 inverted).
-         * An empty bubble border gives ~20-35 darkness (just the thin ring).
-         * A filled bubble gives ~120-255 darkness (dense black fill).
-         * Threshold at 45 remains valid and very reliable on the binarized image.
-         */
-        const EMPTY_THRESHOLD = 45;
-        const isEmpty = bestDark < EMPTY_THRESHOLD;
+        // Dual-constraint: bubble must exceed both dynamic thresholds
+        const bestInner = innerDarknesses[bestOpt];
+        const isFilled = bestDark >= overallThreshold && bestInner >= innerThreshold;
+        const isEmpty = !isFilled;
 
-        // Confidence: ratio of selected darkness vs sum of all
-        const total = Object.values(darknesses).reduce((s, v) => s + v, 0) || 1;
+        // Confidence calculation
         const secondBest = Object.entries(darknesses)
           .filter(([o]) => o !== bestOpt)
           .reduce((m, [, v]) => Math.max(m, v), 0);
 
-        // Confidence 0–1: 1 = perfectly clear, lower = ambiguous
         const confidence = isEmpty
           ? 1
           : Math.min(1, (bestDark - secondBest) / (bestDark + 1));

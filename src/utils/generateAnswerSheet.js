@@ -20,28 +20,16 @@ export async function generateAnswerSheet(exam, user) {
   const charcoal  = [31, 41, 55];      // Dark Text #1f2937
   const mid       = [100, 116, 139];   // Secondary Slate #64748b
 
-  // ── High-Tech Corner Alignment Markers (Crop Marks) ──────────────
-  // Draws precise target alignment markers at 4 corners for a professional Scantron look
-  const drawTargetMarker = (x, y, isRight, isBottom) => {
-    doc.setDrawColor(...violet);
-    doc.setLineWidth(0.6);
-    const size = 6;
-    const dx = isRight ? -1 : 1;
-    const dy = isBottom ? -1 : 1;
-
-    // L-Shape corner lines
-    doc.line(x, y, x + size * dx, y);
-    doc.line(x, y, x, y + size * dy);
-
-    // Subtle alignment dot in center
-    doc.setFillColor(...violet);
-    doc.circle(x + 1 * dx, y + 1 * dy, 0.4, 'F');
+  // ── High-Tech Solid Anchor Squares for Robust Computer Vision ──
+  const drawSolidAnchorSquare = (x, y) => {
+    doc.setFillColor(0, 0, 0);
+    doc.rect(x, y, 7, 7, 'F');
   };
 
-  drawTargetMarker(margin, 10, false, false);               // Top-Left
-  drawTargetMarker(W - margin, 10, true, false);            // Top-Right
-  drawTargetMarker(margin, H - 10, false, true);            // Bottom-Left
-  drawTargetMarker(W - margin, H - 10, true, true);         // Bottom-Right
+  drawSolidAnchorSquare(8, 8);               // Top-Left
+  drawSolidAnchorSquare(W - 8 - 7, 8);       // Top-Right
+  drawSolidAnchorSquare(8, H - 8 - 7);       // Bottom-Left
+  drawSolidAnchorSquare(W - 8 - 7, H - 8 - 7); // Bottom-Right
 
   // ── QR Code Payload ──────────────────────────────────────────────
   const payload = JSON.stringify({
@@ -59,33 +47,34 @@ export async function generateAnswerSheet(exam, user) {
   });
 
   // ── Header Band ──────────────────────────────────────────────────
+  const headerMargin = 16;
   doc.setFillColor(...navy);
-  doc.roundedRect(margin, 12, W - margin * 2, 34, 3, 3, 'F');
+  doc.roundedRect(headerMargin, 16, W - headerMargin * 2, 30, 3, 3, 'F');
 
   // Platform Logo
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text("L'Conq", margin + 6, 23);
+  doc.text("L'Conq", headerMargin + 6, 26);
 
   // Logo gold dot
   doc.setFillColor(245, 158, 11); // Gold #f59e0b
-  doc.circle(margin + 30, 19.5, 1.2, 'F');
+  doc.circle(headerMargin + 30, 22.5, 1.2, 'F');
 
   doc.setFontSize(8.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(191, 196, 210);
-  doc.text('Feuille de réponses officielle · Correction par Intelligence Artificielle', margin + 6, 29);
+  doc.text('Feuille de réponses officielle · Correction par Intelligence Artificielle', headerMargin + 6, 32);
 
   // Exam name
   doc.setFontSize(10.5);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
   const examLabel = `${exam.school} — ${exam.name} ${exam.year || ''}`.trim();
-  doc.text(examLabel, margin + 6, 39, { maxWidth: 130 });
+  doc.text(examLabel, headerMargin + 6, 41, { maxWidth: 130 });
 
   // QR Code Image in Header
-  doc.addImage(qrDataUrl, 'PNG', W - margin - 30, 14, 26, 26);
+  doc.addImage(qrDataUrl, 'PNG', W - headerMargin - 28, 19, 24, 24);
 
   // ── Student Info Cards (Rounded border panels) ───────────────────
   const drawCard = (x, y, w, h, title, val) => {
@@ -226,6 +215,10 @@ export async function generateAnswerSheet(exam, user) {
     const rowIdx = col === 0 ? q : q - half;
     const xBase  = margin + col * colW;
     const y      = gridTop + 7 + rowIdx * rowH;
+
+    // Draw Timing Track (2mm x 2mm solid black square) in side margins
+    doc.setFillColor(0, 0, 0);
+    doc.rect(col === 0 ? 8 : 200, y + rowH / 2 - 1, 2, 2, 'F');
 
     // Alternating row background (Soft premium lavender #f8f7ff)
     if (rowIdx % 2 === 0) {
