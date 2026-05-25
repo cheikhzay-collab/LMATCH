@@ -31,7 +31,7 @@ export default function AdminEbooks() {
   // Build topic map from all exams
   const topicMap = useMemo(() => {
     const map = {};
-    exams.forEach(exam => {
+    exams.filter(exam => exam.isArchived !== true).forEach(exam => {
       (exam.questions || []).forEach(q => {
         const t = q.subject || q.topic || 'Général';
         if (!map[t]) map[t] = [];
@@ -47,7 +47,7 @@ export default function AdminEbooks() {
   );
 
   const totalQ = useMemo(() => Object.values(topicMap).reduce((s, a) => s + a.length, 0), [topicMap]);
-  const totalSources = useMemo(() => new Set(exams.map(e => e.name)).size, [exams]);
+  const totalSources = useMemo(() => new Set(exams.filter(e => e.isArchived !== true).map(e => e.name)).size, [exams]);
 
   const getSettings = (topic) => ({ ...defaultSettings(), ...(allSettings[topic] || {}) });
 

@@ -445,7 +445,7 @@ export default function SchoolsPage() {
     s.toLowerCase().includes(search.toLowerCase())
   );
 
-  const getExamCount = s => exams.filter(e => e.school === s).length;
+  const getExamCount = s => exams.filter(e => e.school === s && e.isArchived !== true).length;
 
   const handleEdit = (school) => setEditTarget(school);
   const handleDelete = (school) => setDeleteTarget(school);
@@ -528,7 +528,7 @@ export default function SchoolsPage() {
         </div>
         <div style={{ display:'flex', gap:'1.25rem', fontSize:'0.83rem', color:'var(--text-muted)' }}>
           <span><strong className="text-main">{allSchoolNames.length}</strong> établissements</span>
-          <span><strong className="text-emerald">{exams.length}</strong> examens</span>
+          <span><strong className="text-emerald">{exams.filter(e => e.isArchived !== true).length}</strong> examens</span>
         </div>
       </div>
 
