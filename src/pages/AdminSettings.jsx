@@ -126,6 +126,81 @@ export default function AdminSettings() {
           position: sticky;
           top: 2rem;
         }
+        .settings-tab-btn {
+          display: flex;
+          align-items: center;
+          gap: 0.85rem;
+          padding: 0.85rem 1.25rem;
+          border-radius: 12px;
+          border: 1px solid var(--border);
+          cursor: pointer;
+          background: var(--bg-glass);
+          text-align: left;
+          transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+          width: 100%;
+          position: relative;
+          overflow: hidden;
+        }
+        .settings-tab-btn:hover {
+          background: var(--bg-hover);
+          border-color: var(--border-hover);
+          transform: translateX(4px);
+        }
+        .settings-tab-btn.active {
+          background: linear-gradient(135deg, var(--violet-soft) 0%, rgba(99, 102, 241, 0.03) 100%);
+          border-color: var(--violet);
+          box-shadow: 0 4px 20px rgba(99, 102, 241, 0.08);
+        }
+        .settings-tab-btn::after {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          bottom: 0;
+          width: 4px;
+          background: var(--violet);
+          border-radius: 0 4px 4px 0;
+          opacity: 0;
+          transform: scaleY(0.3);
+          transition: all 0.25s ease;
+        }
+        .settings-tab-btn.active::after {
+          opacity: 1;
+          transform: scaleY(1);
+          box-shadow: var(--shadow-glow-violet);
+        }
+        .settings-tab-icon {
+          color: var(--text-muted);
+          transition: transform 0.25s ease, color 0.25s ease;
+        }
+        .settings-tab-btn:hover .settings-tab-icon {
+          transform: scale(1.1);
+          color: var(--violet);
+        }
+        .settings-tab-btn.active .settings-tab-icon {
+          color: var(--violet);
+        }
+        .settings-tab-title {
+          font-weight: 700;
+          font-size: 0.85rem;
+          color: var(--text-muted);
+          transition: color 0.25s ease;
+        }
+        .settings-tab-btn.active .settings-tab-title {
+          color: var(--text-main);
+        }
+        .settings-tab-btn:hover .settings-tab-title {
+          color: var(--text-main);
+        }
+        .settings-tab-desc {
+          font-size: 0.68rem;
+          color: var(--text-subtle);
+          margin-top: 2px;
+          transition: color 0.25s ease;
+        }
+        .settings-tab-btn.active .settings-tab-desc {
+          color: var(--violet);
+        }
         @media (max-width: 768px) {
           .settings-container {
             grid-template-columns: 1fr !important;
@@ -137,10 +212,22 @@ export default function AdminSettings() {
             padding-bottom: 0.5rem;
             position: static !important;
           }
-          .settings-tabs button {
+          .settings-tabs .settings-tab-btn {
             flex-shrink: 0;
             width: auto !important;
             min-width: 170px;
+          }
+          .settings-tab-btn:hover {
+            transform: translateY(-2px);
+          }
+          .settings-tab-btn::after {
+            left: 0; right: 0; bottom: 0; top: auto;
+            width: 100%; height: 3px;
+            border-radius: 4px 4px 0 0;
+            transform: scaleX(0.3);
+          }
+          .settings-tab-btn.active::after {
+            transform: scaleX(1);
           }
         }
       `}</style>
@@ -172,26 +259,12 @@ export default function AdminSettings() {
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  padding: '0.85rem 1.1rem',
-                  borderRadius: '12px',
-                  border: 'none',
-                  cursor: 'pointer',
-                  background: isActive ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(15, 23, 42, 0.4))' : 'var(--bg-glass)',
-                  border: `1.5px solid ${isActive ? 'rgba(124, 58, 237, 0.35)' : 'var(--border)'}`,
-                  textAlign: 'left',
-                  transition: 'all 0.2s',
-                  boxShadow: isActive ? '0 8px 20px rgba(124, 58, 237, 0.08)' : 'none',
-                  width: '100%',
-                }}
+                className={`settings-tab-btn ${isActive ? 'active' : ''}`}
               >
-                <tab.icon size={18} style={{ color: isActive ? 'var(--violet)' : 'var(--text-muted)' }} />
+                <tab.icon size={18} className="settings-tab-icon" />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.82rem', color: isActive ? 'var(--text-main)' : 'var(--text-muted)' }}>{tab.label}</div>
-                  <div style={{ fontSize: '0.68rem', color: isActive ? 'var(--violet)' : 'var(--text-subtle)', marginTop: 2 }}>{tab.desc}</div>
+                  <div className="settings-tab-title">{tab.label}</div>
+                  <div className="settings-tab-desc">{tab.desc}</div>
                 </div>
               </button>
             );
