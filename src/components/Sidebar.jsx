@@ -44,9 +44,6 @@ export default function Sidebar() {
             <NavLink to="/dashboard" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
               <LayoutDashboard size={18} /> Tableau de bord
             </NavLink>
-            <NavLink to="/subscription" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Crown size={18} /> Mon Abonnement
-            </NavLink>
             <NavLink to="/schools" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
               <GraduationCap size={18} /> Grandes Écoles
             </NavLink>
@@ -58,6 +55,9 @@ export default function Sidebar() {
             </NavLink>
             <NavLink to="/ranking" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
               <Trophy size={18} /> Classement
+            </NavLink>
+            <NavLink to="/subscription" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <Crown size={18} /> Mon Abonnement
             </NavLink>
           </>
         )}
