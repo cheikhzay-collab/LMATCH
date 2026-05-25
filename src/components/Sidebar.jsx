@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BrainCircuit, BookOpen, UploadCloud,
-  LogOut, Trophy, Library, Users, Settings, Zap, Sun, Moon, GraduationCap, Sparkles, BookMarked, Camera, Megaphone
+  LogOut, Trophy, Library, Users, Settings, Zap, Sun, Moon, GraduationCap, Sparkles, BookMarked, Camera, Megaphone, Crown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -43,6 +43,9 @@ export default function Sidebar() {
             </p>
             <NavLink to="/dashboard" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
               <LayoutDashboard size={18} /> Tableau de bord
+            </NavLink>
+            <NavLink to="/subscription" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <Crown size={18} /> Mon Abonnement
             </NavLink>
             <NavLink to="/schools" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
               <GraduationCap size={18} /> Grandes Écoles
@@ -131,7 +134,12 @@ export default function Sidebar() {
             </p>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
               {isStudent && (
-                <span className={`badge ${user?.tier === 'premium' ? 'badge-pro' : 'badge-free'}`}>
+                <span 
+                  className={`badge ${user?.tier === 'premium' ? 'badge-pro' : 'badge-free'}`}
+                  onClick={() => navigate('/subscription')}
+                  style={{ cursor: 'pointer' }}
+                  title="Gérer mon abonnement"
+                >
                   {user?.tier === 'premium' ? <><Zap size={10} />Pro</> : 'Free'}
                 </span>
               )}

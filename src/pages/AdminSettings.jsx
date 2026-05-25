@@ -1,14 +1,39 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, Zap, RefreshCw, Layers, MousePointerClick } from 'lucide-react';
+import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, Zap, RefreshCw, Layers, MousePointerClick, Crown, Download, Copy, Sliders } from 'lucide-react';
 
 export default function AdminSettings() {
-  const { schools, addSchool, removeSchool } = useAuth();
+  const { schools, addSchool, removeSchool, plans, addPlan, removePlan, updatePlan, activationCodes, generateActivationCodes } = useAuth();
   const [newSchool, setNewSchool] = useState('');
+  const [activeTab, setActiveTab] = useState('general');
+
+  // Voucher states
+  const [voucherPlanId, setVoucherPlanId] = useState('');
+  const [voucherCount, setVoucherCount] = useState('10');
+  const [voucherBatchName, setVoucherBatchName] = useState('');
+  const [copiedCode, setCopiedCode] = useState('');
+  const [voucherFilter, setVoucherFilter] = useState('all');
+
+  // Set default voucher plan ID
+  React.useEffect(() => {
+    if (plans && plans.length > 0 && !voucherPlanId) {
+      setVoucherPlanId(plans[0].id);
+    }
+  }, [plans, voucherPlanId]);
+
+  // Subscription plan states
+  const [newPlanName, setNewPlanName] = useState('');
+  const [newPlanPrice, setNewPlanPrice] = useState('');
+  const [newPlanDuration, setNewPlanDuration] = useState('365');
+  const [newPlanSchools, setNewPlanSchools] = useState([]);
+  const [newPlanDescription, setNewPlanDescription] = useState('');
+  const [newPlanIsRecommended, setNewPlanIsRecommended] = useState(false);
+  const [newPlanFeatures, setNewPlanFeatures] = useState('');
 
   // Claude API Key
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('claudeApiKey') || '');
   const [showKey, setShowKey] = useState(false);
+  const [proxyUrl, setProxyUrl] = useState(() => localStorage.getItem('claudeProxyUrl') || '');
   const [keySaved, setKeySaved] = useState(false);
 
   // Gemini API Key
@@ -79,12 +104,47 @@ export default function AdminSettings() {
 
   const saveApiKey = () => {
     localStorage.setItem('claudeApiKey', apiKey.trim());
+    localStorage.setItem('claudeProxyUrl', proxyUrl.trim());
     setKeySaved(true);
     setTimeout(() => setKeySaved(false), 2500);
   };
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div className="animate-fade-in" style={{ maxWidth: '1100px', margin: '0 auto' }}>
+      
+      <style>{`
+        .settings-container {
+          display: grid;
+          grid-template-columns: 240px 1fr;
+          gap: 2rem;
+          align-items: start;
+        }
+        .settings-tabs {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+          position: sticky;
+          top: 2rem;
+        }
+        @media (max-width: 768px) {
+          .settings-container {
+            grid-template-columns: 1fr !important;
+            gap: 1.25rem !important;
+          }
+          .settings-tabs {
+            flex-direction: row !important;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+            position: static !important;
+          }
+          .settings-tabs button {
+            flex-shrink: 0;
+            width: auto !important;
+            min-width: 170px;
+          }
+        }
+      `}</style>
+
       <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem' }}>
@@ -97,10 +157,52 @@ export default function AdminSettings() {
         </div>
       </header>
 
-      <div className="dashboard-grid">
+      <div className="settings-container">
+        {/* Left Tabs Column */}
+        <div className="settings-tabs">
+          {[
+            { id: 'general', label: 'Général & Branding', icon: Sliders, desc: 'Identité PDF & Écoles' },
+            { id: 'flashcards', label: 'Méthode Flashcards', icon: Layers, desc: 'Animations & Révélation' },
+            { id: 'apis', label: 'Clés API & IA', icon: KeyRound, desc: 'Claude, Gemini, FLUX.1' },
+            { id: 'subscriptions', label: 'Baqat & Vouchers', icon: Crown, desc: 'Tarifs & Activation' },
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                  padding: '0.85rem 1.1rem',
+                  borderRadius: '12px',
+                  border: 'none',
+                  cursor: 'pointer',
+                  background: isActive ? 'linear-gradient(135deg, rgba(124, 58, 237, 0.12), rgba(15, 23, 42, 0.4))' : 'var(--bg-glass)',
+                  border: `1.5px solid ${isActive ? 'rgba(124, 58, 237, 0.35)' : 'var(--border)'}`,
+                  textAlign: 'left',
+                  transition: 'all 0.2s',
+                  boxShadow: isActive ? '0 8px 20px rgba(124, 58, 237, 0.08)' : 'none',
+                  width: '100%',
+                }}
+              >
+                <tab.icon size={18} style={{ color: isActive ? 'var(--violet)' : 'var(--text-muted)' }} />
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.82rem', color: isActive ? 'var(--text-main)' : 'var(--text-muted)' }}>{tab.label}</div>
+                  <div style={{ fontSize: '0.68rem', color: isActive ? 'var(--violet)' : 'var(--text-subtle)', marginTop: 2 }}>{tab.desc}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right Content Column */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', minWidth: 0 }}>
 
         {/* ── Flashcard Review Settings ── */}
-        <div className="col-span-12 glass-panel">
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'flashcards' ? 'block' : 'none' }}>
           <h3 style={{ marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <Layers size={20} /> Paramètres des Flashcards
           </h3>
@@ -218,7 +320,7 @@ export default function AdminSettings() {
         </div>
 
         {/* ── Claude API Key ── */}
-        <div className="col-span-12 glass-panel">
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'apis' ? 'block' : 'none' }}>
           <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <KeyRound size={20} /> Clé API Claude (Anthropic)
           </h3>
@@ -260,6 +362,23 @@ export default function AdminSettings() {
             </button>
           </div>
 
+          <div style={{ marginTop: '1.25rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+              URL du Proxy Serveur (Optionnel - Pour la production)
+            </label>
+            <input
+              type="text"
+              className="input-control"
+              placeholder="https://votre-proxy.workers.dev/api/v1/messages"
+              value={proxyUrl}
+              onChange={e => setProxyUrl(e.target.value)}
+              style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+            />
+            <p style={{ marginTop: '0.4rem', fontSize: '0.73rem', color: 'var(--text-muted)' }}>
+              💡 Si configurée, les requêtes d'importation IA transiteront par ce serveur pour masquer votre clé API en production.
+            </p>
+          </div>
+
           {apiKey && (
             <p style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'var(--emerald)' }}>
               ✓ Clé configurée — {apiKey.slice(0, 14)}...
@@ -268,7 +387,7 @@ export default function AdminSettings() {
         </div>
 
         {/* ── Gemini API Key ── */}
-        <div className="col-span-12 glass-panel" style={{ borderColor: 'rgba(66,133,244,0.25)', background: 'linear-gradient(135deg, rgba(66,133,244,0.04) 0%, rgba(234,67,53,0.02) 100%)' }}>
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'apis' ? 'block' : 'none', borderColor: 'rgba(66,133,244,0.25)', background: 'linear-gradient(135deg, rgba(66,133,244,0.04) 0%, rgba(234,67,53,0.02) 100%)' }}>
           <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 28, height: 28, borderRadius: '8px', background: 'linear-gradient(135deg,#4285F4,#EA4335,#FBBC05,#34A853)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Image size={14} color="#fff" />
@@ -322,7 +441,7 @@ export default function AdminSettings() {
         </div>
 
         {/* ── HuggingFace Token (FLUX.1 — FREE) ── */}
-        <div className="col-span-12 glass-panel" style={{ borderColor: 'rgba(245,158,11,0.3)', background: 'linear-gradient(135deg, rgba(245,158,11,0.05) 0%, rgba(251,191,36,0.02) 100%)' }}>
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'apis' ? 'block' : 'none', borderColor: 'rgba(245,158,11,0.3)', background: 'linear-gradient(135deg, rgba(245,158,11,0.05) 0%, rgba(251,191,36,0.02) 100%)' }}>
           <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 28, height: 28, borderRadius: '8px', background: 'linear-gradient(135deg, #F59E0B, #FCD34D)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Zap size={14} color="#1C1400" />
@@ -379,7 +498,7 @@ export default function AdminSettings() {
         </div>
 
         {/* ── Together AI Key (FLUX.1) ── */}
-        <div className="col-span-12 glass-panel" style={{ borderColor: 'rgba(139,92,246,0.3)', background: 'linear-gradient(135deg, rgba(139,92,246,0.05) 0%, rgba(99,102,241,0.03) 100%)' }}>
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'apis' ? 'block' : 'none', borderColor: 'rgba(139,92,246,0.3)', background: 'linear-gradient(135deg, rgba(139,92,246,0.05) 0%, rgba(99,102,241,0.03) 100%)' }}>
           <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <div style={{ width: 28, height: 28, borderRadius: '8px', background: 'linear-gradient(135deg, #8B5CF6, #6366F1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Zap size={14} color="#fff" />
@@ -435,7 +554,7 @@ export default function AdminSettings() {
         </div>
 
         {/* ── Branding / Identity ── */}
-        <div className="col-span-12 glass-panel">
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'general' ? 'block' : 'none' }}>
           <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             🎨 Identité & Branding PDF
           </h3>
@@ -462,8 +581,300 @@ export default function AdminSettings() {
           </button>
         </div>
 
+        {/* ── Subscription Plans Configuration ── */}
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'subscriptions' ? 'block' : 'none' }}>
+          <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Crown size={20} color="var(--warning)" /> Configuration des Offres d'Abonnement (Baqat)
+          </h3>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+            Gérez les offres d'abonnement disponibles pour les élèves, configurez leurs tarifs, durées et les écoles associées.
+          </p>
+
+          {/* List of existing plans */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
+            {plans.map(plan => {
+              return (
+                <div key={plan.id} style={{ padding: '1.25rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  
+                  {/* Name, Price & Expiration row */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                      <input 
+                        type="text" 
+                        value={plan.name} 
+                        onChange={e => updatePlan(plan.id, { name: e.target.value })}
+                        style={{ background: 'transparent', border: 'none', borderBottom: '1px dashed var(--border)', color: 'var(--text-main)', fontSize: '1rem', fontWeight: 800, width: '100%', outline: 'none', paddingBottom: '2px' }}
+                      />
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(255,255,255,0.02)', padding: '0.3rem 0.6rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <input 
+                          type="number" 
+                          value={plan.price} 
+                          onChange={e => updatePlan(plan.id, { price: parseFloat(e.target.value) || 0 })}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--emerald)', fontSize: '0.85rem', fontWeight: 700, width: '60px', outline: 'none', textAlign: 'right' }}
+                        />
+                        <span style={{ fontSize: '0.85rem', color: 'var(--emerald)', fontWeight: 700 }}>DH</span>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', background: 'rgba(255,255,255,0.02)', padding: '0.3rem 0.6rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <input 
+                          type="number" 
+                          value={plan.durationDays} 
+                          onChange={e => updatePlan(plan.id, { durationDays: parseInt(e.target.value) || 365 })}
+                          style={{ background: 'transparent', border: 'none', color: 'var(--violet)', fontSize: '0.85rem', fontWeight: 700, width: '50px', outline: 'none', textAlign: 'right' }}
+                        />
+                        <span style={{ fontSize: '0.85rem', color: 'var(--violet)', fontWeight: 700 }}>Jours</span>
+                      </div>
+
+                      <button 
+                        onClick={() => removePlan(plan.id)}
+                        style={{ background: 'transparent', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '0.35rem', borderRadius: '6px', display: 'flex' }}
+                        title="Supprimer la baque"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Description & Recommended row */}
+                  <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '200px' }}>
+                      <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>
+                        Description de l'offre
+                      </label>
+                      <input 
+                        type="text" 
+                        className="input-control"
+                        placeholder="Ex: Le pack complet pour la réussite."
+                        value={plan.description || ''}
+                        onChange={e => updatePlan(plan.id, { description: e.target.value })}
+                        style={{ fontSize: '0.85rem', padding: '0.5rem 0.75rem' }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.25rem' }}>
+                      <input 
+                        type="checkbox"
+                        id={`recom-${plan.id}`}
+                        checked={!!plan.isRecommended}
+                        onChange={e => updatePlan(plan.id, { isRecommended: e.target.checked })}
+                        style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                      />
+                      <label htmlFor={`recom-${plan.id}`} style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--warning)', cursor: 'pointer' }}>
+                        ✦ Recommandé
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Features Textarea */}
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>
+                      Fonctionnalités incluses (une par ligne) :
+                    </label>
+                    <textarea 
+                      className="input-control"
+                      placeholder="Ex: Accès à toutes les archives&#10;Astuces IA exclusives pour chaque QCM"
+                      rows={3}
+                      value={plan.features ? plan.features.join('\n') : ''}
+                      onChange={e => updatePlan(plan.id, { features: e.target.value.split('\n').filter(Boolean) })}
+                      style={{ fontSize: '0.85rem', padding: '0.5rem 0.75rem', fontFamily: 'inherit', resize: 'vertical' }}
+                    />
+                  </div>
+
+                  {/* Allowed schools selector */}
+                  <div>
+                    <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, display: 'block', marginBottom: '0.5rem' }}>
+                      Écoles et Facultés autorisées :
+                    </span>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                      {schools.map(school => {
+                        const isAllowed = plan.allowedSchools.includes(school);
+                        return (
+                          <button
+                            key={school}
+                            type="button"
+                            onClick={() => {
+                              const updatedSchools = isAllowed
+                                ? plan.allowedSchools.filter(s => s !== school)
+                                : [...plan.allowedSchools, school];
+                              updatePlan(plan.id, { allowedSchools: updatedSchools });
+                            }}
+                            style={{
+                              padding: '0.25rem 0.6rem',
+                              borderRadius: '6px',
+                              border: `1px solid ${isAllowed ? 'rgba(99,102,241,0.4)' : 'var(--border)'}`,
+                              background: isAllowed ? 'rgba(99,102,241,0.1)' : 'transparent',
+                              color: isAllowed ? 'var(--violet)' : 'var(--text-muted)',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              cursor: 'pointer',
+                              transition: 'all 0.15s'
+                            }}
+                          >
+                            {isAllowed ? '✓ ' : '+ '} {school}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Add Plan Form */}
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+            <h4 style={{ margin: '0 0 1rem 0', fontWeight: 800, fontSize: '0.95rem' }}>Ajouter une nouvelle offre</h4>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '1rem', flexWrap: 'wrap' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>Nom de l'offre</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Pack Spécial ENSA & ENSAM" 
+                    className="input-control"
+                    value={newPlanName}
+                    onChange={e => setNewPlanName(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>Tarif (DH)</label>
+                  <input 
+                    type="number" 
+                    placeholder="299" 
+                    className="input-control"
+                    value={newPlanPrice}
+                    onChange={e => setNewPlanPrice(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>Durée (Jours)</label>
+                  <input 
+                    type="number" 
+                    placeholder="365" 
+                    className="input-control"
+                    value={newPlanDuration}
+                    onChange={e => setNewPlanDuration(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Description & Recommended row for Add Form */}
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', alignItems: 'center' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>Description</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Le pack complet pour la réussite." 
+                    className="input-control"
+                    value={newPlanDescription}
+                    onChange={e => setNewPlanDescription(e.target.value)}
+                  />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '1.25rem' }}>
+                  <input 
+                    type="checkbox"
+                    id="newPlanIsRecommended"
+                    checked={newPlanIsRecommended}
+                    onChange={e => setNewPlanIsRecommended(e.target.checked)}
+                    style={{ width: '16px', height: '16px', cursor: 'pointer' }}
+                  />
+                  <label htmlFor="newPlanIsRecommended" style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--warning)', cursor: 'pointer' }}>
+                    ✦ Recommandé par défaut
+                  </label>
+                </div>
+              </div>
+
+              {/* Features List for Add Form */}
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Fonctionnalités incluses (une par ligne) :
+                </label>
+                <textarea 
+                  placeholder="Ex: Accès à toutes les archives (2010–2025)&#10;Astuces IA exclusives pour chaque QCM&#10;Simulateur de concours chronométré" 
+                  className="input-control"
+                  rows={3}
+                  value={newPlanFeatures}
+                  onChange={e => setNewPlanFeatures(e.target.value)}
+                  style={{ fontFamily: 'inherit', resize: 'vertical' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Autoriser l'accès aux écoles suivantes :
+                </label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                  {schools.map(school => {
+                    const isSelected = newPlanSchools.includes(school);
+                    return (
+                      <button
+                        key={school}
+                        type="button"
+                        onClick={() => {
+                          const updated = isSelected
+                            ? newPlanSchools.filter(s => s !== school)
+                            : [...newPlanSchools, school];
+                          setNewPlanSchools(updated);
+                        }}
+                        style={{
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: '6px',
+                          border: `1px solid ${isSelected ? 'rgba(16,185,129,0.4)' : 'var(--border)'}`,
+                          background: isSelected ? 'rgba(16,185,129,0.1)' : 'transparent',
+                          color: isSelected ? 'var(--emerald)' : 'var(--text-muted)',
+                          fontSize: '0.72rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          transition: 'all 0.15s'
+                        }}
+                      >
+                        {isSelected ? '✓ ' : '+ '} {school}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <button 
+                type="button" 
+                onClick={() => {
+                  if (newPlanName.trim()) {
+                    const featuresArray = newPlanFeatures.split('\n').map(f => f.trim()).filter(Boolean);
+                    addPlan(
+                      newPlanName.trim(), 
+                      newPlanPrice, 
+                      newPlanDuration, 
+                      newPlanSchools, 
+                      newPlanDescription.trim(), 
+                      newPlanIsRecommended, 
+                      featuresArray
+                    );
+                    setNewPlanName('');
+                    setNewPlanPrice('');
+                    setNewPlanDuration('365');
+                    setNewPlanSchools([]);
+                    setNewPlanDescription('');
+                    setNewPlanIsRecommended(false);
+                    setNewPlanFeatures('');
+                  }
+                }}
+                className="btn"
+                style={{ width: 'fit-content', padding: '0.65rem 1.5rem', alignSelf: 'flex-end' }}
+              >
+                <Plus size={16} /> Ajouter l'offre d'abonnement
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
         {/* ── Schools ── */}
-        <div className="col-span-12 glass-panel">
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'general' ? 'block' : 'none' }}>
           <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <School size={20} /> Gestion des Écoles Cibles
           </h3>
@@ -495,6 +906,218 @@ export default function AdminSettings() {
               </div>
             ))}
           </div>
+        </div>
+
+        {/* ── Activation Codes (Vouchers) ── */}
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'subscriptions' ? 'block' : 'none' }}>
+          <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <KeyRound size={20} color="var(--violet)" /> Gestion des Codes d'Activation (Vouchers)
+          </h3>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+            Générez des codes uniques pour vos baquettes d'abonnement. Exportez-les en CSV pour les distribuer aux librairies ou étudiants.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', marginBottom: '2rem' }}>
+            {/* Generate form */}
+            <div style={{ borderRight: '1px solid var(--border)', paddingRight: '2rem' }}>
+              <h4 style={{ margin: '0 0 1rem 0', fontWeight: 800, fontSize: '0.95rem' }}>Générer de nouveaux codes</h4>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>
+                    Sélectionner l'offre associée
+                  </label>
+                  <select 
+                    value={voucherPlanId} 
+                    onChange={e => setVoucherPlanId(e.target.value)}
+                    style={{ 
+                      width: '100%', padding: '0.65rem 0.75rem', borderRadius: '10px', 
+                      border: '1px solid var(--border)', background: 'var(--bg-glass)', 
+                      color: 'var(--text-main)', fontSize: '0.85rem' 
+                    }}
+                  >
+                    {plans.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.price} DH)</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>
+                      Quantité
+                    </label>
+                    <input 
+                      type="number" 
+                      min="1" 
+                      max="100"
+                      className="input-control"
+                      value={voucherCount}
+                      onChange={e => setVoucherCount(e.target.value)}
+                      style={{ fontSize: '0.85rem' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>
+                      Nom du lot (Optionnel)
+                    </label>
+                    <input 
+                      type="text" 
+                      placeholder="Ex: Librairie Al-Amal"
+                      className="input-control"
+                      value={voucherBatchName}
+                      onChange={e => setVoucherBatchName(e.target.value)}
+                      style={{ fontSize: '0.85rem' }}
+                    />
+                  </div>
+                </div>
+
+                <button 
+                  type="button"
+                  onClick={() => {
+                    if (voucherPlanId && voucherCount) {
+                      generateActivationCodes(voucherPlanId, parseInt(voucherCount), voucherBatchName.trim());
+                      setVoucherBatchName('');
+                    }
+                  }}
+                  className="btn"
+                  style={{ width: 'fit-content', padding: '0.65rem 1.5rem', alignSelf: 'flex-end', marginTop: '0.5rem' }}
+                >
+                  <Sparkles size={16} /> Générer les codes
+                </button>
+              </div>
+            </div>
+
+            {/* List and Actions */}
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h4 style={{ margin: 0, fontWeight: 800, fontSize: '0.95rem' }}>Codes Existants</h4>
+                <button 
+                  onClick={() => {
+                    const header = "Code,Plan,Lot,Statut,Utilise Par,Date Utilisation,Date Creation\n";
+                    const rows = activationCodes.map(c => {
+                      const plan = plans.find(p => p.id === c.planId);
+                      const statusStr = c.isUsed ? "Utilise" : "Actif";
+                      const dateUsed = c.usedAt ? new Date(c.usedAt).toLocaleDateString('fr-FR') : "";
+                      const dateCreated = c.createdDate ? new Date(c.createdDate).toLocaleDateString('fr-FR') : "";
+                      return `"${c.code}","${plan?.name || 'Inconnu'}","${c.batchName}","${statusStr}","${c.usedBy || ''}","${dateUsed}","${dateCreated}"`;
+                    }).join("\n");
+                    
+                    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+                    const url = URL.createObjectURL(blob);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", url);
+                    link.setAttribute("download", `vouchers_lconq_${new Date().toISOString().split('T')[0]}.csv`);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                  }}
+                  className="btn-outline"
+                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                >
+                  <Download size={13} /> Exporter CSV
+                </button>
+              </div>
+
+              {/* Filters */}
+              <div style={{ display: 'flex', gap: '0.4rem', marginBottom: '1rem' }}>
+                {['all', 'active', 'used'].map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setVoucherFilter(f)}
+                    style={{
+                      padding: '0.25rem 0.6rem',
+                      borderRadius: '6px',
+                      border: '1px solid var(--border)',
+                      background: voucherFilter === f ? 'rgba(99,102,241,0.1)' : 'transparent',
+                      color: voucherFilter === f ? 'var(--violet)' : 'var(--text-muted)',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {f === 'all' ? 'Tous' : f === 'active' ? 'Actifs' : 'Utilisés'}
+                  </button>
+                ))}
+              </div>
+
+              {/* List */}
+              <div style={{ maxHeight: '240px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: '10px', background: 'rgba(255,255,255,0.01)' }}>
+                {activationCodes
+                  .filter(c => {
+                    if (voucherFilter === 'active') return !c.isUsed;
+                    if (voucherFilter === 'used') return c.isUsed;
+                    return true;
+                  })
+                  .map(c => {
+                    const plan = plans.find(p => p.id === c.planId);
+                    return (
+                      <div 
+                        key={c.code} 
+                        style={{ 
+                          padding: '0.75rem 1rem', 
+                          borderBottom: '1px solid var(--border)', 
+                          display: 'flex', 
+                          justifyContent: 'space-between', 
+                          alignItems: 'center',
+                          fontSize: '0.85rem'
+                        }}
+                      >
+                        <div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span 
+                              style={{ 
+                                fontFamily: 'monospace', 
+                                fontWeight: 800, 
+                                color: copiedCode === c.code ? 'var(--emerald)' : 'var(--text-main)',
+                                cursor: 'pointer' 
+                              }}
+                              onClick={() => {
+                                navigator.clipboard.writeText(c.code);
+                                setCopiedCode(c.code);
+                                setTimeout(() => setCopiedCode(''), 1500);
+                              }}
+                              title="Cliquer pour copier"
+                            >
+                              {c.code}
+                            </span>
+                            <span style={{ fontSize: '0.7rem', color: 'var(--text-subtle)' }}>
+                              ({plan?.name || 'Plan inconnu'})
+                            </span>
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                            Lot: {c.batchName} · {new Date(c.createdDate).toLocaleDateString('fr-FR')}
+                          </div>
+                        </div>
+
+                        <div>
+                          {c.isUsed ? (
+                            <span 
+                              style={{ color: 'var(--danger)', fontSize: '0.72rem', fontWeight: 800 }}
+                              title={`Utilisé par ${c.usedBy} le ${new Date(c.usedAt).toLocaleDateString('fr-FR')}`}
+                            >
+                              UTILISÉ
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--emerald)', fontSize: '0.72rem', fontWeight: 800 }}>
+                              ACTIF
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                {activationCodes.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    Aucun code d'activation disponible
+                  </div>
+                )}
+              </div>
+
+            </div>
+          </div>
+        </div>
         </div>
       </div>
     </div>

@@ -21,6 +21,7 @@ import AdminEbooks from './pages/AdminEbooks';
 import AdminMarketing from './pages/AdminMarketing';
 
 import OMRScannerPage from './pages/OMRScannerPage';
+import SubscriptionPage from './pages/SubscriptionPage';
 
 function AppContent() {
   return (
@@ -32,6 +33,7 @@ function AppContent() {
       <Route element={<Layout />}>
         {/* Student Routes */}
         <Route path="/dashboard" element={<StudentDashboard />} />
+        <Route path="/subscription" element={<SubscriptionPage />} />
         <Route path="/schools" element={<SchoolsPage />} />
         <Route path="/schools/:schoolName" element={<SchoolExamsPage />} />
         <Route path="/study" element={<StudyMode />} />

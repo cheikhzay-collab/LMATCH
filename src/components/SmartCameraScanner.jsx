@@ -351,30 +351,75 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
         {/* Dynamic scanning laser and corner overlay */}
         <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '2rem' }}>
           
-          {/* Target Corners */}
-          <svg style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-            {/* Draw 4 glowing corners */}
+        {/* Target Corners and A4 Cutout Mask */}
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+          
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+            <defs>
+              <mask id="scanner-mask">
+                {/* White keeps the pixel, black cuts it out */}
+                <rect width="100" height="100" fill="white" />
+                <rect x="8" y="8" width="84" height="84" rx="4" fill="black" />
+              </mask>
+            </defs>
+
+            {/* Semi-transparent dark overlay mask */}
+            <rect width="100" height="100" fill="rgba(2, 6, 23, 0.65)" mask="url(#scanner-mask)" />
+
+            {/* Glowing guide outline */}
             {(() => {
-              const strokeColor = scannerStatus === 'detected' ? 'var(--emerald)' : 'var(--violet)';
-              const strokeWidth = scannerStatus === 'detected' ? 4 : 3;
-              const shadowColor = scannerStatus === 'detected' ? 'rgba(16, 163, 74, 0.6)' : 'rgba(99, 102, 241, 0.4)';
+              const statusDetected = scannerStatus === 'detected';
+              const strokeColor = statusDetected ? 'var(--emerald)' : 'var(--violet)';
+              const strokeWidth = statusDetected ? 1.0 : 0.6;
+              const shadowColor = statusDetected ? 'rgba(16, 185, 129, 0.6)' : 'rgba(99, 102, 241, 0.4)';
+              const cornerStrokeWidth = statusDetected ? 1.8 : 1.2;
+
               return (
-                <g style={{ filter: `drop-shadow(0 0 6px ${shadowColor})` }}>
-                  {/* Top Left Corner Anchor Target */}
-                  <path d="M 40,20 L 20,20 L 20,40" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
-                  <path d="M 23,23 L 37,23 L 37,37 L 23,37 Z" fill="none" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3 2" />
+                <g style={{ transition: 'all 0.3s ease' }}>
+                  {/* Dashed outer boundary guide */}
+                  <rect
+                    x="8" y="8" width="84" height="84" rx="4"
+                    fill="none"
+                    stroke={strokeColor}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={statusDetected ? 'none' : '3 2'}
+                    style={{ filter: `drop-shadow(0 0 3px ${shadowColor})` }}
+                  />
 
-                  {/* Top Right Corner Anchor Target */}
-                  <path d="M calc(100% - 40),20 L calc(100% - 20),20 L calc(100% - 20),40" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
-                  <path d="M calc(100% - 37),23 L calc(100% - 23),23 L calc(100% - 23),37 L calc(100% - 37),37 Z" fill="none" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3 2" />
+                  {/* 4 Thick Corner Anchors */}
+                  <g stroke={strokeColor} strokeWidth={cornerStrokeWidth} fill="none" strokeLinecap="round">
+                    {/* Top Left */}
+                    <path d="M 16,8 L 8,8 L 8,16" />
+                    {/* Top Right */}
+                    <path d="M 84,8 L 92,8 L 92,16" />
+                    {/* Bottom Left */}
+                    <path d="M 16,92 L 8,92 L 8,84" />
+                    {/* Bottom Right */}
+                    <path d="M 84,92 L 92,92 L 92,84" />
+                  </g>
 
-                  {/* Bottom Left Corner Anchor Target */}
-                  <path d="M 40,calc(100% - 20) L 20,calc(100% - 20) L 20,calc(100% - 40)" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
-                  <path d="M 23,calc(100% - 37) L 37,calc(100% - 37) L 37,calc(100% - 23) L 23,calc(100% - 23) Z" fill="none" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3 2" />
+                  {/* Anchor Targets (HUD Circles where OMR sheet corner anchors should align) */}
+                  <g stroke={strokeColor} strokeWidth="0.4" fill="none" strokeDasharray="1.5 1" style={{ opacity: statusDetected ? 0.9 : 0.4, transition: 'all 0.3s' }}>
+                    {/* Top Left Target */}
+                    <circle cx="15" cy="15" r="3" />
+                    <line x1="11" y1="15" x2="19" y2="15" />
+                    <line x1="15" y1="11" x2="15" y2="19" />
 
-                  {/* Bottom Right Corner Anchor Target */}
-                  <path d="M calc(100% - 40),calc(100% - 20) L calc(100% - 20),calc(100% - 20) L calc(100% - 20),calc(100% - 40)" fill="none" stroke={strokeColor} strokeWidth={strokeWidth} strokeLinecap="round" />
-                  <path d="M calc(100% - 37),calc(100% - 37) L calc(100% - 23),calc(100% - 37) L calc(100% - 23),calc(100% - 23) L calc(100% - 37),calc(100% - 23) Z" fill="none" stroke={strokeColor} strokeWidth="1.2" strokeDasharray="3 2" />
+                    {/* Top Right Target */}
+                    <circle cx="85" cy="15" r="3" />
+                    <line x1="81" y1="15" x2="89" y2="15" />
+                    <line x1="85" y1="11" x2="85" y2="19" />
+
+                    {/* Bottom Left Target */}
+                    <circle cx="15" cy="85" r="3" />
+                    <line x1="11" y1="85" x2="19" y2="85" />
+                    <line x1="15" y1="81" x2="15" y2="89" />
+
+                    {/* Bottom Right Target */}
+                    <circle cx="85" cy="85" r="3" />
+                    <line x1="81" y1="85" x2="89" y2="85" />
+                    <line x1="85" y1="81" x2="85" y2="89" />
+                  </g>
                 </g>
               );
             })()}
@@ -384,14 +429,46 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
           {scannerStatus === 'scanning' && (
             <div style={{
               position: 'absolute',
-              left: '5%',
-              right: '5%',
+              left: '10%',
+              right: '10%',
               height: '3px',
               background: 'linear-gradient(90deg, transparent, var(--violet), transparent)',
               boxShadow: '0 0 12px var(--violet)',
               animation: 'scanLaser 2.2s linear infinite'
             }} />
           )}
+
+          {/* Live helper guidance text */}
+          {scannerStatus === 'scanning' && (
+            <div style={{
+              position: 'absolute',
+              bottom: '1.5rem',
+              left: 0,
+              right: 0,
+              textAlign: 'center',
+              pointerEvents: 'none',
+              zIndex: 10
+            }}>
+              <span style={{
+                background: 'rgba(15, 23, 42, 0.85)',
+                color: 'var(--text-main)',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                padding: '0.45rem 1.1rem',
+                borderRadius: '99px',
+                border: '1px solid var(--border)',
+                backdropFilter: 'blur(8px)',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '0.4rem'
+              }}>
+                <Camera size={13} className="text-violet" />
+                Cadrez la feuille L&apos;Match dans les repères
+              </span>
+            </div>
+          )}
+        </div>
 
           {/* Top Control Overlay */}
           <div style={{ 
@@ -736,9 +813,9 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
       {/* Inject local stylesheet styles dynamically */}
       <style>{`
         @keyframes scanLaser {
-          0% { top: 15%; opacity: 0.2; }
-          50% { top: 85%; opacity: 1; }
-          100% { top: 15%; opacity: 0.2; }
+          0% { top: 10%; opacity: 0.2; }
+          50% { top: 90%; opacity: 1; }
+          100% { top: 10%; opacity: 0.2; }
         }
       `}</style>
     </div>

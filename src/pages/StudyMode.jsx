@@ -3,15 +3,16 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import Flashcard from '../components/Flashcard';
 import SessionSummary from '../components/SessionSummary';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Award, BrainCircuit, CheckCircle2, Zap, RefreshCw, Sparkles, Trophy } from 'lucide-react';
+import { ArrowLeft, Award, BrainCircuit, CheckCircle2, Zap, RefreshCw, Sparkles, Trophy, Lock } from 'lucide-react';
 
 export default function StudyMode() {
-  const { exams, progress: allProgress, updateCardProgress } = useAuth();
+  const { exams, progress: allProgress, updateCardProgress, isExamLocked } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const navigate = useNavigate();
 
-  const currentExam = examId ? exams.find(e => e.id === examId) : exams[0];
+  const activeExamsList = exams.filter(e => e.isActive !== false && e.isArchived !== true && !isExamLocked(e));
+  const currentExam = examId ? exams.find(e => e.id === examId) : activeExamsList[0];
 
   // ─── SNAPSHOT: Freeze the due cards list at session start ───────────────────
   const [sessionCards, setSessionCards] = useState(null); // null = not initialized yet
@@ -28,8 +29,7 @@ export default function StudyMode() {
       if (!currentExam || !currentExam.questions) return;
       questionsPool = (currentExam.questions || []).map(q => ({ ...q, examName: currentExam.name }));
     } else {
-      const activeExams = exams.filter(e => e.isActive !== false);
-      questionsPool = activeExams.flatMap(e =>
+      questionsPool = activeExamsList.flatMap(e =>
         (e.questions || []).map(q => ({ ...q, examName: e.name }))
       );
     }
@@ -83,17 +83,17 @@ export default function StudyMode() {
   // Redirect if exam is invalid
   useEffect(() => {
     if (isParcours) {
-      if (exams.length === 0) {
+      if (activeExamsList.length === 0) {
         navigate('/dashboard');
       }
       return;
     }
-    if (!currentExam && exams.length > 0) {
-      navigate(`/study?exam=${exams[0].id}`, { replace: true });
-    } else if (exams.length === 0) {
+    if (!currentExam && activeExamsList.length > 0) {
+      navigate(`/study?exam=${activeExamsList[0].id}`, { replace: true });
+    } else if (activeExamsList.length === 0) {
       navigate('/dashboard');
     }
-  }, [currentExam, exams, navigate, isParcours]);
+  }, [currentExam, activeExamsList, navigate, isParcours]);
 
   const handleNext = (questionId, quality) => {
     updateCardProgress(questionId, quality); // Updates SRS data in background
@@ -124,6 +124,29 @@ export default function StudyMode() {
     setCurrentIndex(0);
     setSessionHistory([]);
   };
+
+  // ── Lock check ──
+  if (!isParcours && currentExam && isExamLocked(currentExam)) {
+    return (
+      <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', padding: '2rem', textAlign: 'center' }}>
+        <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(99,102,241,0.1)', color: 'var(--violet)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', boxShadow: '0 8px 24px rgba(99,102,241,0.15)' }}>
+          <Zap size={36} fill="currentColor" />
+        </div>
+        <h2 style={{ fontWeight: 800, marginBottom: '0.5rem' }}>Contenu Premium Verrouillé</h2>
+        <p style={{ color: 'var(--text-muted)', maxWidth: '460px', marginBottom: '2rem', lineHeight: 1.6 }}>
+          L'examen <strong>{currentExam.name}</strong> fait partie de l'offre Premium. Abonnez-vous pour débloquer l'accès à tous les concours et corriger vos faiblesses avec l'IA.
+        </p>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <button onClick={() => navigate('/subscription')} className="btn" style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}>
+            ✦ Voir les offres d'abonnement
+          </button>
+          <button onClick={() => navigate('/dashboard')} className="btn-outline">
+            Retour au Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ── Loading state ──
   if ((!isParcours && !currentExam) || sessionCards === null) {

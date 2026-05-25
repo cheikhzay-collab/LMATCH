@@ -29,12 +29,12 @@ function getBrand(name, schoolBranding) {
 export default function SchoolExamsPage() {
   const { schoolName } = useParams();
   const school = decodeURIComponent(schoolName);
-  const { exams, user, schoolBranding } = useAuth();
+  const { exams, user, schoolBranding, isExamLocked } = useAuth();
   const navigate = useNavigate();
   const [scanExam, setScanExam] = useState(null);
 
   const brand = getBrand(school, schoolBranding);
-  const schoolExams = exams.filter(e => e.school === school && e.isActive !== false);
+  const schoolExams = exams.filter(e => e.school === school && e.isActive !== false && e.isArchived !== true);
 
   const handleDownloadPDF = async (exam) => {
     await generateAnswerSheet(exam, user);
@@ -119,34 +119,43 @@ export default function SchoolExamsPage() {
           </div>
         </div>
 
-        {/* Stats footer */}
+        {/* Stats Grid Under Hero */}
         <div style={{
-          background:'var(--bg-card)', padding:'0.875rem 1.25rem',
-          display:'flex', gap:'1.25rem', borderTop:'1px solid var(--border)',
-          flexWrap:'wrap',
+          background: 'var(--bg-card)',
+          padding: '1.25rem 2rem',
+          display: 'flex',
+          gap: '2.5rem',
+          flexWrap: 'wrap',
         }}>
           {[
-            { icon: BookOpen, label: 'Examens', value: schoolExams.length, color: brand.accent },
-            { icon: Trophy,   label: 'QCM Total', value: schoolExams.reduce((s,e) => s + e.questions.length, 0), color: 'var(--warning)' },
+            { icon: BookOpen, label: 'Concours disponibles', value: schoolExams.length, color: brand.accent },
             { icon: Zap,      label: 'Premium', value: schoolExams.filter(e => e.tier === 'premium').length, color: 'var(--violet)' },
           ].map(({ icon: Icon, label, value, color }) => (
-            <div key={label} style={{ display:'flex', alignItems:'center', gap:'0.625rem' }}>
-              <Icon size={16} color={color} />
-              <span style={{ fontSize:'0.82rem', color:'var(--text-muted)' }}>{label} :</span>
-              <span style={{ fontWeight:800, fontSize:'0.95rem', color }}>{value}</span>
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: '10px', background: 'var(--bg-glass)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color,
+              }}>
+                <Icon size={18} />
+              </div>
+              <div>
+                <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{label}</p>
+                <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>{value}</p>
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* ── Exams List ── */}
       {schoolExams.length === 0 ? (
-        <div style={{
-          textAlign:'center', padding:'5rem 2rem',
-          background:'var(--bg-card)', border:'1px solid var(--border)',
-          borderRadius:'1.5rem', color:'var(--text-muted)',
-        }}>
-          <GraduationCap size={52} style={{ opacity:0.25, margin:'0 auto 1.25rem' }} />
+        <div className="glass-panel text-center" style={{ padding:'4rem 2rem' }}>
+          <div style={{
+            width: '80px', height: '80px', background: brand.accentSoft, borderRadius: '50%',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem',
+            color: brand.accent,
+          }}>
+            <BookOpen size={36} />
+          </div>
           <h3 style={{ marginBottom:'0.5rem', fontSize:'1.1rem' }}>Aucun examen pour le moment</h3>
           <p style={{ fontSize:'0.88rem' }}>
             L'administrateur n'a pas encore mis en ligne d'examens pour <strong>{school}</strong>.
@@ -158,7 +167,7 @@ export default function SchoolExamsPage() {
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:'0.875rem' }}>
           {schoolExams.map((exam, idx) => {
-            const isLocked  = exam.tier === 'premium' && user?.tier !== 'premium';
+            const isLocked  = isExamLocked(exam);
             const qCount    = exam.questions.length;
 
             return (
@@ -206,9 +215,12 @@ export default function SchoolExamsPage() {
                 {/* Action buttons */}
                 <div style={{ display:'flex', gap:'0.5rem', flexShrink:0 }}>
                   {isLocked ? (
-                    <button className="btn-outline" disabled
-                      style={{ opacity:0.5, cursor:'not-allowed', display:'flex', alignItems:'center', gap:'0.4rem' }}>
-                      <Lock size={14} /> Verrouillé
+                    <button 
+                      className="btn-outline"
+                      onClick={() => navigate('/subscription')}
+                      style={{ display:'flex', alignItems:'center', gap:'0.4rem', borderColor: 'rgba(239, 68, 68, 0.3)', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.03)' }}
+                    >
+                      <Lock size={14} /> Débloquer
                     </button>
                   ) : (
                     <>

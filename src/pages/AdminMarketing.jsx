@@ -11,9 +11,9 @@ const FEATURES = [
     id: 'srs', emoji: '🧠', icon: Brain,
     label: 'Révision SRS Intelligente', color: '#6366F1', colorSoft: 'rgba(99,102,241,0.12)',
     hook: "Ne révise plus au hasard. L'algorithme te dit quoi réviser et quand.",
-    features: ['Algorithme SM-2', 'Révision espacée', '3x plus vite', 'Suivi progression'],
+    features: ['Algorithme FSRS', 'Révision espacée', '3x plus vite', 'Suivi progression'],
     persona: 'a focused Moroccan university student sitting at a clean desk at night, holding an open textbook, soft warm lamp light illuminating their face, dark studious background, wearing casual modern clothes',
-    appScreen: { title: 'Révision SRS', score: 87, items: ['SM-2 Algorithm', 'Due: 12 cards', 'Streak: 14 days'] },
+    appScreen: { title: 'Révision SRS', score: 87, items: ['FSRS Algorithm', 'Due: 12 cards', 'Streak: 14 days'] },
   },
   {
     id: 'ai-import', emoji: '✨', icon: Sparkles,
@@ -88,21 +88,33 @@ const STYLES = [
 
 const IMAGE_MODELS = [
   {
+    id: 'huggingface', label: 'HuggingFace — FLUX.1 (Gratuit)',
+    badge: 'Option Gratuite ✅', color: '#F59E0B',
+    desc: 'FLUX.1-schnell via HuggingFace. Très réaliste et gratuit.',
+    needsKey: 'hfApiKey',
+  },
+  {
     id: 'together',  label: 'Together AI — FLUX.1',
-    badge: 'Recommandé ⚡', color: '#8B5CF6',
-    desc: 'FLUX.1-schnell — photos réalistes, visages, scènes éducatives',
+    badge: 'Premium ⚡', color: '#8B5CF6',
+    desc: 'FLUX.1-schnell via Together API (Payant).',
     needsKey: 'togetherApiKey',
   },
   {
     id: 'imagen3',   label: 'Google Imagen 3',
     badge: 'Clé Gemini', color: '#4285F4',
-    desc: 'Meilleure qualité photo-réaliste. Nécessite clé Gemini.',
+    desc: 'Qualité photo-réaliste Google. Nécessite clé Gemini.',
     needsKey: 'geminiApiKey',
   },
   {
-    id: 'canvas',    label: 'Poster Studio (Local)',
-    badge: 'Hors ligne', color: '#10B981',
-    desc: 'Génération instantanée sans API. Design graphique local.',
+    id: 'upload',    label: 'Importer votre propre image de fond',
+    badge: 'Sur-mesure 🎨', color: '#EC4899',
+    desc: 'Téléchargez une image locale. L\'application ajoutera le texte et le mockup dessus.',
+    needsKey: false,
+  },
+  {
+    id: 'canvas',    label: 'Poster Studio (Générateur Local)',
+    badge: 'Hors ligne 🔌', color: '#10B981',
+    desc: 'Fond dégradé stylisé avec emoji géant. Sans API.',
     needsKey: false,
   },
 ];
@@ -504,6 +516,7 @@ export default function AdminMarketing() {
   );
 
   const [phase,           setPhase]           = useState(1);
+  const [uploadedBg,      setUploadedBg]      = useState(null);
   const [generatedImage,  setGeneratedImage]  = useState(null);
   const [generatedText,   setGeneratedText]   = useState(null);
   const [generatedPrompt, setGeneratedPrompt] = useState('');
@@ -517,6 +530,7 @@ export default function AdminMarketing() {
   const claudeKey   = localStorage.getItem('claudeApiKey')   || '';
   const geminiKey   = localStorage.getItem('geminiApiKey')   || '';
   const togetherKey = localStorage.getItem('togetherApiKey') || '';
+  const hfKey       = localStorage.getItem('hfApiKey')       || '';
 
   // ── Step 1: Claude writes the person/scene FLUX.1 prompt ──────────────────
   const generateScenePrompt = useCallback(async (feature, format, style) => {
@@ -570,6 +584,33 @@ Write ONLY the prompt (4-5 sentences). No preamble.`
       return basePrompt;
     }
   }, [claudeKey]);
+
+  // ── Step 2a: HuggingFace Inference FLUX.1 ─────────────────────────────────
+  const tryHuggingFace = useCallback(async (prompt) => {
+    if (!hfKey) throw new Error('Token HuggingFace manquant.');
+    const res = await fetch(
+      'https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${hfKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ inputs: prompt })
+      }
+    );
+    if (!res.ok) {
+      const errText = await res.text().catch(() => '');
+      throw new Error(`HuggingFace API error: HTTP ${res.status} ${errText}`);
+    }
+    const blob = await res.blob();
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }, [hfKey]);
 
   // ── Step 2: Together AI FLUX.1 ────────────────────────────────────────────
   const tryTogether = useCallback(async (prompt, format) => {
@@ -694,6 +735,14 @@ Write ONLY the prompt (4-5 sentences). No preamble.`
             const b64 = await tryImagen3(scenePrompt, selectedFormat);
             setUsedModel('Imagen 3 + Canvas'); return b64;
           }
+          if (selectedModel === 'huggingface') {
+            const b64 = await tryHuggingFace(scenePrompt);
+            setUsedModel('FLUX.1 (HF) + Canvas'); return b64;
+          }
+          if (selectedModel === 'upload') {
+            if (!uploadedBg) throw new Error("Veuillez d'abord importer une image de fond.");
+            setUsedModel('Image Perso + Canvas'); return uploadedBg;
+          }
           setUsedModel('Canvas Studio');
           return buildFallbackBgB64(selectedFeature, selectedFormat, selectedStyle);
         })(),
@@ -737,7 +786,9 @@ Write ONLY the prompt (4-5 sentences). No preamble.`
 
   const canGenerate = selectedFeature && claudeKey
     && (selectedModel !== 'together' || togetherKey)
-    && (selectedModel !== 'imagen3'  || geminiKey);
+    && (selectedModel !== 'imagen3'  || geminiKey)
+    && (selectedModel !== 'huggingface' || hfKey)
+    && (selectedModel !== 'upload' || uploadedBg);
 
   // ─── RENDER ───────────────────────────────────────────────────────────────
   return (
@@ -765,7 +816,8 @@ Write ONLY the prompt (4-5 sentences). No preamble.`
         </div>
         <div style={{ display: 'flex', gap: '0.45rem', marginTop: '0.75rem', flexWrap: 'wrap' }}>
           {[
-            { label: 'Together AI', active: !!togetherKey, color: '#8B5CF6', note: togetherKey ? '✓ FLUX.1 ⚡' : '⚠️ Manquant' },
+            { label: 'HuggingFace', active: !!hfKey,       color: '#F59E0B', note: hfKey       ? '✓ FLUX.1 (Gratuit) ⚡' : '⚠️ Non configuré' },
+            { label: 'Together AI', active: !!togetherKey, color: '#8B5CF6', note: togetherKey ? '✓ FLUX.1' : '— Optionnel' },
             { label: 'Claude AI',   active: !!claudeKey,   color: '#6366F1', note: claudeKey   ? '✓ Prompt + Texte' : '⚠️ Requis' },
             { label: 'Imagen 3',    active: !!geminiKey,   color: '#4285F4', note: geminiKey   ? '✓ Actif' : '— Optionnel' },
           ].map(({ label, active, color, note }) => (
@@ -945,6 +997,32 @@ Write ONLY the prompt (4-5 sentences). No preamble.`
                   );
                 })}
               </div>
+
+              {selectedModel === 'upload' && (
+                <div style={{ marginTop: '1rem', border: '2px dashed var(--border)', borderRadius: '0.75rem', padding: '1.25rem', textAlign: 'center', background: 'var(--bg-glass)', position: 'relative' }}>
+                  <input 
+                    type="file" 
+                    accept="image/*" 
+                    onChange={e => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const r = new FileReader();
+                        r.onload = () => setUploadedBg(r.result.split(',')[1]);
+                        r.readAsDataURL(file);
+                      }
+                    }}
+                    style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }}
+                  />
+                  <div style={{ color: 'var(--violet)', fontWeight: 700, fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+                    <Upload size={16} /> {uploadedBg ? "Modifier l'image de fond" : "Importer une image de fond"}
+                  </div>
+                  {uploadedBg && (
+                    <div style={{ marginTop: '0.5rem', fontSize: '0.72rem', color: 'var(--emerald)', fontWeight: 600 }}>
+                      ✓ Image importée avec succès ! Prêt pour la composition.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Step 3: Format + Language */}

@@ -165,14 +165,24 @@ export default function BottomNav() {
               </div>
 
               {/* Tier badge */}
-              <span style={{
-                padding: '0.28rem 0.7rem', borderRadius: 99,
-                fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em',
-                background: user?.tier === 'premium' ? 'var(--violet-soft)' : 'var(--bg-glass)',
-                color:      user?.tier === 'premium' ? 'var(--violet)'      : 'var(--text-muted)',
-                border: `1px solid ${user?.tier === 'premium' ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
-                flexShrink: 0,
-              }}>
+              <span 
+                onClick={() => {
+                  if (isStudent) {
+                    navigate('/subscription');
+                    setShowSheet(false);
+                  }
+                }}
+                style={{
+                  padding: '0.28rem 0.7rem', borderRadius: 99,
+                  fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em',
+                  background: user?.tier === 'premium' ? 'var(--violet-soft)' : 'var(--bg-glass)',
+                  color:      user?.tier === 'premium' ? 'var(--violet)'      : 'var(--text-muted)',
+                  border: `1px solid ${user?.tier === 'premium' ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
+                  flexShrink: 0,
+                  cursor: isStudent ? 'pointer' : 'default'
+                }}
+                title={isStudent ? "Gérer mon abonnement" : undefined}
+              >
                 {user?.tier === 'premium' ? '⚡ Pro' : 'Free'}
               </span>
             </div>

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -9,9 +9,18 @@ import {
 export default function AdminStudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { users, exams } = useAuth();
+  const { users, exams, plans, activateSubscription, cancelSubscription } = useAuth();
   
   const student = users.find(u => u.id === id);
+
+  const [selectedPlanId, setSelectedPlanId] = useState('');
+  const [selectedDuration, setSelectedDuration] = useState('365');
+
+  useEffect(() => {
+    if (plans && plans.length > 0 && !selectedPlanId) {
+      setSelectedPlanId(plans[0].id);
+    }
+  }, [plans, selectedPlanId]);
 
   if (!student) return <div style={{ padding: '2rem' }}>Utilisateur non trouvé.</div>;
 
@@ -74,7 +83,85 @@ export default function AdminStudentDetail() {
                     <TrendingUp size={16} /> {student.xp} XP
                   </div>
                </div>
-            </div>
+             </div>
+          </div>
+
+          {/* ── Subscription Management Card ── */}
+          <div className="glass-panel" style={{ padding: '2rem' }}>
+            <h4 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Crown size={20} color="var(--warning)" /> Abonnement de l'élève
+            </h4>
+            
+            {student.subscription && student.subscription.status === 'active' ? (() => {
+              const activePlan = plans.find(p => p.id === student.subscription.planId);
+              const daysLeft = Math.ceil((new Date(student.subscription.endDate) - new Date()) / (1000 * 3600 * 24));
+              
+              return (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ background: 'rgba(245, 158, 11, 0.08)', border: '1px solid rgba(245, 158, 11, 0.2)', padding: '1rem', borderRadius: '12px' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--warning)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.25rem' }}>
+                      Baque Active
+                    </div>
+                    <div style={{ fontWeight: 800, fontSize: '1.05rem', color: 'var(--text-main)' }}>
+                      {activePlan ? activePlan.name : 'Abonnement Spécial'}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                      Expire le : {new Date(student.subscription.endDate).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', fontWeight: 700, color: daysLeft > 10 ? 'var(--emerald)' : 'var(--danger)', marginTop: '0.25rem' }}>
+                      {daysLeft > 0 ? `${daysLeft} jours restants` : 'Expiré aujourd\'hui'}
+                    </div>
+                  </div>
+                  
+                  <button 
+                    type="button" 
+                    onClick={() => cancelSubscription(student.id)}
+                    className="btn-outline"
+                    style={{ width: '100%', borderColor: 'rgba(239, 68, 68, 0.5)', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.05)', padding: '0.6rem', fontSize: '0.85rem' }}
+                  >
+                    Résilier l'abonnement
+                  </button>
+                </div>
+              );
+            })() : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Sélectionner une offre</label>
+                  <select 
+                    value={selectedPlanId} 
+                    onChange={e => setSelectedPlanId(e.target.value)}
+                    style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-glass)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                  >
+                    {plans.map(p => (
+                      <option key={p.id} value={p.id}>{p.name} ({p.price} DH)</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 600 }}>Durée de l'activation</label>
+                  <select 
+                    value={selectedDuration} 
+                    onChange={e => setSelectedDuration(e.target.value)}
+                    style={{ padding: '0.5rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-glass)', color: 'var(--text-main)', fontSize: '0.85rem' }}
+                  >
+                    <option value="30">30 Jours (1 Mois)</option>
+                    <option value="90">90 Jours (3 Mois)</option>
+                    <option value="180">180 Jours (6 Mois)</option>
+                    <option value="365">365 Jours (1 An)</option>
+                  </select>
+                </div>
+                
+                <button 
+                  type="button" 
+                  onClick={() => activateSubscription(student.id, selectedPlanId, selectedDuration)}
+                  className="btn"
+                  style={{ width: '100%', padding: '0.65rem', justifyContent: 'center', fontSize: '0.85rem' }}
+                >
+                  Activer l'abonnement
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="glass-panel" style={{ padding:'2rem' }}>

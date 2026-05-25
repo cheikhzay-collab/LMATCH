@@ -40,7 +40,7 @@ const features = [
 ];
 
 export default function LandingPage() {
-  const { theme, toggleTheme } = useAuth();
+  const { theme, toggleTheme, plans, user } = useAuth();
   const isLight = theme === 'light';
 
   return (
@@ -83,12 +83,20 @@ export default function LandingPage() {
             {isLight ? <Moon size={16} /> : <Sun size={16} />}
           </button>
           {/* Hide Connexion on very small screens */}
-          <Link to="/login" className="btn-ghost landing-nav-cta" style={{ textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>
-            Connexion
-          </Link>
-          <Link to="/login" className="btn" style={{ textDecoration: 'none', padding: '0.6rem 1rem', fontSize: '0.88rem' }}>
-            Commencer <ArrowRight size={14} />
-          </Link>
+          {user ? (
+            <Link to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} className="btn" style={{ textDecoration: 'none', padding: '0.6rem 1rem', fontSize: '0.88rem' }}>
+              Mon Espace <ArrowRight size={14} />
+            </Link>
+          ) : (
+            <>
+              <Link to="/login" className="btn-ghost landing-nav-cta" style={{ textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>
+                Connexion
+              </Link>
+              <Link to="/login" className="btn" style={{ textDecoration: 'none', padding: '0.6rem 1rem', fontSize: '0.88rem' }}>
+                Commencer <ArrowRight size={14} />
+              </Link>
+            </>
+          )}
         </div>
       </header>
 
@@ -129,12 +137,25 @@ export default function LandingPage() {
           </p>
 
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap', padding: '0 0.5rem' }}>
-            <Link to="/login" className="btn-emerald" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
-              <Zap size={18} /> Démarrer gratuitement
-            </Link>
-            <Link to="/login" className="btn-outline" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
-              Voir la démo <ArrowRight size={16} />
-            </Link>
+            {user ? (
+              <>
+                <Link to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} className="btn-emerald" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
+                  <Zap size={18} /> Tableau de Bord
+                </Link>
+                <Link to="/schools" className="btn-outline" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
+                  Parcourir les écoles <ArrowRight size={16} />
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="btn-emerald" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
+                  <Zap size={18} /> Démarrer gratuitement
+                </Link>
+                <Link to="/login" className="btn-outline" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
+                  Voir la démo <ArrowRight size={16} />
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Social proof */}
@@ -174,73 +195,141 @@ export default function LandingPage() {
       </section>
 
       {/* ── Pricing ── */}
-      <section style={{ maxWidth: '860px', margin: '0 auto', padding: '2rem 1.25rem 6rem' }}>
+      <section style={{ maxWidth: '1200px', margin: '0 auto', padding: '2rem 1.25rem 6rem' }}>
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
           <h2 style={{ fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 800, marginBottom: '0.75rem' }}>Choisissez votre plan</h2>
           <p className="text-muted">Commencez gratuitement. Passez Pro quand vous êtes prêt.</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem' }}>
+        <div className="pricing-grid" style={{ alignItems: 'stretch' }}>
           {/* Freemium */}
-          <div className="glass-panel">
-            <h3 style={{ fontWeight: 700, marginBottom: '0.25rem' }}>Freemium</h3>
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.25rem' }}>
-              0 <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400 }}>Dh/mois</span>
+          <div className="glass-panel" style={{ 
+            display: 'flex', 
+            flexDirection: 'column', 
+            justifyContent: 'space-between',
+            background: isLight ? '#ffffff' : 'var(--bg-card)',
+            border: isLight ? '1px solid rgba(226, 232, 240, 0.8)' : '1px solid var(--border)',
+            boxShadow: isLight ? '0 10px 30px rgba(0,0,0,0.03)' : 'var(--shadow-card)',
+          }}>
+            <div>
+              <h3 style={{ fontWeight: 700, marginBottom: '0.25rem', color: isLight ? 'var(--navy-900)' : 'var(--text-main)' }}>Freemium</h3>
+              <div style={{ fontSize: '2.8rem', fontWeight: 900, marginBottom: '0.25rem', display: 'flex', alignItems: 'baseline', gap: '0.25rem', color: isLight ? 'var(--navy-900)' : 'var(--text-main)' }}>
+                0 <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400 }}>Dh/mois</span>
+              </div>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.87rem', marginBottom: '1.5rem' }}>Pour tester la méthode.</p>
+              <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '2rem', padding: 0 }}>
+                {[
+                  { ok: true, label: 'Annales des 2 dernières années' },
+                  { ok: true, label: 'Correction basique' },
+                  { ok: false, label: 'Astuces IA (Cheat codes)' },
+                  { ok: false, label: 'Classement National' },
+                ].map(({ ok, label }) => (
+                  <li key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.9rem', color: ok ? 'var(--text-main)' : 'var(--text-subtle)', textDecoration: ok ? 'none' : 'line-through' }}>
+                    {ok ? <CheckCircle2 size={16} color="var(--emerald)" style={{ flexShrink: 0 }} /> : <XIcon />}
+                    {label}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.87rem', marginBottom: '1.5rem' }}>Pour tester la méthode.</p>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '2rem' }}>
-              {[
-                { ok: true, label: 'Annales des 2 dernières années' },
-                { ok: true, label: 'Correction basique' },
-                { ok: false, label: 'Astuces IA (Cheat codes)' },
-                { ok: false, label: 'Classement National' },
-              ].map(({ ok, label }) => (
-                <li key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.9rem', color: ok ? 'var(--text-main)' : 'var(--text-subtle)' }}>
-                  {ok ? <CheckCircle2 size={16} color="var(--emerald)" /> : <XIcon />}
-                  {label}
-                </li>
-              ))}
-            </ul>
-            <Link to="/login" className="btn-outline" style={{ width: '100%', textDecoration: 'none', justifyContent: 'center' }}>
-              S'inscrire
+            <Link to={user ? "/dashboard" : "/login"} className="btn-outline" style={{ width: '100%', textDecoration: 'none', justifyContent: 'center' }}>
+              {user ? "Accéder à mon espace" : "S'inscrire"}
             </Link>
           </div>
 
-          {/* Premium */}
-          <div className="glass-panel" style={{
-            border: '1px solid rgba(99,102,241,0.4)',
-            background: 'linear-gradient(145deg, rgba(99,102,241,0.08), rgba(30,41,59,0.7))',
-            position: 'relative', overflow: 'hidden'
-          }}>
-            {/* Shimmer top */}
-            <div style={{
-              position: 'absolute', top: 0, left: 0, right: 0, height: '2px',
-              background: 'linear-gradient(90deg, var(--violet), var(--emerald))',
-            }} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-              <h3 style={{ fontWeight: 700 }} className="text-gradient">Premium L'Conq</h3>
-              <span className="badge badge-pro"><Zap size={9} /> Recommandé</span>
-            </div>
-            <div style={{ fontSize: '2.5rem', fontWeight: 900, marginBottom: '0.25rem' }}>
-              99 <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400 }}>Dh/mois</span>
-            </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.87rem', marginBottom: '1.5rem' }}>Le pack complet pour la réussite.</p>
-            <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '2rem' }}>
-              {[
-                'Accès à toutes les archives (2010-2025)',
-                'Astuces IA exclusives pour chaque QCM',
-                'Simulateur de concours chronométré',
-                'Heatmaps des faiblesses',
-              ].map(label => (
-                <li key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.9rem' }}>
-                  <CheckCircle2 size={16} color="var(--emerald)" /> {label}
-                </li>
-              ))}
-            </ul>
-            <Link to="/login" className="btn" style={{ width: '100%', textDecoration: 'none', justifyContent: 'center', background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}>
-              <Zap size={15} /> Passer Premium
-            </Link>
-          </div>
+          {/* Dynamic Premium Plans */}
+          {plans && plans.map((plan, index) => {
+            const isRecommended = !!plan.isRecommended;
+            const formatPriceLabel = (price, days) => {
+              if (days === 30 || days === 31) return 'Dh/mois';
+              if (days === 365) return 'Dh/an';
+              return `Dh / ${days} j`;
+            };
+
+            return (
+              <div 
+                key={plan.id}
+                className="glass-panel" 
+                style={{
+                  border: isRecommended ? '1.5px solid rgba(99,102,241,0.5)' : (isLight ? '1px solid rgba(226, 232, 240, 0.8)' : '1px solid var(--border)'),
+                  background: isRecommended 
+                    ? (isLight 
+                        ? 'linear-gradient(145deg, #ffffff, #f0f3ff)' 
+                        : 'linear-gradient(145deg, rgba(99,102,241,0.1), rgba(15,23,42,0.85))')
+                    : (isLight ? '#ffffff' : 'var(--bg-card)'),
+                  boxShadow: isRecommended 
+                    ? (isLight ? '0 15px 35px rgba(99,102,241,0.15)' : '0 15px 35px rgba(99,102,241,0.3)')
+                    : (isLight ? '0 10px 30px rgba(0,0,0,0.03)' : 'var(--shadow-card)'),
+                  position: 'relative', 
+                  overflow: 'hidden',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  transform: isRecommended ? 'scale(1.02)' : 'none',
+                  zIndex: isRecommended ? 5 : 1
+                }}
+              >
+                {/* Shimmer top for recommended */}
+                {isRecommended && (
+                  <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, height: '3px',
+                    background: 'linear-gradient(90deg, var(--violet), var(--emerald))',
+                  }} />
+                )}
+                
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+                    <h3 style={{ fontWeight: 800, margin: 0, color: isRecommended ? 'var(--violet)' : (isLight ? 'var(--navy-900)' : 'var(--text-main)') }}>
+                      {plan.name}
+                    </h3>
+                    {isRecommended && (
+                      <span className="badge badge-pro"><Zap size={9} fill="currentColor" /> RECOMMANDÉ</span>
+                    )}
+                  </div>
+                  
+                  <div style={{ fontSize: '2.8rem', fontWeight: 900, marginBottom: '0.25rem', color: isLight ? 'var(--navy-900)' : 'var(--text-main)', display: 'flex', alignItems: 'baseline', gap: '0.25rem' }}>
+                    {plan.price} <span style={{ fontSize: '1rem', color: 'var(--text-muted)', fontWeight: 400 }}>{formatPriceLabel(plan.price, plan.durationDays)}</span>
+                  </div>
+                  
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.87rem', marginBottom: '1.5rem' }}>
+                    {plan.description || "Le pack complet pour la réussite."}
+                  </p>
+                  
+                  <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '2rem', padding: 0 }}>
+                    {plan.features && plan.features.map(label => (
+                      <li key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.9rem' }}>
+                        <CheckCircle2 size={16} color="var(--emerald)" style={{ flexShrink: 0 }} />
+                        <span>{label}</span>
+                      </li>
+                    ))}
+                    
+                    {plan.allowedSchools && plan.allowedSchools.length > 0 && (
+                      <li style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem', fontSize: '0.85rem', borderTop: isLight ? '1px solid rgba(226, 232, 240, 0.8)' : '1px solid rgba(255,255,255,0.06)', paddingTop: '0.75rem', marginTop: '0.75rem' }}>
+                        <CheckCircle2 size={16} color="var(--emerald)" style={{ flexShrink: 0, opacity: 0.7 }} />
+                        <div>
+                          <strong style={{ color: isLight ? 'var(--navy-800)' : 'var(--text-main)' }}>Écoles incluses :</strong>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2, lineHeight: 1.4 }}>
+                            {plan.allowedSchools.join(', ')}
+                          </div>
+                        </div>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+                
+                <Link to={user ? "/subscription" : "/login"} className="btn" style={{ 
+                  width: '100%', 
+                  textDecoration: 'none', 
+                  justifyContent: 'center', 
+                  background: isRecommended ? 'linear-gradient(135deg, var(--violet), #818cf8)' : undefined, 
+                  marginTop: 'auto',
+                  gap: '0.5rem',
+                  fontWeight: 700
+                }}>
+                  <Zap size={15} fill={isRecommended ? "currentColor" : "none"} /> {user ? "S'abonner à l'offre" : "Passer Premium"}
+                </Link>
+              </div>
+            );
+          })}
         </div>
       </section>
     </div>

@@ -124,7 +124,7 @@ function ResultRow({ row }) {
 
 /* ── Main Global Scanner Page ────────────────────────────────────── */
 export default function OMRScannerPage() {
-  const { user, updateCardProgress, schoolBranding, exams } = useAuth();
+  const { user, updateCardProgress, schoolBranding, exams, isExamLocked } = useAuth();
   const navigate = useNavigate();
 
   const [activeExam,   setActiveExam]   = useState(null);
@@ -171,6 +171,9 @@ export default function OMRScannerPage() {
       const found = exams.find(e => e.id === qrPayload.examId);
       if (!found) {
         throw new Error(`Examen introuvable dans la bibliothèque (ID : ${qrPayload.examId.slice(0, 8)})`);
+      }
+      if (isExamLocked(found)) {
+        throw new Error("Cet examen fait partie de l'offre Premium. Veuillez vous abonner pour scanner votre feuille de réponses et obtenir votre correction.");
       }
 
       setActiveExam(found);
@@ -275,7 +278,18 @@ export default function OMRScannerPage() {
             <div style={{ maxWidth: 640, margin: '0 auto' }}>
               {scanError && (
                 <div style={{ padding:'0.875rem 1.25rem', background:'var(--danger-soft)', border:'1px solid var(--danger)33', borderRadius:'0.875rem', marginBottom:'1.5rem', color:'var(--danger)', fontSize:'0.88rem', fontWeight:600, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <AlertCircle size={18} style={{ flexShrink: 0 }} /> <span>{scanError}</span>
+                  <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-start' }}>
+                    <span>{scanError}</span>
+                    {scanError.includes("Premium") && (
+                      <button 
+                        onClick={() => navigate('/subscription')} 
+                        style={{ background: 'none', border: 'none', color: 'var(--violet)', padding: 0, fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', textAlign: 'left', textDecoration: 'underline' }}
+                      >
+                        Voir les formules d'abonnement
+                      </button>
+                    )}
+                  </div>
                 </div>
               )}
               

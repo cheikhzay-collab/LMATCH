@@ -135,6 +135,8 @@ export function AuthProvider({ children }) {
     localStorage.setItem('examsSchemaVersion', String(SCHEMA_VERSION));
   }, [exams]);
 
+
+
   
   // Theme Management
   const [theme, setTheme] = useState(() => {
@@ -154,10 +156,45 @@ export function AuthProvider({ children }) {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  // Progress state for SRS: { [questionId]: { interval, repetitions, easeFactor, nextReviewDate } }
+  // Progress state for SRS: { [questionId]: { difficulty, stability, repetitions, easeFactor, lastReviewDate, nextReviewDate } }
+  // Migrated from legacy SM-2: { interval, repetitions, easeFactor, nextReviewDate }
   const [progress, setProgress] = useState(() => {
     const saved = localStorage.getItem('progress');
-    return saved ? JSON.parse(saved) : {};
+    if (!saved) return {};
+    try {
+      const parsed = JSON.parse(saved);
+      let migrated = false;
+      const migratedProgress = {};
+      Object.entries(parsed).forEach(([id, card]) => {
+        if (card && card.repetitions !== undefined && card.difficulty === undefined) {
+          migrated = true;
+          const easeFactor = card.easeFactor || 2.5;
+          const interval = card.interval || 1;
+          const difficulty = Math.max(1.0, Math.min(10.0, 12.0 - 4.0 * easeFactor));
+          const stability = Math.max(0.5, interval);
+          const nextReviewDate = card.nextReviewDate || new Date().toISOString();
+          const lastReview = new Date(nextReviewDate);
+          lastReview.setDate(lastReview.getDate() - Math.round(stability));
+
+          migratedProgress[id] = {
+            difficulty,
+            stability,
+            repetitions: card.repetitions,
+            easeFactor, // keep stored for stats backward-compatibility
+            lastReviewDate: lastReview.toISOString(),
+            nextReviewDate
+          };
+        } else {
+          migratedProgress[id] = card;
+        }
+      });
+      if (migrated) {
+        localStorage.setItem('progress', JSON.stringify(migratedProgress));
+      }
+      return migratedProgress;
+    } catch (e) {
+      return {};
+    }
   });
 
   useEffect(() => {
@@ -191,6 +228,40 @@ export function AuthProvider({ children }) {
     { id: '2', name: 'Sara Bennani', email: 'premium@lconq.ma', tier: 'premium', joined: '2026-05-01', xp: 8450 },
     { id: '3', name: 'Aymane Idrissi', email: 'free@lconq.ma', tier: 'freemium', joined: '2026-05-12', xp: 120 },
   ]);
+
+  // Check subscription expiration on mount/updates
+  useEffect(() => {
+    const now = new Date();
+    let changed = false;
+    const checkedUsers = users.map(u => {
+      if (u.subscription && new Date(u.subscription.endDate) < now && u.subscription.status === 'active') {
+        changed = true;
+        return {
+          ...u,
+          tier: 'freemium',
+          subscription: {
+            ...u.subscription,
+            status: 'expired'
+          }
+        };
+      }
+      return u;
+    });
+
+    if (changed) {
+      setUsers(checkedUsers);
+      if (user && user.subscription && new Date(user.subscription.endDate) < now && user.subscription.status === 'active') {
+        setUser(u => ({
+          ...u,
+          tier: 'freemium',
+          subscription: {
+            ...u.subscription,
+            status: 'expired'
+          }
+        }));
+      }
+    }
+  }, [users, user]);
 
   const login = (email, password) => {
     if (email === 'admin@lconq.ma') {
@@ -233,6 +304,14 @@ export function AuthProvider({ children }) {
     setExams(exams.map(e => e.id === examId ? { ...e, ...updates } : e));
   };
 
+  const deleteExam = (examId) => {
+    setExams(exams.filter(e => e.id !== examId));
+  };
+
+  const toggleArchiveExam = (examId) => {
+    setExams(exams.map(e => e.id === examId ? { ...e, isArchived: !e.isArchived } : e));
+  };
+
   const updateUserTier = (userId, newTier) => {
     setUsers(users.map(u => u.id === userId ? { ...u, tier: newTier } : u));
     if (user && user.id === userId) {
@@ -240,36 +319,321 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // SM-2 Algorithm Implementation
-  const updateCardProgress = (questionId, quality) => {
-    // Quality: 0 = failed, 3 = hard, 4 = good, 5 = easy
-    setProgress((prev) => {
-      const card = prev[questionId] || { interval: 0, repetitions: 0, easeFactor: 2.5 };
-      let { interval, repetitions, easeFactor } = card;
+  const [plans, setPlans] = useState(() => {
+    const saved = localStorage.getItem('plans');
+    let parsed = null;
+    if (saved) {
+      try {
+        parsed = JSON.parse(saved);
+      } catch (e) {
+        parsed = null;
+      }
+    }
+    
+    // Default fallback plans aligned with the new Premium L'Conq mockup
+    const defaultPlans = [
+      {
+        id: 'plan_lconq',
+        name: "Premium L'Conq",
+        price: 99,
+        durationDays: 30,
+        description: "Le pack complet pour la réussite.",
+        isRecommended: true,
+        features: [
+          "Accès à toutes les archives (2010–2025)",
+          "Astuces IA exclusives pour chaque QCM",
+          "Simulateur de concours chronométré",
+          "Heatmaps des faiblesses"
+        ],
+        allowedSchools: ['Médecine / Pharmacie', 'ENSA', 'ENSAM', 'ENCG', 'INPT', 'INSEA', 'Général (Prépa)']
+      },
+      {
+        id: 'plan_complet',
+        name: "Pack Premium Global",
+        price: 699,
+        durationDays: 365,
+        description: "La préparation ultime sur le long terme.",
+        isRecommended: false,
+        features: [
+          "Accès à toutes les archives (2010–2025)",
+          "Astuces IA exclusives pour chaque QCM",
+          "Simulateur de concours chronométré",
+          "Heatmaps des faiblesses",
+          "Accès prioritaire aux nouveautés"
+        ],
+        allowedSchools: ['Médecine / Pharmacie', 'ENSA', 'ENSAM', 'ENCG', 'INPT', 'INSEA', 'Général (Prépa)']
+      }
+    ];
 
-      if (quality >= 3) {
-        if (repetitions === 0) {
-          interval = 1;
-        } else if (repetitions === 1) {
-          interval = 6;
+    if (!parsed || !Array.isArray(parsed) || parsed.length === 0) {
+      return defaultPlans;
+    }
+
+    // Ensure loaded plans have the features and description field
+    return parsed.map(p => ({
+      ...p,
+      description: p.description !== undefined ? p.description : "Accès complet pour préparer vos concours.",
+      isRecommended: p.isRecommended !== undefined ? p.isRecommended : (p.id === 'plan_complet'),
+      features: Array.isArray(p.features) ? p.features : [
+        "Accès à toutes les archives (2010–2025)",
+        "Astuces IA exclusives pour chaque QCM",
+        "Simulateur de concours chronométré",
+        "Heatmaps des faiblesses"
+      ]
+    }));
+  });
+
+  useEffect(() => {
+    localStorage.setItem('plans', JSON.stringify(plans));
+  }, [plans]);
+
+  const addPlan = (name, price, durationDays, allowedSchools, description = '', isRecommended = false, features = []) => {
+    setPlans([...plans, {
+      id: 'plan_' + Math.random().toString(36).substr(2, 9),
+      name,
+      price: parseFloat(price) || 0,
+      durationDays: parseInt(durationDays) || 365,
+      allowedSchools: allowedSchools || [],
+      description: description || "Accès complet pour préparer vos concours.",
+      isRecommended: !!isRecommended,
+      features: Array.isArray(features) ? features : [
+        "Accès à toutes les archives (2010–2025)",
+        "Astuces IA exclusives pour chaque QCM",
+        "Simulateur de concours chronométré",
+        "Heatmaps des faiblesses"
+      ]
+    }]);
+  };
+
+  const removePlan = (planId) => {
+    setPlans(plans.filter(p => p.id !== planId));
+  };
+
+  const updatePlan = (planId, updates) => {
+    setPlans(plans.map(p => p.id === planId ? { ...p, ...updates } : p));
+  };
+
+  const activateSubscription = (userId, planId, durationDays) => {
+    const startDate = new Date();
+    const endDate = new Date();
+    endDate.setDate(startDate.getDate() + parseInt(durationDays));
+
+    const updatedUsers = users.map(u => {
+      if (u.id === userId) {
+        return {
+          ...u,
+          tier: 'premium',
+          subscription: {
+            planId,
+            status: 'active',
+            startDate: startDate.toISOString(),
+            endDate: endDate.toISOString()
+          }
+        };
+      }
+      return u;
+    });
+
+    setUsers(updatedUsers);
+
+    if (user && user.id === userId) {
+      const match = updatedUsers.find(u => u.id === userId);
+      setUser({ ...user, ...match });
+    }
+  };
+
+  const cancelSubscription = (userId) => {
+    const updatedUsers = users.map(u => {
+      if (u.id === userId) {
+        return {
+          ...u,
+          tier: 'freemium',
+          subscription: null
+        };
+      }
+      return u;
+    });
+
+    setUsers(updatedUsers);
+
+    if (user && user.id === userId) {
+      const match = updatedUsers.find(u => u.id === userId);
+      setUser({ ...user, ...match });
+    }
+  };
+
+  const [activationCodes, setActivationCodes] = useState(() => {
+    const saved = localStorage.getItem('activationCodes');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        return [];
+      }
+    }
+    
+    // Seed some default test codes
+    return [
+      {
+        code: 'LCONQ-PREM-TEST-30D',
+        planId: 'plan_lconq',
+        isUsed: false,
+        usedBy: '',
+        usedAt: '',
+        batchName: 'Test Batch 30 Jours',
+        createdDate: new Date().toISOString()
+      },
+      {
+        code: 'LCONQ-GLOB-TEST-365',
+        planId: 'plan_complet',
+        isUsed: false,
+        usedBy: '',
+        usedAt: '',
+        batchName: 'Test Batch 365 Jours',
+        createdDate: new Date().toISOString()
+      }
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('activationCodes', JSON.stringify(activationCodes));
+  }, [activationCodes]);
+
+  const generateActivationCodes = (planId, count, batchName) => {
+    const newCodes = [];
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    for (let i = 0; i < count; i++) {
+      // Generate code format: LCONQ-XXXX-XXXX
+      let part1 = '';
+      let part2 = '';
+      for (let j = 0; j < 4; j++) {
+        part1 += characters.charAt(Math.floor(Math.random() * characters.length));
+        part2 += characters.charAt(Math.floor(Math.random() * characters.length));
+      }
+      const codeStr = `LCONQ-${part1}-${part2}`;
+      newCodes.push({
+        code: codeStr,
+        planId,
+        isUsed: false,
+        usedBy: '',
+        usedAt: '',
+        batchName: batchName || 'Manuel',
+        createdDate: new Date().toISOString()
+      });
+    }
+    setActivationCodes(prev => [...newCodes, ...prev]);
+    return newCodes;
+  };
+
+  const redeemActivationCode = (codeStr) => {
+    const cleanCode = codeStr.trim().toUpperCase();
+    const foundIdx = activationCodes.findIndex(c => c.code.toUpperCase() === cleanCode);
+    
+    if (foundIdx === -1) {
+      throw new Error("Code d'activation invalide. Veuillez vérifier la saisie.");
+    }
+    
+    const codeObj = activationCodes[foundIdx];
+    if (codeObj.isUsed) {
+      throw new Error(`Ce code a déjà été utilisé par ${codeObj.usedBy} le ${new Date(codeObj.usedAt).toLocaleDateString('fr-FR')}.`);
+    }
+    
+    const plan = plans.find(p => p.id === codeObj.planId);
+    if (!plan) {
+      throw new Error("Plan d'abonnement introuvable pour ce code.");
+    }
+    
+    if (!user) {
+      throw new Error("Seuls les élèves connectés peuvent activer un abonnement.");
+    }
+    
+    // Mark code as used
+    const updatedCodes = [...activationCodes];
+    updatedCodes[foundIdx] = {
+      ...codeObj,
+      isUsed: true,
+      usedBy: user.name || user.email,
+      usedAt: new Date().toISOString()
+    };
+    setActivationCodes(updatedCodes);
+    
+    // Activate subscription
+    activateSubscription(user.id, plan.id, plan.durationDays);
+    
+    return plan;
+  };
+
+  // FSRS (Free Spaced Repetition Scheduler) Algorithm Implementation
+  const updateCardProgress = (questionId, quality) => {
+    // Quality: 0 = failed/forgot, 3 = hard, 4 = good, 5 = easy
+    setProgress((prev) => {
+      const card = prev[questionId] || {
+        difficulty: 5.0,
+        stability: 2.0,
+        repetitions: 0,
+        lastReviewDate: new Date().toISOString(),
+        nextReviewDate: new Date().toISOString()
+      };
+
+      let { difficulty, stability, repetitions } = card;
+      const now = new Date();
+      const lastReview = card.lastReviewDate ? new Date(card.lastReviewDate) : now;
+
+      // 1. Calculate elapsed days since last review
+      const elapsedDays = Math.max(0.5, (now.getTime() - lastReview.getTime()) / (1000 * 3600 * 24));
+
+      // 2. Update stats using FSRS formulas
+      if (repetitions === 0) {
+        // Initial setup
+        if (quality < 3) {
+          difficulty = 8.2;
+          stability = 0.5;
         } else {
-          interval = Math.round(interval * easeFactor);
+          // quality >= 3
+          difficulty = Math.max(1.0, Math.min(10.0, 6.0 - 0.8 * (quality - 3)));
+          stability = Math.max(1.0, 2.0 * (quality - 2)); // 3->2d, 4->4d, 5->6d
         }
-        repetitions += 1;
+        repetitions = 1;
       } else {
-        repetitions = 0;
-        interval = 1;
+        // Recall probability (Retrievability)
+        const retrievability = Math.pow(0.9, elapsedDays / stability);
+
+        // Update Difficulty (D)
+        const diffChange = -0.7 * (quality - 4);
+        difficulty = Math.max(1.0, Math.min(10.0, difficulty + diffChange));
+
+        // Update Stability (S)
+        if (quality < 3) {
+          // Forgot / lapse
+          stability = Math.max(0.5, Math.min(stability * 0.2, 1.5));
+          repetitions = 1; // reset streak-like repetitions count
+        } else {
+          // Succeeded
+          const hardBonus = quality === 3 ? 0.75 : quality === 4 ? 1.0 : 1.5;
+          const factor = 1.0 + Math.pow(9.0 - difficulty, 0.4) * Math.pow(stability, -0.15) * (Math.exp(Math.pow(1.0 - retrievability, 0.45)) - 0.45) * hardBonus;
+          stability = Math.max(stability + 1.0, stability * factor);
+          repetitions += 1;
+        }
       }
 
-      easeFactor = easeFactor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02));
-      if (easeFactor < 1.3) easeFactor = 1.3;
-
+      // 3. Compute Interval
+      const interval = Math.round(stability);
       const nextReviewDate = new Date();
       nextReviewDate.setDate(nextReviewDate.getDate() + interval);
 
+      // Map difficulty back to easeFactor equivalent for stats backward-compatibility
+      const easeFactor = 3.0 - (difficulty - 1.0) / 4.5;
+
       return {
         ...prev,
-        [questionId]: { interval, repetitions, easeFactor, nextReviewDate: nextReviewDate.toISOString() }
+        [questionId]: {
+          difficulty,
+          stability,
+          repetitions,
+          easeFactor,
+          lastReviewDate: now.toISOString(),
+          nextReviewDate: nextReviewDate.toISOString()
+        }
       };
     });
 
@@ -296,7 +660,7 @@ export function AuthProvider({ children }) {
   const getStudentStats = () => {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
-    const activeExams = exams.filter(e => e.isActive !== false);
+    const activeExams = exams.filter(e => e.isActive !== false && e.isArchived !== true);
     const allQuestions = activeExams.flatMap(e =>
       (e.questions || []).map(q => ({ ...q, examName: e.name }))
     );
@@ -419,15 +783,35 @@ export function AuthProvider({ children }) {
     setSchoolBranding(prev => ({ ...prev, [name]: { ...(prev[name] || {}), ...patch } }));
   };
 
+  const isExamLocked = (exam) => {
+    if (!exam) return true;
+    if (user?.role === 'admin') return false;
+    if (exam.tier === 'freemium') return false;
+    
+    // If not logged in or not premium, lock it
+    if (!user || user.tier !== 'premium') return true;
+    
+    // Premium tier checks: verify plan allows this exam's school
+    if (!user.subscription || user.subscription.status !== 'active') return true;
+    
+    const plan = plans.find(p => p.id === user.subscription.planId);
+    if (!plan) return true;
+    
+    return !plan.allowedSchools.includes(exam.school);
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, users, login, logout, exams, addExam, updateUserTier,
-      toggleExamStatus, updateExamDetails,
+      toggleExamStatus, updateExamDetails, deleteExam, toggleArchiveExam,
+      plans, activateSubscription, cancelSubscription, addPlan, removePlan, updatePlan,
+      activationCodes, generateActivationCodes, redeemActivationCode,
       progress, updateCardProgress, getStudentStats,
       theme, toggleTheme,
       schools, addSchool, removeSchool, renameSchool,
       schoolBranding, updateSchoolBranding,
-      mockExamHistory, saveMockExamResult
+      mockExamHistory, saveMockExamResult,
+      isExamLocked
     }}>
       {children}
     </AuthContext.Provider>

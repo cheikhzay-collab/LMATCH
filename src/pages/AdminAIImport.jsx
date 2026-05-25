@@ -132,6 +132,7 @@ export default function AdminAIImport() {
 
   // Setup state
   const apiKey = localStorage.getItem('claudeApiKey') || '';
+  const proxyUrl = localStorage.getItem('claudeProxyUrl') || '';
   const [claudeModel, setClaudeModel] = useState(() => localStorage.getItem('claudeModel') || 'claude-opus-4-5');
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfName, setPdfName] = useState('');
@@ -231,17 +232,25 @@ Tu dois :
       userPromptText = `${pageNote}Extrais TOUTES les questions QCM de ce document et retourne le JSON demandé.`;
     }
 
+    // Read the SSE stream
+    const endpoint = proxyUrl || 'https://api.anthropic.com/v1/messages';
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (proxyUrl) {
+      if (apiKey) headers['x-api-key'] = apiKey;
+    } else {
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+      headers['anthropic-dangerous-direct-browser-access'] = 'true';
+    }
+
     // Create fresh AbortController for this request
     abortRef.current = new AbortController();
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+    const res = await fetch(endpoint, {
       signal: abortRef.current.signal,
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
+      headers,
       body: JSON.stringify({
         model: claudeModel,
         max_tokens: 16000,
@@ -379,10 +388,12 @@ Tu dois :
   };
 
   const handleAnalyze = async () => {
-    if (!apiKey) { setError('Clé API Claude manquante. Configurez-la dans Paramètres.'); return; }
-    if (!apiKey.startsWith('sk-ant-')) {
-      setError('⚠️ Clé invalide: doit commencer par "sk-ant-". Obtenez-la sur console.anthropic.com.');
-      return;
+    if (!proxyUrl) {
+      if (!apiKey) { setError('Clé API Claude manquante. Configurez-la dans Paramètres.'); return; }
+      if (!apiKey.startsWith('sk-ant-')) {
+        setError('⚠️ Clé invalide: doit commencer par "sk-ant-". Obtenez-la sur console.anthropic.com.');
+        return;
+      }
     }
     if (!pdfFile) { setError('Veuillez sélectionner un PDF.'); return; }
     setError('');
@@ -549,12 +560,24 @@ Tu dois :
             </div>
           )}
 
-          {!apiKey && (
+          {!apiKey && !proxyUrl && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', marginBottom: '1.5rem' }}>
               <AlertCircle size={20} color="var(--danger)" />
               <div>
-                <p style={{ margin: 0, fontWeight: 700, color: 'var(--danger)', fontSize: '0.9rem' }}>Clé API Claude manquante</p>
-                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Allez dans <strong>Paramètres</strong> pour configurer votre clé Anthropic.</p>
+                <p style={{ margin: 0, fontWeight: 700, color: 'var(--danger)', fontSize: '0.9rem' }}>Clé API ou Proxy manquant</p>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Allez dans <strong>Paramètres</strong> pour configurer votre clé Anthropic ou l'URL du proxy.</p>
+              </div>
+            </div>
+          )}
+
+          {apiKey && !proxyUrl && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1.25rem', borderRadius: 12, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', marginBottom: '1.5rem', fontSize: '0.82rem' }}>
+              <AlertCircle size={18} color="var(--warning)" style={{ flexShrink: 0 }} />
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, color: 'var(--warning)', fontSize: '0.88rem' }}>⚠️ Appel direct au navigateur activé (sk-ant-...)</p>
+                <p style={{ margin: 0, color: 'var(--text-muted)', marginTop: '0.15rem', lineHeight: 1.4 }}>
+                  En production, configurez un <strong>Proxy Serveur</strong> dans les Paramètres pour masquer vos clés API et éviter le vol de crédits.
+                </p>
               </div>
             </div>
           )}
@@ -754,7 +777,7 @@ Tu dois :
             <button
               className="btn"
               onClick={handleAnalyze}
-              disabled={!pdfFile || !apiKey}
+              disabled={!pdfFile || (!apiKey && !proxyUrl)}
               style={{ width: '100%', padding: '1.1rem', fontSize: '1rem', justifyContent: 'center', background: 'linear-gradient(135deg,#7c3aed,#6366f1)', boxShadow: '0 8px 24px rgba(124,58,237,0.35)' }}
             >
               <Sparkles size={20} /> Analyser avec Claude AI ✨

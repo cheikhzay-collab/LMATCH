@@ -97,7 +97,7 @@ function StatCard({ icon: Icon, label, value, colorClass }) {
 }
 
 export default function StudentDashboard() {
-  const { user, exams, progress, getStudentStats, mockExamHistory } = useAuth();
+  const { user, exams, progress, getStudentStats, mockExamHistory, isExamLocked } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const stats = getStudentStats();
@@ -131,7 +131,7 @@ export default function StudentDashboard() {
 
 
 
-  const activeExams = exams.filter(e => e.isActive !== false);
+  const activeExams = exams.filter(e => e.isActive !== false && e.isArchived !== true);
 
   const groupedExams = activeExams.reduce((acc, exam) => {
     const school = exam.school || 'Général';
@@ -279,24 +279,29 @@ export default function StudentDashboard() {
                       {schoolExams.map((exam) => {
                         const dueCount = getDueCount(exam.questions);
                         const isCompleted = dueCount === 0;
+                        const isLocked = isExamLocked(exam);
 
                         return (
                           <div 
                              key={exam.id} 
                              className="exam-card-premium"
+                             style={{ opacity: isLocked ? 0.8 : 1 }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                               <div style={{ 
                                 width: '52px', height: '52px', borderRadius: '14px', 
-                                background: isCompleted ? 'rgba(16, 185, 129, 0.05)' : 'var(--violet-soft)',
+                                background: isLocked ? 'var(--bg-glass)' : (isCompleted ? 'rgba(16, 185, 129, 0.05)' : 'var(--violet-soft)'),
                                 display: 'flex', alignItems: 'center', justifyContent: 'center', 
-                                color: isCompleted ? 'var(--emerald)' : 'var(--violet)'
+                                color: isLocked ? 'var(--text-subtle)' : (isCompleted ? 'var(--emerald)' : 'var(--violet)')
                               }}>
-                                <BookOpen size={24} />
+                                {isLocked ? <Lock size={20} /> : <BookOpen size={24} />}
                               </div>
                               <div>
-                                <h4 style={{ margin: '0 0 0.25rem 0', fontWeight: 800, fontSize: '1.05rem' }}>{exam.name}</h4>
-                                <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                  <h4 style={{ margin: 0, fontWeight: 800, fontSize: '1.05rem' }}>{exam.name}</h4>
+                                  {isLocked && <span className="badge badge-pro" style={{ fontSize: '0.65rem', padding: '0.15rem 0.4rem' }}><Zap size={8} /> PRO</span>}
+                                </div>
+                                <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', fontSize: '0.82rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
                                   <span style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}><Clock size={12} /> {exam.year}</span>
                                   <span style={{ width:'4px', height:'4px', background:'var(--border)', borderRadius:'50%' }}></span>
                                   <span>{exam.questions.length} QCM</span>
@@ -305,7 +310,15 @@ export default function StudentDashboard() {
                             </div>
                             
                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-                              {!isCompleted ? (
+                              {isLocked ? (
+                                <button 
+                                  className="btn-outline" 
+                                  onClick={() => navigate('/subscription')}
+                                  style={{ padding: '0.7rem 1.5rem', fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                                >
+                                  <Lock size={13} /> S'abonner
+                                </button>
+                              ) : !isCompleted ? (
                                 <div style={{ display:'flex', alignItems:'center', gap:'1rem' }}>
                                   <div style={{ 
                                     background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', 

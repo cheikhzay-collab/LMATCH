@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Timer, ArrowLeft, CheckCircle2, XCircle, Lightbulb, Trophy, Flame, Zap, ChevronLeft, ChevronRight, TrendingUp } from 'lucide-react';
+import { Timer, ArrowLeft, CheckCircle2, XCircle, Lightbulb, Trophy, Flame, Zap, ChevronLeft, ChevronRight, TrendingUp, Lock } from 'lucide-react';
 
 import { renderWithMath } from '../utils/mathRenderer';
 import DiagnosticReport from '../components/DiagnosticReport';
@@ -357,7 +357,7 @@ function ResultsScreen({ questions, answers, exam, onReturn }) {
 
 /* ─── Main Component ────────────────────────────────────────────── */
 export default function MockExamMode() {
-  const { exams, saveMockExamResult, schoolBranding } = useAuth();
+  const { exams, saveMockExamResult, schoolBranding, isExamLocked } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const navigate = useNavigate();
@@ -444,6 +444,30 @@ export default function MockExamMode() {
           <button className="btn" onClick={() => navigate('/dashboard')}>
             <ArrowLeft size={16} /> Retour
           </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentExam && isExamLocked(currentExam)) {
+    return (
+      <div className="focus-layout" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '2rem', textAlign: 'center' }}>
+        <div className="glass-panel" style={{ maxWidth: '520px', padding: '3rem' }}>
+          <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(99,102,241,0.1)', color: 'var(--violet)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 8px 24px rgba(99,102,241,0.15)' }}>
+            <Zap size={36} fill="currentColor" />
+          </div>
+          <h2 style={{ fontWeight: 800, marginBottom: '0.5rem' }}>Concours Premium Verrouillé</h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: 1.6 }}>
+            L'examen <strong>{currentExam.name}</strong> fait partie de l'offre Premium. Abonnez-vous pour débloquer l'accès à tous les concours blancs et tester vos connaissances en conditions réelles.
+          </p>
+          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <button onClick={() => navigate('/subscription')} className="btn" style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}>
+              ✦ Voir les offres
+            </button>
+            <button onClick={() => navigate('/dashboard')} className="btn-outline">
+              Retour
+            </button>
+          </div>
         </div>
       </div>
     );
