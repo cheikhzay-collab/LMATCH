@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
-import { onAuthChange, loginWithEmail, logoutUser, registerStudent } from '../services/authService';
+import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
 import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers } from '../services/userService';
 import { getAllExams, getActiveExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam } from '../services/examService';
 import { getSchoolsConfig, saveSchoolsConfig } from '../services/schoolService';
@@ -133,7 +133,29 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthChange(async (supabaseUser) => {
       if (supabaseUser) {
         try {
-          const profile = await getUserDoc(supabaseUser.id);
+          let profile = await getUserDoc(supabaseUser.id);
+          if (!profile) {
+            // Auto-create profile if missing (e.g. first-time Google OAuth)
+            const defaultProfile = {
+              name:         supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || 'Élève',
+              email:        supabaseUser.email,
+              role:         'student',
+              tier:         'freemium',
+              xp:           0,
+              streak:       0,
+              rank:         null,
+              totalStudents: 1200,
+              joined:       new Date().toISOString(),
+              subscription: null,
+            };
+            try {
+              await createUserDoc(supabaseUser.id, defaultProfile);
+              profile = { ...defaultProfile, uid: supabaseUser.id, id: supabaseUser.id };
+            } catch (createErr) {
+              console.warn('[Supabase] Failed to auto-create user profile:', createErr.message);
+            }
+          }
+
           if (profile) {
             const enriched = {
               uid:          supabaseUser.id,
@@ -151,7 +173,7 @@ export function AuthProvider({ children }) {
             setUser(enriched);
           }
         } catch (e) {
-          console.warn('[Supabase] Failed to fetch user profile:', e.message);
+          console.warn('[Supabase] Failed to fetch or initialize user profile:', e.message);
         }
       } else {
         // Supabase signed out — only clear if we were using Supabase auth
@@ -371,6 +393,29 @@ export function AuthProvider({ children }) {
         streak: 0,
         uid: 'mock_student',
         id: 'mock_student'
+      };
+      setUser(mockUser);
+    }
+  };
+
+  const loginGoogle = async () => {
+    if (SUPABASE_ENABLED) {
+      return await loginWithGoogle();
+    } else {
+      // Fallback: mock Google OAuth user in local environment when Supabase is disabled
+      const mockUser = {
+        name: 'Élève Google',
+        email: 'google-student@lconq.ma',
+        role: 'student',
+        tier: 'freemium',
+        rank: 445,
+        totalStudents: 1200,
+        xp: 0,
+        streak: 0,
+        uid: 'mock_google_student',
+        id: 'mock_google_student',
+        joined: new Date().toISOString(),
+        subscription: null,
       };
       setUser(mockUser);
     }
@@ -1198,7 +1243,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ 
-      user, users, login, logout, register, exams, addExam, updateUserTier,
+      user, users, login, logout, register, loginWithGoogle: loginGoogle, exams, addExam, updateUserTier,
       toggleExamStatus, updateExamDetails, deleteExam, toggleArchiveExam,
       plans, activateSubscription, cancelSubscription, addPlan, removePlan, updatePlan,
       activationCodes, generateActivationCodes, redeemActivationCode,

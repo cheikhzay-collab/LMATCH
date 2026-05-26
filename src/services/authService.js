@@ -82,6 +82,23 @@ export const loginWithEmail = async (email, password) => {
 };
 
 /**
+ * Sign in with Google OAuth.
+ */
+export const loginWithGoogle = async () => {
+  if (!supabase) throw new Error('Supabase is not configured.');
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin + '/dashboard',
+    },
+  });
+
+  if (error) throw error;
+  return data;
+};
+
+/**
  * Sign out the current user.
  */
 export const logoutUser = () => supabase ? supabase.auth.signOut() : Promise.resolve();
