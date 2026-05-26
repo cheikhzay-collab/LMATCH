@@ -3,22 +3,35 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   ArrowLeft, BrainCircuit, Play, Lock, Zap,
-  BookOpen, Trophy, Clock, GraduationCap, FileDown, ScanLine
+  BookOpen, Trophy, Clock, GraduationCap, FileDown, ScanLine,
+  Stethoscope, Cpu, Wrench, BarChart3, Wifi, TrendingUp, Compass
 } from 'lucide-react';
 import { generateAnswerSheet } from '../utils/generateAnswerSheet';
 import ScanUploadModal from '../components/ScanUploadModal';
 
-const SCHOOL_BRANDS_DEFAULTS = {
-  'Médecine / Pharmacie': { emoji:'🏥', gradient:'linear-gradient(135deg,#B91C1C,#7F1D1D)', accent:'var(--danger)', accentSoft:'rgba(239,68,68,0.1)', tag:'Sciences de la Santé' },
-  'ENSA':                  { emoji:'⚙️', gradient:'linear-gradient(135deg,#1D4ED8,#1E3A8A)', accent:'#3B82F6', accentSoft:'rgba(59,130,246,0.1)',  tag:'Ingénierie' },
-  'ENSAM':                 { emoji:'🔩', gradient:'linear-gradient(135deg,#0F4C75,#1B262C)', accent:'#38BDF8', accentSoft:'rgba(56,189,248,0.1)',  tag:'Arts & Métiers' },
-  'ENCG':                  { emoji:'📊', gradient:'linear-gradient(135deg,#065F46,#022C22)', accent:'var(--emerald)', accentSoft:'rgba(16,185,129,0.1)',  tag:'Commerce & Gestion' },
-  'INPT':                  { emoji:'📡', gradient:'linear-gradient(135deg,#C2410C,#7C2D12)', accent:'#F97316', accentSoft:'rgba(249,115,22,0.1)',  tag:'Télécommunications' },
-  'INSEA':                 { emoji:'📈', gradient:'linear-gradient(135deg,#0F766E,#134E4A)', accent:'#14B8A6', accentSoft:'rgba(20,184,166,0.1)',  tag:'Statistiques & Économie' },
-  'Général (Prépa)':       { emoji:'📐', gradient:'linear-gradient(135deg,#6D28D9,#3B0764)', accent:'#A78BFA', accentSoft:'rgba(167,139,250,0.1)', tag:'Classes Préparatoires' },
+/* ─── Icon Mapping ─── */
+const ICON_MAP = {
+  'stethoscope': Stethoscope,
+  'cpu': Cpu,
+  'wrench': Wrench,
+  'barchart': BarChart3,
+  'wifi': Wifi,
+  'trendingup': TrendingUp,
+  'compass': Compass,
+  'graduationcap': GraduationCap
 };
 
-const DEFAULT_BRAND = { emoji:'🎓', gradient:'linear-gradient(135deg,#4338CA,#1E1B4B)', accent:'#818CF8', accentSoft:'rgba(129,140,248,0.1)', tag:'Grande École' };
+const SCHOOL_BRANDS_DEFAULTS = {
+  'Médecine / Pharmacie': { iconKey:'stethoscope', gradient:'linear-gradient(135deg, #EF4444 0%, #991B1B 100%)', accent:'#EF4444', accentSoft:'rgba(239, 68, 68, 0.08)', tag:'Sciences de la Santé' },
+  'ENSA':                  { iconKey:'cpu', gradient:'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)', accent:'#3B82F6', accentSoft:'rgba(59, 130, 246, 0.08)',  tag:'Ingénierie' },
+  'ENSAM':                 { iconKey:'wrench', gradient:'linear-gradient(135deg, #0EA5E9 0%, #0369A1 100%)', accent:'#0EA5E9', accentSoft:'rgba(14, 165, 233, 0.08)',  tag:'Arts & Métiers' },
+  'ENCG':                  { iconKey:'barchart', gradient:'linear-gradient(135deg, #10B981 0%, #047857 100%)', accent:'var(--emerald)', accentSoft:'rgba(16, 185, 129, 0.08)',  tag:'Commerce & Gestion' },
+  'INPT':                  { iconKey:'wifi', gradient:'linear-gradient(135deg, #F97316 0%, #C2410C 100%)', accent:'#F97316', accentSoft:'rgba(249, 115, 22, 0.08)',  tag:'Télécommunications' },
+  'INSEA':                 { iconKey:'trendingup', gradient:'linear-gradient(135deg, #14B8A6 0%, #0F766E 100%)', accent:'#14B8A6', accentSoft:'rgba(20, 184, 166, 0.08)',  tag:'Statistiques & Économie' },
+  'Général (Prépa)':       { iconKey:'compass', gradient:'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)', accent:'#8B5CF6', accentSoft:'rgba(139, 92, 246, 0.08)', tag:'Classes Préparatoires' },
+};
+
+const DEFAULT_BRAND = { iconKey:'graduationcap', gradient:'linear-gradient(135deg, #6366F1 0%, #4338CA 100%)', accent:'#818CF8', accentSoft:'rgba(129, 140, 248, 0.08)', tag:'Grande École' };
 
 function getBrand(name, schoolBranding) {
   const custom = schoolBranding?.[name] || {};
@@ -40,8 +53,10 @@ export default function SchoolExamsPage() {
     await generateAnswerSheet(exam, user);
   };
 
+  const IconComponent = ICON_MAP[brand.iconKey] || GraduationCap;
+
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
       {/* ── School Hero Header ── */}
       <div style={{
         borderRadius: '1.5rem',
@@ -57,18 +72,30 @@ export default function SchoolExamsPage() {
           position: 'relative',
           overflow: 'hidden',
         }}>
-          {/* Watermark Logo/Emoji Background */}
+          {/* Watermark Logo Background */}
           <div style={{ 
             position:'absolute', right:'-5%', top:'-5%', 
             width:'320px', height:'320px', 
-            opacity:0.15, transform:'rotate(-15deg)', 
+            opacity: brand.logoUrl ? 0.08 : 0.12, transform:'rotate(-15deg)', 
             display:'flex', alignItems:'center', justifyContent:'center',
-            pointerEvents:'none', zIndex:0
+            pointerEvents:'none', zIndex:0,
+            color: '#fff'
           }}>
             {brand.logoUrl ? (
-              <img src={brand.logoUrl} style={{ width:'100%', height:'100%', objectFit:'contain' }} alt="" />
+              <img 
+                src={brand.logoUrl} 
+                style={{ 
+                  width:'100%', 
+                  height:'100%', 
+                  objectFit:'contain',
+                  filter: 'grayscale(100%) contrast(0.8)' 
+                }} 
+                alt="" 
+              />
             ) : (
-              <span style={{ fontSize:'240px' }}>{brand.emoji}</span>
+              <div style={{ transform: 'scale(2.2)' }}>
+                <IconComponent size={140} />
+              </div>
             )}
           </div>
 
@@ -79,9 +106,9 @@ export default function SchoolExamsPage() {
               onClick={() => navigate('/schools')}
               style={{
                 background:'rgba(255,255,255,0.12)', border:'1px solid rgba(255,255,255,0.25)',
-                color:'#fff', borderRadius:'10px', padding:'0.4rem 1rem',
+                color:'#fff', borderRadius:'10px', padding:'0.45rem 1.15rem',
                 cursor:'pointer', display:'flex', alignItems:'center', gap:'0.5rem',
-                fontSize:'0.8rem', fontWeight:700, marginBottom:'2rem',
+                fontSize:'0.82rem', fontWeight:700, marginBottom:'2rem',
                 backdropFilter:'blur(12px)', transition:'all 0.2s',
               }}
               onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; e.currentTarget.style.transform = 'translateX(-4px)'; }}
@@ -90,13 +117,21 @@ export default function SchoolExamsPage() {
               <ArrowLeft size={16} /> Retour aux écoles
             </button>
 
-            <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', flexWrap:'wrap' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'1.5rem', flexWrap:'wrap' }}>
               {brand.logoUrl ? (
-                <img src={brand.logoUrl} alt="" style={{ width:100, height:100, objectFit:'contain', filter:'drop-shadow(0 12px 24px rgba(0,0,0,0.3))' }} />
+                <img src={brand.logoUrl} alt="" style={{ width:88, height:88, objectFit:'contain', filter:'drop-shadow(0 12px 24px rgba(0,0,0,0.3))' }} />
               ) : (
-                <span style={{ fontSize:'4.5rem', filter:'drop-shadow(0 12px 24px rgba(0,0,0,0.3))' }}>
-                  {brand.emoji}
-                </span>
+                <div style={{
+                  width: 80, height: 80, borderRadius: '20px',
+                  background: 'rgba(255, 255, 255, 0.18)',
+                  backdropFilter: 'blur(8px)',
+                  border: '1px solid rgba(255,255,255,0.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 12px 24px rgba(0,0,0,0.2)',
+                  color: '#fff'
+                }}>
+                  <IconComponent size={36} />
+                </div>
               )}
               
               <div>
@@ -104,14 +139,14 @@ export default function SchoolExamsPage() {
                   display:'inline-flex', alignItems:'center',
                   background:'rgba(255,255,255,0.15)', backdropFilter:'blur(12px)',
                   border:'1px solid rgba(255,255,255,0.3)',
-                  padding:'0.25rem 0.875rem', borderRadius:'99px',
+                  padding:'0.28rem 0.95rem', borderRadius:'99px',
                   fontSize:'0.72rem', fontWeight:800, color:'#fff',
                   textTransform:'uppercase', letterSpacing:'0.12em',
                   marginBottom:'0.75rem',
                 }}>
                   {brand.tag}
                 </div>
-                <h1 style={{ fontSize:'2.5rem', fontWeight:900, color:'#fff', letterSpacing:'-0.03em', lineHeight:1.1 }}>
+                <h1 style={{ fontSize:'2.5rem', fontWeight:900, color:'#fff', letterSpacing:'-0.03em', lineHeight:1.1, margin: 0 }}>
                   {school}
                 </h1>
               </div>
@@ -129,7 +164,7 @@ export default function SchoolExamsPage() {
         }}>
           {[
             { icon: BookOpen, label: 'Concours disponibles', value: schoolExams.length, color: brand.accent },
-            { icon: Zap,      label: 'Premium', value: schoolExams.filter(e => e.tier === 'premium').length, color: 'var(--violet)' },
+            { icon: Zap,      label: 'Préparation Premium', value: schoolExams.filter(e => e.tier === 'premium').length, color: 'var(--violet)' },
           ].map(({ icon: Icon, label, value, color }) => (
             <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
               <div style={{
@@ -157,7 +192,7 @@ export default function SchoolExamsPage() {
             <BookOpen size={36} />
           </div>
           <h3 style={{ marginBottom:'0.5rem', fontSize:'1.1rem' }}>Aucun examen pour le moment</h3>
-          <p style={{ fontSize:'0.88rem' }}>
+          <p style={{ fontSize:'0.88rem', color: 'var(--text-muted)' }}>
             L'administrateur n'a pas encore mis en ligne d'examens pour <strong>{school}</strong>.
           </p>
           <button className="btn" style={{ marginTop:'1.5rem' }} onClick={() => navigate('/dashboard')}>
@@ -176,6 +211,18 @@ export default function SchoolExamsPage() {
                 className="exam-list-item"
                 style={{
                   borderLeft: `4px solid ${brand.accent}`,
+                  background: 'var(--bg-card)',
+                  borderRadius: '12px',
+                  padding: '1.25rem 1.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '1.25rem',
+                  flexWrap: 'wrap',
+                  border: '1px solid var(--border)',
+                  borderLeftWidth: '4px',
+                  borderLeftColor: brand.accent,
+                  transition: 'all 0.2s',
+                  boxShadow: 'var(--shadow-card)',
                 }}
               >
                 {/* Number badge */}
@@ -191,15 +238,15 @@ export default function SchoolExamsPage() {
 
                 {/* Info */}
                 <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.3rem' }}>
-                    <h3 style={{ fontWeight:700, fontSize:'0.97rem', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.3rem', flexWrap: 'wrap' }}>
+                    <h3 style={{ fontWeight:700, fontSize:'0.97rem', margin: 0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', color: 'var(--text-main)' }}>
                       {exam.name}
                     </h3>
                     {exam.tier === 'premium' && (
                       <span className="badge badge-pro"><Zap size={9} /> PRO</span>
                     )}
                   </div>
-                  <div style={{ display:'flex', gap:'1rem', fontSize:'0.8rem', color:'var(--text-muted)' }}>
+                  <div style={{ display:'flex', gap:'1rem', fontSize:'0.8rem', color:'var(--text-muted)', flexWrap: 'wrap' }}>
                     <span style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}>
                       <Clock size={12} /> {exam.year}
                     </span>
@@ -213,7 +260,7 @@ export default function SchoolExamsPage() {
                 </div>
 
                 {/* Action buttons */}
-                <div style={{ display:'flex', gap:'0.5rem', flexShrink:0 }}>
+                <div style={{ display:'flex', gap:'0.5rem', flexShrink:0, flexWrap: 'wrap' }}>
                   {isLocked ? (
                     <button 
                       className="btn-outline"

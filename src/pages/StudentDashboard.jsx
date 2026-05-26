@@ -4,9 +4,10 @@ import { useAuth } from '../context/AuthContext';
 import {
   Trophy, Flame, Target, BrainCircuit, Play, Lock,
   Zap, TrendingUp, BookOpen, Clock, Camera, LayoutDashboard,
-  CheckCircle2, AlertCircle, Award, History
+  CheckCircle2, AlertCircle, Award, History, FileText, Printer
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, YAxis, CartesianGrid } from 'recharts';
+import { generateEbookHTML, generateStudentReportHTML, openPrintWindow } from '../utils/generateExamPDF';
 
 function ChartTooltip({ active, payload }) {
   if (active && payload && payload.length) {
@@ -182,6 +183,108 @@ export default function StudentDashboard() {
 
   const tip = getPedagogicalTip();
 
+  const handleGenerateWeaknessPDF = () => {
+    // 1. Identify weak topics
+    const topicsToPrint = stats.weakTopics.map(t => t.name);
+
+    if (topicsToPrint.length === 0) {
+      return;
+    }
+
+    // 2. Gather all matching questions from active exams
+    const activeExams = exams.filter(e => e.isActive !== false && e.isArchived !== true);
+    const questionsToPrint = [];
+    activeExams.forEach(exam => {
+      (exam.questions || []).forEach(q => {
+        const t = q.subject || q.topic || 'Général';
+        if (topicsToPrint.includes(t)) {
+          questionsToPrint.push({
+            ...q,
+            _source: exam.name,
+            _year: exam.year
+          });
+        }
+      });
+    });
+
+    if (questionsToPrint.length === 0) {
+      alert("Aucune question n'a été trouvée pour vos points faibles.");
+      return;
+    }
+
+    // 3. Generate and open Print window
+    const s = {
+      showCover: true,
+      showTricks: true,
+      showPageNumbers: true,
+      startPage: 1,
+      questionsPerPage: 3,
+      profName: localStorage.getItem('profName') || '',
+      profPhone: localStorage.getItem('profPhone') || '',
+      profSite: localStorage.getItem('profSite') || 'www.lconq.ma'
+    };
+    
+    const title = "Fascicule de Révision Personnalisé";
+    const html = generateEbookHTML(title, questionsToPrint, s);
+    openPrintWindow(html, `cahier-revision-points-faibles`);
+  };
+
+  const handleDownloadReport = (item) => {
+    const exam = exams.find(e => e.id === item.examId);
+    if (!exam) {
+      alert("Examen introuvable dans la bibliothèque.");
+      return;
+    }
+    
+    // Reconstruct corrected array from aggregate statistics
+    const corrected = [];
+    let correctLeft = item.correctCount || 0;
+    let wrongLeft = item.wrongCount || 0;
+    
+    const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+    
+    exam.questions.forEach((q, idx) => {
+      const correct = q.correct_answer || q.answer || 'A';
+      let detected = null;
+      let result = 'empty';
+      
+      if (correctLeft > 0) {
+        detected = correct;
+        result = 'correct';
+        correctLeft--;
+      } else if (wrongLeft > 0) {
+        detected = LETTERS.find(l => l !== correct) || 'A';
+        result = 'wrong';
+        wrongLeft--;
+      }
+      
+      corrected.push({
+        q: idx + 1,
+        question: q.question,
+        correct,
+        detected,
+        result,
+        topic: q.topic || 'Général'
+      });
+    });
+    
+    const scoreObj = {
+      pts: item.score,
+      neg: (item.maxScore - item.correctCount) * 0.25,
+      max: item.maxScore,
+      pct: item.pct
+    };
+    
+    const settings = {
+      profName: localStorage.getItem('profName') || '',
+      profPhone: localStorage.getItem('profPhone') || '',
+      profSite: localStorage.getItem('profSite') || 'www.lconq.ma'
+    };
+    
+    const html = generateStudentReportHTML(exam, scoreObj, corrected, settings);
+    openPrintWindow(html);
+  };
+
   return (
     <div className="animate-fade-in">
       {/* ── Header ── */}
@@ -200,27 +303,67 @@ export default function StudentDashboard() {
           </p>
         </div>
         
-        {/* Quick OMR Scan Button */}
-        <button 
-          className="btn"
-          onClick={() => navigate('/scanner')}
-          style={{ 
-            background: 'linear-gradient(135deg, var(--violet), var(--emerald))', 
-            border: 'none', 
-            fontWeight: 800, 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '0.5rem',
-            padding: '0.75rem 1.5rem',
-            boxShadow: '0 10px 25px rgba(124, 58, 237, 0.25)',
-            transform: 'translateY(0)',
-            transition: 'all 0.2s ease'
-          }}
-          onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(124, 58, 237, 0.35)'; }}
-          onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(124, 58, 237, 0.25)'; }}
-        >
-          <Camera size={16} /> Scanner une feuille OMR
-        </button>
+        {/* Quick Actions Button Group */}
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          {/* Daily Guided Review Button */}
+          <button 
+            className="btn"
+            onClick={() => navigate('/study')}
+            style={{ 
+              background: 'linear-gradient(135deg, var(--violet), #4f46e5)', 
+              border: 'none', 
+              fontWeight: 800, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              boxShadow: '0 10px 25px rgba(124, 58, 237, 0.25)',
+              transform: 'translateY(0)',
+              transition: 'all 0.2s ease',
+              color: '#fff'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(124, 58, 237, 0.35)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(124, 58, 237, 0.25)'; }}
+          >
+            <BrainCircuit size={16} /> Révision Guidée Quotidienne
+            {stats.dueToday > 0 && (
+              <span style={{ 
+                background: 'var(--danger)', 
+                color: '#fff', 
+                borderRadius: '99px', 
+                padding: '0.1rem 0.5rem', 
+                fontSize: '0.7rem', 
+                fontWeight: 900,
+                marginLeft: '0.25rem',
+                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
+              }}>
+                {stats.dueToday}
+              </span>
+            )}
+          </button>
+
+          {/* Quick OMR Scan Button */}
+          <button 
+            className="btn-outline"
+            onClick={() => navigate('/scanner')}
+            style={{ 
+              background: 'var(--bg-glass)', 
+              border: '1px solid var(--border)', 
+              fontWeight: 800, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              transform: 'translateY(0)',
+              transition: 'all 0.2s ease',
+              color: 'var(--text-main)'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'var(--bg-glass)'; }}
+          >
+            <Camera size={16} /> Scanner une feuille OMR
+          </button>
+        </div>
       </div>
       {/* ── Stats Bento (Dynamic real stats) ── */}
       <div className="dashboard-grid stats-row" style={{ marginBottom: '1.5rem' }}>
@@ -530,6 +673,34 @@ export default function StudentDashboard() {
                             }}>
                               {item.score}/{item.maxScore} <span style={{ opacity: 0.85, fontSize: '0.75rem', fontWeight: 600 }}>({item.pct}%)</span>
                             </div>
+
+                            <button
+                              onClick={() => handleDownloadReport(item)}
+                              title="Télécharger le rapport PDF"
+                              style={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                background: 'var(--violet-soft)',
+                                border: '1px solid rgba(99, 102, 241, 0.2)',
+                                color: 'var(--violet)',
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '8px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                              }}
+                              onMouseEnter={e => {
+                                e.currentTarget.style.background = 'var(--violet)';
+                                e.currentTarget.style.color = '#fff';
+                              }}
+                              onMouseLeave={e => {
+                                e.currentTarget.style.background = 'var(--violet-soft)';
+                                e.currentTarget.style.color = 'var(--violet)';
+                              }}
+                            >
+                              <Printer size={14} />
+                            </button>
                           </div>
                         </div>
                       );
@@ -610,6 +781,43 @@ export default function StudentDashboard() {
                 })
               )}
             </div>
+            {/* Custom PDF Workbook Generator */}
+            <button
+              className="btn"
+              onClick={handleGenerateWeaknessPDF}
+              disabled={stats.weakTopics.length === 0}
+              style={{
+                marginTop: '1.25rem',
+                width: '100%',
+                background: stats.weakTopics.length === 0 ? 'var(--bg-glass)' : 'linear-gradient(135deg, var(--warning), #ea580c)',
+                border: stats.weakTopics.length === 0 ? '1px solid var(--border)' : 'none',
+                fontWeight: 800,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem',
+                padding: '0.75rem 1.25rem',
+                boxShadow: stats.weakTopics.length === 0 ? 'none' : '0 10px 20px rgba(234, 88, 12, 0.15)',
+                transform: 'translateY(0)',
+                transition: 'all 0.2s ease',
+                color: stats.weakTopics.length === 0 ? 'var(--text-muted)' : '#fff',
+                cursor: stats.weakTopics.length === 0 ? 'not-allowed' : 'pointer'
+              }}
+              onMouseEnter={e => { 
+                if (stats.weakTopics.length > 0) {
+                  e.currentTarget.style.transform = 'translateY(-2px)'; 
+                  e.currentTarget.style.boxShadow = '0 12px 25px rgba(234, 88, 12, 0.25)'; 
+                }
+              }}
+              onMouseLeave={e => { 
+                if (stats.weakTopics.length > 0) {
+                  e.currentTarget.style.transform = 'translateY(0)'; 
+                  e.currentTarget.style.boxShadow = '0 10px 20px rgba(234, 88, 12, 0.15)'; 
+                }
+              }}
+            >
+              <FileText size={16} /> Générer mon Cahier d'Erreurs PDF
+            </button>
           </div>
 
           {/* Dynamic Pedagogical Advice Box */}

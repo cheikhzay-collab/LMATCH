@@ -1,4 +1,14 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import { onAuthChange, loginWithEmail, logoutUser, registerStudent } from '../services/authService';
+import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity } from '../services/userService';
+import { getAllExams, getActiveExams, addExam as fbAddExam, updateExam as fbUpdateExam, deleteExam as fbDeleteExam, toggleExamStatus as fbToggleExamStatus, toggleArchiveExam as fbToggleArchiveExam } from '../services/examService';
+import { getSchoolsConfig, saveSchoolsConfig } from '../services/schoolService';
+import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, getCode } from '../services/planService';
+
+// ── Firebase availability guard ───────────────────────────────────────────────
+// If VITE_FIREBASE_API_KEY is not set (e.g. local dev without .env.local),
+// the app falls back gracefully to localStorage-only mode.
+const FIREBASE_ENABLED = !!import.meta.env.VITE_FIREBASE_API_KEY;
 
 const AuthContext = createContext();
 
@@ -113,6 +123,43 @@ export function AuthProvider({ children }) {
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
+
+  // ── Firebase Auth listener ───────────────────────────────────────────────
+  // Stays in sync with Firebase Auth state changes (login, logout, token refresh).
+  // On sign-in, enriches the local user state with Firestore profile data.
+  useEffect(() => {
+    if (!FIREBASE_ENABLED) return;
+    const unsubscribe = onAuthChange(async (firebaseUser) => {
+      if (firebaseUser) {
+        try {
+          const profile = await getUserDoc(firebaseUser.uid);
+          if (profile) {
+            const enriched = {
+              uid:          firebaseUser.uid,
+              name:         profile.name || firebaseUser.displayName || 'Élève',
+              email:        firebaseUser.email,
+              role:         profile.role || 'student',
+              tier:         profile.tier || 'freemium',
+              xp:           profile.xp   || 0,
+              streak:       profile.streak || 0,
+              rank:         profile.rank  || null,
+              totalStudents: profile.totalStudents || 1200,
+              subscription: profile.subscription || null,
+            };
+            setUser(enriched);
+          }
+        } catch (e) {
+          console.warn('[Firebase] Failed to fetch user profile:', e.message);
+        }
+      } else {
+        // Firebase signed out — only clear if we were using Firebase auth
+        const saved = localStorage.getItem('user');
+        const localUser = saved ? JSON.parse(saved) : null;
+        if (localUser?.uid) setUser(null); // uid means it was a Firebase user
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const { exams: initialExams, needsSave } = loadAndMigrateExams();
   const [exams, setExams] = useState(initialExams);
@@ -263,20 +310,49 @@ export function AuthProvider({ children }) {
     }
   }, [users, user]);
 
-  const login = (email, password) => {
+  const login = async (email, password) => {
+    // ── Admin shortcut (no Firebase needed) ──────────────────────────────────
     if (email === 'admin@lconq.ma') {
       setUser({ name: 'Directeur', email: email, role: 'admin' });
-    } else {
-      const existingUser = users.find(u => u.email === email);
-      if (existingUser) {
-        setUser({ ...existingUser, role: 'student', rank: existingUser.tier === 'premium' ? 12 : 445, totalStudents: 1200, streak: 3 });
-      } else {
-        setUser({ name: 'Élève', email: email, role: 'student', tier: 'freemium', rank: 445, totalStudents: 1200, xp: 0, streak: 0 });
+      return;
+    }
+
+    // ── Firebase Auth login ───────────────────────────────────────────────────
+    if (FIREBASE_ENABLED) {
+      try {
+        const fbUser = await loginWithEmail(email, password);
+        setUser(fbUser);
+        return;
+      } catch (err) {
+        if (err.message !== 'ADMIN_LOCAL') {
+          throw err; // re-throw so the login form can show the error
+        }
       }
+    }
+
+    // ── Fallback: legacy mock users (local dev without Firebase) ─────────────
+    const existingUser = users.find(u => u.email === email);
+    if (existingUser) {
+      setUser({ ...existingUser, role: 'student', rank: existingUser.tier === 'premium' ? 12 : 445, totalStudents: 1200, streak: 3 });
+    } else {
+      setUser({ name: 'Élève', email: email, role: 'student', tier: 'freemium', rank: 445, totalStudents: 1200, xp: 0, streak: 0 });
     }
   };
 
-  const logout = () => {
+  // ── Firebase registration ────────────────────────────────────────────────
+  const register = async (name, email, password) => {
+    if (!FIREBASE_ENABLED) {
+      throw new Error('Firebase is not configured. Add your .env.local file.');
+    }
+    const newUser = await registerStudent(name, email, password);
+    setUser(newUser);
+    return newUser;
+  };
+
+  const logout = async () => {
+    if (FIREBASE_ENABLED && user?.uid) {
+      try { await logoutUser(); } catch (e) { /* ignore */ }
+    }
     setUser(null);
   };
 
@@ -802,7 +878,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ 
-      user, users, login, logout, exams, addExam, updateUserTier,
+      user, users, login, logout, register, exams, addExam, updateUserTier,
       toggleExamStatus, updateExamDetails, deleteExam, toggleArchiveExam,
       plans, activateSubscription, cancelSubscription, addPlan, removePlan, updatePlan,
       activationCodes, generateActivationCodes, redeemActivationCode,
@@ -811,11 +887,12 @@ export function AuthProvider({ children }) {
       schools, addSchool, removeSchool, renameSchool,
       schoolBranding, updateSchoolBranding,
       mockExamHistory, saveMockExamResult,
-      isExamLocked
+      isExamLocked,
+      firebaseEnabled: FIREBASE_ENABLED,
     }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext) || {};

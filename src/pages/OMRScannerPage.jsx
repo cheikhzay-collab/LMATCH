@@ -2,13 +2,14 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Upload, Camera, CheckCircle2, XCircle, AlertCircle,
-  BrainCircuit, Zap, RotateCcw, Loader2, Check, TrendingUp, Sparkles, BookOpen
+  BrainCircuit, Zap, RotateCcw, Loader2, Check, TrendingUp, Sparkles, BookOpen, Printer
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { scanAnswerSheet, readQRCodeFromImage } from '../utils/OMRScanner';
 import DiagnosticReport from '../components/DiagnosticReport';
 import { renderWithMath } from '../utils/mathRenderer';
 import SmartCameraScanner from '../components/SmartCameraScanner';
+import { generateStudentReportHTML, openPrintWindow } from '../utils/generateExamPDF';
 
 const CHOICES = ['A', 'B', 'C', 'D', 'E'];
 
@@ -124,7 +125,7 @@ function ResultRow({ row }) {
 
 /* ── Main Global Scanner Page ────────────────────────────────────── */
 export default function OMRScannerPage() {
-  const { user, updateCardProgress, schoolBranding, exams, isExamLocked } = useAuth();
+  const { user, updateCardProgress, saveMockExamResult, schoolBranding, exams, isExamLocked } = useAuth();
   const navigate = useNavigate();
 
   const [activeExam,   setActiveExam]   = useState(null);
@@ -139,6 +140,17 @@ export default function OMRScannerPage() {
   const [resultsTab,   setResultsTab]   = useState('list');
 
   const fileRef = useRef(null);
+
+  const handlePrintReport = () => {
+    if (!activeExam || !score || !corrected.length) return;
+    const settings = {
+      profName: localStorage.getItem('profName') || '',
+      profPhone: localStorage.getItem('profPhone') || '',
+      profSite: localStorage.getItem('profSite') || 'www.lconq.ma'
+    };
+    const html = generateStudentReportHTML(activeExam, score, corrected, settings);
+    openPrintWindow(html);
+  };
 
   const questions = activeExam?.questions || [];
   const Q = questions.length;
@@ -217,13 +229,37 @@ export default function OMRScannerPage() {
     
     setCorrected(rows);
     const maxPossible = Q * rules.correct;
-    setScore({ pts, neg, max: Q, pct: Math.max(0, (pts / maxPossible) * 100) });
+    const pct = maxPossible > 0 ? Math.max(0, Math.round((pts / maxPossible) * 100)) : 0;
+    setScore({ pts, neg, max: Q, pct });
     setResultsTab('list');
 
     // Push to Spaced Repetition (SRS)
     rows.forEach((row, idx) => {
       const id = questions[idx]?.id || idx;
       updateCardProgress(id, row.result === 'correct' ? 4 : 0);
+    });
+
+    // Save OMR exam results to student's mock history
+    let correctCount = 0;
+    let wrongCount = 0;
+    let emptyCount = 0;
+    rows.forEach(row => {
+      if (row.result === 'correct') correctCount++;
+      else if (row.result === 'wrong') wrongCount++;
+      else emptyCount++;
+    });
+
+    saveMockExamResult({
+      examId: activeExam.id,
+      examName: activeExam.name,
+      school: activeExam.school,
+      score: pts,
+      maxScore: Q,
+      correctCount,
+      wrongCount,
+      emptyCount,
+      pct,
+      mode: 'omr'
     });
 
     setPhase('results');
@@ -531,9 +567,12 @@ export default function OMRScannerPage() {
               </div>
 
               {/* Action row */}
-              <div style={{ display:'flex', gap:'0.75rem', marginTop:'2.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem', justifyContent:'flex-end' }}>
+              <div style={{ display:'flex', gap:'0.75rem', marginTop:'2.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem', justifyContent:'flex-end', flexWrap: 'wrap' }}>
                 <button className="btn-outline" onClick={reset} style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding: '0.75rem 1.5rem' }}>
                   <RotateCcw size={15} /> Scanner une autre feuille
+                </button>
+                <button className="btn" onClick={handlePrintReport} style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding: '0.75rem 1.75rem', background: 'linear-gradient(135deg, var(--violet), #4f46e5)', border: 'none', color: '#fff' }}>
+                  <Printer size={15} /> Télécharger le Rapport PDF
                 </button>
                 <button className="btn" onClick={() => navigate('/dashboard')} style={{ padding: '0.75rem 2rem' }}>
                   Retour à l'accueil

@@ -3,75 +3,93 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   GraduationCap, BookOpen, ChevronRight, Search,
-  Plus, Pencil, Trash2, X, Check, AlertTriangle, Upload, ImageOff,
-  CheckCircle2, XCircle, AlertCircle
+  Plus, Pencil, Trash2, X, Check, AlertTriangle, Upload,
+  CheckCircle2, XCircle, AlertCircle,
+  Stethoscope, Cpu, Wrench, BarChart3, Wifi, TrendingUp, Compass
 } from 'lucide-react';
+
+/* ─── Icon Mapping ─── */
+const ICON_MAP = {
+  'stethoscope': Stethoscope,
+  'cpu': Cpu,
+  'wrench': Wrench,
+  'barchart': BarChart3,
+  'wifi': Wifi,
+  'trendingup': TrendingUp,
+  'compass': Compass,
+  'graduationcap': GraduationCap
+};
 
 /* ─── School Brand Registry ─────────────────────────────────────── */
 const SCHOOL_BRANDS = {
   'Médecine / Pharmacie': {
-    emoji: '🏥', tag: 'Sciences de la Santé',
-    gradient: 'linear-gradient(135deg, #B91C1C 0%, #7F1D1D 100%)',
-    glow: 'rgba(185, 28, 28, 0.35)', accent: 'var(--danger)', accentSoft: 'rgba(239,68,68,0.12)',
+    iconKey: 'stethoscope', tag: 'Sciences de la Santé',
+    gradient: 'linear-gradient(135deg, #EF4444 0%, #991B1B 100%)',
+    glow: 'rgba(239, 68, 68, 0.25)', accent: '#EF4444', accentSoft: 'rgba(239, 68, 68, 0.08)',
     desc: 'Médecine, Pharmacie, Chirurgie Dentaire — Annales officielles du Maroc.',
     scoring: { correct: 1, wrong: -0.25, empty: 0 }
   },
   'ENSA': {
-    emoji: '⚙️', tag: 'Ingénierie',
-    gradient: 'linear-gradient(135deg, #1D4ED8 0%, #1E3A8A 100%)',
-    glow: 'rgba(29, 78, 216, 0.35)', accent: '#3B82F6', accentSoft: 'rgba(59,130,246,0.12)',
+    iconKey: 'cpu', tag: 'Ingénierie',
+    gradient: 'linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)',
+    glow: 'rgba(59, 130, 246, 0.25)', accent: '#3B82F6', accentSoft: 'rgba(59, 130, 246, 0.08)',
     desc: 'École Nationale des Sciences Appliquées — concours CNC & autres.',
     scoring: { correct: 1, wrong: -0.25, empty: 0 }
   },
   'ENSAM': {
-    emoji: '🔩', tag: 'Arts & Métiers',
-    gradient: 'linear-gradient(135deg, #0F4C75 0%, #1B262C 100%)',
-    glow: 'rgba(15, 76, 117, 0.4)', accent: '#38BDF8', accentSoft: 'rgba(56,189,248,0.12)',
+    iconKey: 'wrench', tag: 'Arts & Métiers',
+    gradient: 'linear-gradient(135deg, #0EA5E9 0%, #0369A1 100%)',
+    glow: 'rgba(14, 165, 233, 0.25)', accent: '#0EA5E9', accentSoft: 'rgba(14, 165, 233, 0.08)',
     desc: "École Nationale Supérieure d'Arts et Métiers — sciences de l'ingénieur.",
     scoring: { correct: 1, wrong: -0.25, empty: 0 }
   },
   'ENCG': {
-    emoji: '📊', tag: 'Commerce & Gestion',
-    gradient: 'linear-gradient(135deg, #065F46 0%, #022C22 100%)',
-    glow: 'rgba(6, 95, 70, 0.35)', accent: 'var(--emerald)', accentSoft: 'rgba(16,185,129,0.12)',
+    iconKey: 'barchart', tag: 'Commerce & Gestion',
+    gradient: 'linear-gradient(135deg, #10B981 0%, #047857 100%)',
+    glow: 'rgba(16, 185, 129, 0.25)', accent: 'var(--emerald)', accentSoft: 'rgba(16,185,129,0.08)',
     desc: "École Nationale de Commerce et de Gestion — commerce, finance, management.",
     scoring: { correct: 1, wrong: -0.25, empty: 0 }
   },
   'INPT': {
-    emoji: '📡', tag: 'Télécommunications',
-    gradient: 'linear-gradient(135deg, #C2410C 0%, #7C2D12 100%)',
-    glow: 'rgba(194, 65, 12, 0.35)', accent: '#F97316', accentSoft: 'rgba(249,115,22,0.12)',
+    iconKey: 'wifi', tag: 'Télécommunications',
+    gradient: 'linear-gradient(135deg, #F97316 0%, #C2410C 100%)',
+    glow: 'rgba(249, 115, 22, 0.25)', accent: '#F97316', accentSoft: 'rgba(249,115,22,0.08)',
     desc: "Institut National des Postes et Télécommunications — réseaux, systèmes.",
     scoring: { correct: 1, wrong: -0.25, empty: 0 }
   },
   'INSEA': {
-    emoji: '📈', tag: 'Statistiques & Économie',
-    gradient: 'linear-gradient(135deg, #0F766E 0%, #134E4A 100%)',
-    glow: 'rgba(15, 118, 110, 0.35)', accent: '#14B8A6', accentSoft: 'rgba(20,184,166,0.12)',
+    iconKey: 'trendingup', tag: 'Statistiques & Économie',
+    gradient: 'linear-gradient(135deg, #14B8A6 0%, #0F766E 100%)',
+    glow: 'rgba(20, 184, 166, 0.25)', accent: '#14B8A6', accentSoft: 'rgba(20, 184, 166, 0.08)',
     desc: "Institut National de Statistique et d'Économie Appliquée.",
     scoring: { correct: 1, wrong: -0.25, empty: 0 }
   },
   'Général (Prépa)': {
-    emoji: '📐', tag: 'Classes Préparatoires',
-    gradient: 'linear-gradient(135deg, #6D28D9 0%, #3B0764 100%)',
-    glow: 'rgba(109, 40, 217, 0.35)', accent: '#A78BFA', accentSoft: 'rgba(167,139,250,0.12)',
+    iconKey: 'compass', tag: 'Classes Préparatoires',
+    gradient: 'linear-gradient(135deg, #8B5CF6 0%, #6D28D9 100%)',
+    glow: 'rgba(139, 92, 246, 0.25)', accent: '#8B5CF6', accentSoft: 'rgba(139, 92, 246, 0.08)',
     desc: "MPSI, PCSI, TSI — Préparation générale aux grandes écoles marocaines.",
     scoring: { correct: 1, wrong: -0.25, empty: 0 }
   },
 };
 
 const DEFAULT_BRAND = {
-  emoji: '🎓', tag: 'Grande École',
-  gradient: 'linear-gradient(135deg, #4338CA 0%, #1E1B4B 100%)',
-  glow: 'rgba(67, 56, 202, 0.35)', accent: '#818CF8', accentSoft: 'rgba(129,140,248,0.12)',
+  iconKey: 'graduationcap', tag: 'Grande École',
+  gradient: 'linear-gradient(135deg, #6366F1 0%, #4338CA 100%)',
+  glow: 'rgba(99, 102, 241, 0.25)', accent: '#818CF8', accentSoft: 'rgba(129,140,248,0.08)',
   desc: 'Concours nationaux — Annales et QCM officiels.',
   scoring: { correct: 1, wrong: -0.25, empty: 0 }
 };
 
-const EMOJI_PALETTE = [
-  '🎓','🏥','⚙️','🔩','📊','📡','📈','📐','🔬','🧬','💡','🖥️',
-  '🏗️','✈️','🌍','🔭','📚','🧪','🏛️','⚡','🌱','🎯','💻','🔐',
-  '🧠','🏆','🎖️','🌟','🔑','📋','🗺️','🌐','🏄','🎨','🔧','🛡️',
+const ICON_PALETTE = [
+  { key: 'graduationcap', label: 'Diplôme' },
+  { key: 'stethoscope', label: 'Santé' },
+  { key: 'cpu', label: 'Tech' },
+  { key: 'wrench', label: 'Industrie' },
+  { key: 'barchart', label: 'Finance' },
+  { key: 'wifi', label: 'Télécom' },
+  { key: 'trendingup', label: 'Statistiques' },
+  { key: 'compass', label: 'Prépa' }
 ];
 
 const GRADIENT_PALETTE = [
@@ -81,12 +99,9 @@ const GRADIENT_PALETTE = [
   { label:'Rose',     value:'linear-gradient(135deg, #ec4899 0%, #f472b6 100%)', dot:'#ec4899' },
   { label:'Violet',   value:'linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%)', dot:'#8b5cf6' },
   { label:'Indigo',   value:'linear-gradient(135deg, #6366f1 0%, #818cf8 100%)', dot:'var(--violet)' },
-  { label:'Corail',   // New addition
-    value:'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)', dot:'#f43f5e' },
-  { label:'Émeraude', 
-    value:'linear-gradient(135deg, #059669 0%, #10b981 100%)', dot:'var(--emerald)' },
-  { label:'Or', 
-    value:'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)', dot:'var(--warning)' },
+  { label:'Corail',   value:'linear-gradient(135deg, #f43f5e 0%, #fb7185 100%)', dot:'#f43f5e' },
+  { label:'Émeraude', value:'linear-gradient(135deg, #059669 0%, #10b981 100%)', dot:'var(--emerald)' },
+  { label:'Or',       value:'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)', dot:'var(--warning)' },
 ];
 
 function getBrand(name, schoolBranding) {
@@ -98,7 +113,7 @@ function getBrand(name, schoolBranding) {
 /* ─── Edit Modal ─────────────────────────────────────────────────── */
 function EditModal({ school, brand, onSave, onClose }) {
   const [name,     setName]     = useState(school);
-  const [emoji,    setEmoji]    = useState(brand.emoji);
+  const [iconKey,  setIconKey]  = useState(brand.iconKey || 'graduationcap');
   const [gradient, setGradient] = useState(brand.gradient);
   const [tag,      setTag]      = useState(brand.tag);
   const [logoUrl,  setLogoUrl]  = useState(brand.logoUrl || null);
@@ -112,6 +127,8 @@ function EditModal({ school, brand, onSave, onClose }) {
     reader.onload = (ev) => setLogoUrl(ev.target.result);
     reader.readAsDataURL(file);
   };
+
+  const PreviewIcon = ICON_MAP[iconKey] || GraduationCap;
 
   return (
     <div style={{
@@ -142,7 +159,7 @@ function EditModal({ school, brand, onSave, onClose }) {
         <div style={{ padding:'2rem' }}>
           
           {/* Section 1: Identité */}
-          <div className="school-modal-grid" style={{ gap:'1.5rem', marginBottom:'2rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap:'1.5rem', marginBottom:'2rem' }}>
             <div className="input-group">
               <label style={{ display:'flex', alignItems:'center', gap:'0.4rem', fontWeight:700, marginBottom:'0.6rem', fontSize:'0.82rem' }}>
                 <BookOpen size={14} /> Nom de l'école
@@ -161,48 +178,69 @@ function EditModal({ school, brand, onSave, onClose }) {
           <div style={{ borderRadius:'1.25rem', overflow:'hidden', marginBottom:'2rem', border:'1px solid var(--border)', background:'var(--bg-glass)' }}>
              <div style={{ background: gradient, padding:'1.25rem 1.75rem', display:'flex', alignItems:'center', gap:'1.25rem' }}>
                {logoUrl ? (
-                 <div style={{ width:60, height:60, borderRadius:'14px', background:'rgba(255,255,255,0.15)', padding:'5px', backdropFilter:'blur(5px)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 20px rgba(0,0,0,0.2)' }}>
+                 <div style={{ width:56, height:56, borderRadius:'14px', background:'rgba(255,255,255,0.15)', padding:'5px', backdropFilter:'blur(5px)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 20px rgba(0,0,0,0.2)' }}>
                    <img src={logoUrl} alt="logo" style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain' }} />
                  </div>
                ) : (
-                 <div style={{ fontSize:'2.8rem', filter:'drop-shadow(0 4px 12px rgba(0,0,0,0.3))' }}>{emoji}</div>
+                 <div style={{
+                   width: 52, height: 52, borderRadius: '14px',
+                   background: 'rgba(255, 255, 255, 0.15)',
+                   display: 'flex', alignItems: 'center', justifyContent: 'center',
+                   boxShadow: '0 8px 20px rgba(0,0,0,0.15)',
+                   color: '#fff'
+                 }}>
+                   <PreviewIcon size={24} />
+                 </div>
                )}
                <div>
                  <p style={{ color:'rgba(255,255,255,0.6)', fontSize:'0.68rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.15em' }}>Aperçu de la carte</p>
-                 <h4 style={{ color:'#fff', fontWeight:900, fontSize:'1.2rem', textShadow:'0 2px 4px rgba(0,0,0,0.2)' }}>{name || "Établissement"}</h4>
+                 <h4 style={{ color:'#fff', fontWeight:900, fontSize:'1.2rem', textShadow:'0 2px 4px rgba(0,0,0,0.2)', margin: 0 }}>{name || "Établissement"}</h4>
                </div>
              </div>
           </div>
 
-          {/* Logo & Emoji Section */}
+          {/* Logo & Icon Selection */}
           <div style={{ marginBottom:'2.5rem' }}>
              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem' }}>
-                <h5 style={{ fontWeight:800, fontSize:'0.88rem' }}>🎨 Identité Visuelle</h5>
+                <h5 style={{ fontWeight:800, fontSize:'0.88rem', margin: 0 }}>🎨 Identité Visuelle</h5>
                 <button type="button" onClick={() => fileInputRef.current?.click()} className="btn" style={{ fontSize:'0.75rem', padding:'0.4rem 0.8rem' }}>
-                   <Upload size={13} style={{ marginRight:'0.3rem' }} /> {logoUrl ? 'Changer' : 'Uploader logo'}
+                   <Upload size={13} style={{ marginRight:'0.3rem' }} /> {logoUrl ? 'Changer logo' : 'Uploader logo'}
                 </button>
              </div>
              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display:'none' }} />
 
              {!logoUrl ? (
-               <div className="glass-panel" style={{ padding:'1rem', borderRadius:'1rem' }}>
-                 <div style={{ display:'grid', gridTemplateColumns:'repeat(8, 1fr)', gap:'0.5rem', marginBottom:'1rem' }}>
-                   {EMOJI_PALETTE.map(e => (
-                     <button key={e} onClick={() => setEmoji(e)}
-                       style={{
-                         padding:'0.5rem', borderRadius:'10px', fontSize:'1.4rem', cursor:'pointer', border:'none',
-                         background: emoji === e ? 'var(--violet)' : 'transparent',
-                         transform: emoji === e ? 'scale(1.15)' : 'scale(1)',
-                         transition:'all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                       }}>
-                       {e}
-                     </button>
-                   ))}
+               <div className="glass-panel" style={{ padding:'1rem', borderRadius:'1.25rem' }}>
+                 <p style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '0.75rem', letterSpacing: '0.04em' }}>Sélectionner une Icône</p>
+                 <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:'0.5rem' }}>
+                   {ICON_PALETTE.map(item => {
+                     const IconComp = ICON_MAP[item.key] || GraduationCap;
+                     return (
+                       <button 
+                         key={item.key} 
+                         type="button"
+                         onClick={() => setIconKey(item.key)}
+                         style={{
+                           padding:'0.6rem 0.4rem', borderRadius:'10px', fontSize:'0.8rem', cursor:'pointer', border:'1px solid var(--border)',
+                           background: iconKey === item.key ? 'var(--violet-soft)' : 'var(--bg-card)',
+                           color: iconKey === item.key ? 'var(--violet)' : 'var(--text-muted)',
+                           borderColor: iconKey === item.key ? 'var(--violet)' : 'var(--border)',
+                           fontWeight: 700,
+                           display: 'flex',
+                           flexDirection: 'column',
+                           alignItems: 'center',
+                           gap: '0.35rem',
+                           transition:'all 0.2s',
+                         }}>
+                         <IconComp size={18} />
+                         <span>{item.label}</span>
+                       </button>
+                     );
+                   })}
                  </div>
-                 <input className="input-control" placeholder="Ou collez un emoji personnalisé..." style={{ fontSize:'0.85rem' }} value={emoji} onChange={e => setEmoji(e.target.value)} />
                </div>
              ) : (
-               <div style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'0.75rem', background:'var(--emerald-soft)', borderRadius:'1rem', border:'1px solid var(--emerald)33' }}>
+               <div style={{ display:'flex', alignItems:'center', gap:'1rem', padding:'0.75rem', background:'var(--emerald-soft)', borderRadius:'1rem', border:'1px solid rgba(16, 185, 129, 0.2)' }}>
                  <Check size={16} color="var(--emerald)" />
                  <span style={{ fontSize:'0.8rem', fontWeight:600, color:'var(--emerald)', flex:1 }}>Logo personnalisé actif</span>
                  <button className="btn-ghost" onClick={() => setLogoUrl(null)} style={{ color:'var(--danger)', fontSize:'0.75rem' }}>Supprimer</button>
@@ -212,8 +250,8 @@ function EditModal({ school, brand, onSave, onClose }) {
 
           {/* Theme Colors */}
           <div style={{ marginBottom:'2.5rem' }}>
-            <h5 style={{ fontWeight:800, fontSize:'0.88rem', marginBottom:'1rem' }}>✨ Couleurs du thème</h5>
-            <div style={{ display:'flex', flexWrap:'wrap', gap:'0.75rem' }}>
+            <h5 style={{ fontWeight:800, fontSize:'0.88rem', marginBottom:'1rem', margin: 0 }}>✨ Couleurs du thème</h5>
+            <div style={{ display:'flex', flexWrap:'wrap', gap:'0.75rem', marginTop: '0.75rem' }}>
               {GRADIENT_PALETTE.map(g => (
                 <button key={g.label} onClick={() => setGradient(g.value)}
                   style={{
@@ -227,18 +265,18 @@ function EditModal({ school, brand, onSave, onClose }) {
             </div>
           </div>
 
-          {/* Scoring Section - Bento Style */}
+          {/* Scoring Section */}
           <div style={{ 
             padding:'1.25rem', background:'linear-gradient(135deg, var(--bg-card), var(--bg-glass))', 
             borderRadius:'1.25rem', border:'1px solid var(--border)',
-            boxShadow:'inset 0 0 20px rgba(99, 102, 241, 0.05)',
+            boxShadow:'inset 0 0 20px rgba(99, 102, 241, 0.03)',
             width: '100%'
           }}>
             <div style={{ display:'flex', alignItems:'center', gap:'0.6rem', marginBottom:'1.5rem' }}>
               <div style={{ width:28, height:28, borderRadius:'8px', background:'var(--violet-soft)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                 <Plus size={14} color="var(--violet)" />
               </div>
-              <h5 style={{ fontWeight:800, fontSize:'0.9rem', color:'var(--text-main)' }}>Système de Notation (Points)</h5>
+              <h5 style={{ fontWeight:800, fontSize:'0.9rem', color:'var(--text-main)', margin: 0 }}>Système de Notation (Points)</h5>
             </div>
             
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:'0.75rem' }}>
@@ -260,7 +298,7 @@ function EditModal({ school, brand, onSave, onClose }) {
                 </div>
               ))}
             </div>
-            <p style={{ fontSize:'0.7rem', color:'var(--text-muted)', marginTop:'1rem', fontStyle:'italic', textAlign:'center' }}>
+            <p style={{ fontSize:'0.7rem', color:'var(--text-muted)', marginTop:'1rem', fontStyle:'italic', textAlign:'center', margin: '1rem 0 0' }}>
                💡 Ces valeurs seront appliquées à tous les examens de cet établissement.
             </p>
           </div>
@@ -268,7 +306,7 @@ function EditModal({ school, brand, onSave, onClose }) {
           {/* Footer Actions */}
           <div style={{ display:'flex', gap:'1rem', marginTop:'3rem' }}>
             <button className="btn-outline" onClick={onClose} style={{ flex:1, padding:'0.9rem' }}>Annuler</button>
-            <button className="btn-emerald" onClick={() => onSave({ name, emoji, gradient, tag, logoUrl, scoring })}
+            <button className="btn-emerald" onClick={() => onSave({ name, iconKey, gradient, tag, logoUrl, scoring })}
               style={{ flex:2, padding:'0.9rem', fontSize:'1rem', fontWeight:900, boxShadow:'0 10px 25px var(--emerald-glow)' }}>
               <Check size={18} style={{ marginRight:'0.5rem' }} /> Enregistrer les modifications
             </button>
@@ -318,6 +356,7 @@ function DeleteModal({ school, onConfirm, onClose }) {
 /* ─── School Card ───────────────────────────────────────────────── */
 function SchoolCard({ school, examCount, brand, isAdmin, onEdit, onDelete, onClick }) {
   const [hovered, setHovered] = useState(false);
+  const IconComponent = ICON_MAP[brand.iconKey] || GraduationCap;
 
   return (
     <div style={{ position:'relative' }}>
@@ -329,67 +368,111 @@ function SchoolCard({ school, examCount, brand, isAdmin, onEdit, onDelete, onCli
       >
         <div style={{
           borderRadius:'1.5rem', overflow:'hidden',
-          border:`1px solid ${hovered ? brand.accent + '55' : 'var(--border)'}`,
+          border:`1px solid ${hovered ? brand.accent + '33' : 'var(--border)'}`,
           background:'var(--bg-card)',
-          boxShadow: hovered ? `0 12px 48px ${brand.glow}, 0 2px 8px rgba(0,0,0,0.15)` : 'var(--shadow-card)',
-          transform: hovered ? 'translateY(-6px) scale(1.01)' : 'translateY(0) scale(1)',
-          transition:'all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
+          boxShadow: hovered ? `0 12px 32px ${brand.glow}, 0 4px 12px rgba(0,0,0,0.1)` : 'var(--shadow-card)',
+          transform: hovered ? 'translateY(-6px)' : 'translateY(0)',
+          transition:'all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1)',
+          position: 'relative',
+          display: 'flex',
+          flexDirection: 'column',
+          height: '100%',
+          minHeight: '260px'
         }}>
-          {/* Gradient header */}
-          <div style={{ background: brand.gradient, padding:'2rem 1.75rem 1.5rem', position:'relative', overflow:'hidden' }}>
-            
-            {/* Watermark Logo/Emoji Background */}
-            <div style={{ 
-              position:'absolute', right:'-5%', top:'5%', 
-              width:'180px', height:'180px', 
-              opacity:0.22, transform: hovered ? 'rotate(-8deg) scale(1.1)' : 'rotate(-12deg) scale(1)', 
-              transition:'all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1)',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              pointerEvents:'none', zIndex:0
-            }}>
-              {brand.logoUrl ? (
-                <img src={brand.logoUrl} style={{ width:'100%', height:'100%', objectFit:'contain' }} alt="" />
-              ) : (
-                <span style={{ fontSize:'130px' }}>{brand.emoji}</span>
-              )}
-            </div>
+          {/* Top color accent strip */}
+          <div style={{ height: '4px', background: brand.gradient, width: '100%' }} />
 
-            <div style={{ position:'absolute', top:-30, left:-30, width:120, height:120, borderRadius:'50%', background:'rgba(255,255,255,0.06)' }} />
+          {/* Card Content container */}
+          <div style={{ padding: '1.75rem', flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
             
-            <div style={{ position:'relative', zIndex:1 }}>
+            {/* Watermark Logo/Vector in background */}
+            <div style={{
+              position: 'absolute',
+              right: '-15px',
+              bottom: '-15px',
+              opacity: brand.logoUrl ? (hovered ? 0.07 : 0.03) : (hovered ? 0.08 : 0.04),
+              color: brand.accent,
+              transform: hovered ? 'scale(1.18) rotate(-5deg)' : 'scale(1) rotate(-12deg)',
+              transition: 'all 0.45s cubic-bezier(0.2, 0.8, 0.2, 1)',
+              pointerEvents: 'none',
+              zIndex: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
               {brand.logoUrl ? (
                 <img 
                   src={brand.logoUrl} 
-                  alt="" 
-                  style={{ 
-                    width:72, height:72, objectFit:'contain', 
-                    marginBottom:'1rem', 
-                    filter:'drop-shadow(0 8px 20px rgba(0,0,0,0.3))', 
-                    transition:'all 0.3s', 
-                    transform: hovered ? 'translateY(-4px) scale(1.05)' : 'none' 
+                  style={{
+                    width: '150px',
+                    height: '150px',
+                    objectFit: 'contain',
+                    filter: 'grayscale(100%) contrast(0.8)'
                   }} 
+                  alt="" 
                 />
               ) : (
-                <div style={{ fontSize:'3.2rem', marginBottom:'0.75rem', filter:'drop-shadow(0 8px 16px rgba(0,0,0,0.3))', transition:'all 0.3s', transform: hovered ? 'scale(1.1) rotate(-5deg)' : 'scale(1)', display:'inline-block' }}>
-                  {brand.emoji}
-                </div>
+                <IconComponent size={140} strokeWidth={1} />
               )}
-              <div style={{ display:'inline-block', background:'rgba(255,255,255,0.18)', backdropFilter:'blur(8px)', border:'1px solid rgba(255,255,255,0.25)', padding:'0.2rem 0.75rem', borderRadius:'99px', fontSize:'0.68rem', fontWeight:700, color:'#fff', textTransform:'uppercase', letterSpacing:'0.08em' }}>
-                {brand.tag}
-              </div>
             </div>
-          </div>
 
-          {/* Body */}
-          <div style={{ padding:'1.25rem 1.75rem' }}>
-            <h3 style={{ fontSize:'1.05rem', fontWeight:800, marginBottom:'0.4rem', color:'var(--text-main)' }}>{school}</h3>
-            <p style={{ color:'var(--text-muted)', fontSize:'0.8rem', lineHeight:1.6, marginBottom:'1rem' }}>{brand.desc}</p>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:'0.4rem', background: brand.accentSoft, color: brand.accent, padding:'0.28rem 0.75rem', borderRadius:'99px', fontSize:'0.78rem', fontWeight:700, border:`1px solid ${brand.accent}33` }}>
-                <BookOpen size={12} />
-                {examCount > 0 ? `${examCount} examen${examCount > 1 ? 's' : ''}` : 'Bientôt'}
+            {/* Icon Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', zIndex: 1 }}>
+              {/* Glowing Icon Wrapper */}
+              <div style={{
+                width: 52, height: 52, borderRadius: '14px',
+                background: brand.gradient,
+                boxShadow: `0 8px 16px ${brand.glow}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                transition: 'all 0.3s ease',
+                transform: hovered ? 'scale(1.05) rotate(3deg)' : 'none',
+                overflow: 'hidden',
+                padding: brand.logoUrl ? '6px' : '0'
+              }}>
+                {brand.logoUrl ? (
+                  <img 
+                    src={brand.logoUrl} 
+                    style={{ 
+                      width: '100%', 
+                      height: '100%', 
+                      objectFit: 'contain',
+                      filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.15))' 
+                    }} 
+                    alt="" 
+                  />
+                ) : (
+                  <IconComponent size={24} color="#fff" />
+                )}
               </div>
-              <div style={{ display:'flex', alignItems:'center', gap:'0.25rem', color: hovered ? brand.accent : 'var(--text-subtle)', fontSize:'0.8rem', fontWeight:600, transition:'all 0.2s', transform: hovered ? 'translateX(4px)' : 'translateX(0)' }}>
+
+              {/* Tag Badge */}
+              <span style={{
+                background: brand.accentSoft,
+                color: brand.accent,
+                border: `1px solid ${brand.accent}25`,
+                padding: '0.25rem 0.75rem',
+                borderRadius: '99px',
+                fontSize: '0.72rem',
+                fontWeight: 700,
+                letterSpacing: '0.02em'
+              }}>
+                {brand.tag}
+              </span>
+            </div>
+
+            {/* Title & Description */}
+            <div style={{ zIndex: 1, flex: 1 }}>
+              <h3 style={{ fontSize:'1.1rem', fontWeight:800, marginBottom:'0.5rem', color:'var(--text-main)' }}>{school}</h3>
+              <p style={{ color:'var(--text-muted)', fontSize:'0.82rem', lineHeight:1.55, marginBottom:'1.25rem' }}>{brand.desc}</p>
+            </div>
+
+            {/* Footer Stats and Action */}
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', zIndex: 1, marginTop: 'auto' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.35rem', background: 'var(--bg-glass)', padding:'0.28rem 0.75rem', borderRadius:'99px', fontSize:'0.76rem', fontWeight:700, border:`1px solid var(--border)` }}>
+                <BookOpen size={11} style={{ color: brand.accent }} />
+                <span style={{ color: 'var(--text-muted)' }}>{examCount > 0 ? `${examCount} examen${examCount > 1 ? 's' : ''}` : 'Bientôt'}</span>
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:'0.25rem', color: hovered ? brand.accent : 'var(--text-subtle)', fontSize:'0.8rem', fontWeight:700, transition:'all 0.2s', transform: hovered ? 'translateX(4px)' : 'translateX(0)' }}>
                 Voir <ChevronRight size={15} />
               </div>
             </div>
@@ -397,24 +480,24 @@ function SchoolCard({ school, examCount, brand, isAdmin, onEdit, onDelete, onCli
         </div>
       </button>
 
-      {/* Admin action buttons — overlay top-right */}
+      {/* Admin overlay buttons */}
       {isAdmin && (
         <div style={{ position:'absolute', top:'0.875rem', right:'0.875rem', display:'flex', gap:'0.35rem', zIndex:10 }}>
           <button
             onClick={e => { e.stopPropagation(); onEdit(); }}
             title="Modifier"
-            style={{ width:30, height:30, borderRadius:'8px', border:'1px solid rgba(255,255,255,0.3)', background:'rgba(255,255,255,0.2)', backdropFilter:'blur(8px)', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+            style={{ width:30, height:30, borderRadius:'8px', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text-muted)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--violet)'; e.currentTarget.style.borderColor = 'var(--violet)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
           >
             <Pencil size={13} />
           </button>
           <button
             onClick={e => { e.stopPropagation(); onDelete(); }}
             title="Supprimer"
-            style={{ width:30, height:30, borderRadius:'8px', border:'1px solid rgba(239,68,68,0.5)', background:'rgba(239,68,68,0.25)', backdropFilter:'blur(8px)', color:'#fca5a5', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s' }}
-            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.45)'}
-            onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.25)'}
+            style={{ width:30, height:30, borderRadius:'8px', border:'1px solid var(--border)', background:'var(--bg-card)', color:'var(--text-muted)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'var(--danger)'; e.currentTarget.style.borderColor = 'var(--danger)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-muted)'; e.currentTarget.style.borderColor = 'var(--border)'; }}
           >
             <Trash2 size={13} />
           </button>
@@ -450,9 +533,9 @@ export default function SchoolsPage() {
   const handleEdit = (school) => setEditTarget(school);
   const handleDelete = (school) => setDeleteTarget(school);
 
-  const handleSaveEdit = ({ name, emoji, gradient, tag, logoUrl, scoring }) => {
+  const handleSaveEdit = ({ name, iconKey, gradient, tag, logoUrl, scoring }) => {
     const old = editTarget;
-    updateSchoolBranding(name, { emoji, gradient, tag, logoUrl, scoring, desc: getBrand(old, schoolBranding).desc });
+    updateSchoolBranding(name, { iconKey, gradient, tag, logoUrl, scoring, desc: getBrand(old, schoolBranding).desc });
     if (name !== old) renameSchool(old, name);
     setEditTarget(null);
   };
@@ -473,19 +556,19 @@ export default function SchoolsPage() {
   const editBrand = editTarget ? getBrand(editTarget, schoolBranding) : null;
 
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
       {/* Header */}
       <header style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'1.5rem', flexWrap:'wrap', gap:'0.875rem' }}>
         <div>
           <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'0.4rem' }}>
-            <div style={{ width:40, height:40, borderRadius:'12px', background:'linear-gradient(135deg,var(--violet),var(--emerald))', display:'flex', alignItems:'center', justifyContent: 'center' }}>
+            <div style={{ width:40, height:40, borderRadius:'12px', background:'linear-gradient(135deg,var(--violet),var(--emerald))', display:'flex', alignItems:'center', justifyContent: 'center', boxShadow: 'var(--btn-primary-shadow)' }}>
               <GraduationCap size={22} color="#fff" />
             </div>
             <h1 style={{ fontSize:'1.75rem', fontWeight:800, letterSpacing:'-0.02em', margin:0 }}>Grandes Écoles</h1>
           </div>
           <p style={{ color:'var(--text-muted)', fontSize:'0.9rem', margin:0 }}>
             {isAdmin
-              ? 'Gérez les établissements, personnalisez leurs logos et couleurs.'
+              ? 'Gérez les établissements, personnalisez leurs logos, icônes et règles de notation.'
               : 'Choisissez votre école pour accéder aux annales et QCM officiels.'}
           </p>
         </div>
@@ -493,7 +576,7 @@ export default function SchoolsPage() {
         {/* Admin: Add school button */}
         {isAdmin && (
           <button className="btn-emerald" onClick={() => setShowAddForm(v => !v)}
-            style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+            style={{ display:'flex', alignItems:'center', gap:'0.5rem', boxShadow: '0 8px 20px var(--emerald-glow)' }}>
             <Plus size={16} /> Ajouter une école
           </button>
         )}
@@ -524,11 +607,19 @@ export default function SchoolsPage() {
       <div style={{ display:'flex', gap:'0.875rem', alignItems:'center', marginBottom:'1.5rem', flexWrap:'wrap' }}>
         <div style={{ position:'relative', flex:'1 1 200px', minWidth:'180px' }}>
           <Search size={16} style={{ position:'absolute', left:'0.875rem', top:'50%', transform:'translateY(-50%)', color:'var(--text-subtle)', pointerEvents:'none' }} />
-          <input className="input-control" placeholder="Rechercher une école..." value={search} onChange={e => setSearch(e.target.value)} style={{ paddingLeft:'2.5rem', width:'100%' }} />
+          <input 
+            className="input-control" 
+            placeholder="Rechercher une école..." 
+            value={search} 
+            onChange={e => setSearch(e.target.value)} 
+            style={{ paddingLeft:'2.5rem', width:'100%', borderRadius: '10px' }} 
+            onFocus={e => { e.target.style.borderColor = 'var(--violet)'; e.target.style.boxShadow = 'var(--shadow-glow-violet)'; }}
+            onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
+          />
         </div>
         <div style={{ display:'flex', gap:'1.25rem', fontSize:'0.83rem', color:'var(--text-muted)' }}>
-          <span><strong className="text-main">{allSchoolNames.length}</strong> établissements</span>
-          <span><strong className="text-emerald">{exams.filter(e => e.isArchived !== true).length}</strong> examens</span>
+          <span><strong className="text-main" style={{ color: 'var(--text-main)' }}>{allSchoolNames.length}</strong> établissements</span>
+          <span><strong className="text-emerald" style={{ color: 'var(--emerald)' }}>{exams.filter(e => e.isArchived !== true).length}</strong> examens</span>
         </div>
       </div>
 
@@ -539,7 +630,7 @@ export default function SchoolsPage() {
           <p>Aucune école trouvée pour «{search}»</p>
         </div>
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap:'1.25rem' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap:'1.5rem' }}>
           {filtered.map(school => (
             <SchoolCard
               key={school}
@@ -574,4 +665,3 @@ export default function SchoolsPage() {
     </div>
   );
 }
-

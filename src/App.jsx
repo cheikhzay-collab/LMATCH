@@ -22,6 +22,7 @@ import AdminMarketing from './pages/AdminMarketing';
 
 import OMRScannerPage from './pages/OMRScannerPage';
 import SubscriptionPage from './pages/SubscriptionPage';
+import RankingPage from './pages/RankingPage';
 
 function AppContent() {
   return (
@@ -39,7 +40,7 @@ function AppContent() {
         <Route path="/study" element={<StudyMode />} />
         <Route path="/exam" element={<MockExamMode />} />
         <Route path="/scanner" element={<OMRScannerPage />} />
-        <Route path="/ranking" element={<div className="animate-fade-in text-center mt-8"><h2>Classement National</h2><p className="text-muted mt-4">En cours de développement...</p></div>} />
+        <Route path="/ranking" element={<RankingPage />} />
         
         {/* Admin Routes */}
         <Route path="/admin/dashboard" element={<AdminOverview />} />
