@@ -147,3 +147,13 @@ export const getRecentActivity = async (uid, days = 90) => {
   snap.forEach(d => { result[d.id] = d.data().count || 0; });
   return result;
 };
+
+/**
+ * Fetch all registered users from Firestore (Admin only).
+ * @returns {Promise<Array>}
+ */
+export const getAllUsers = async () => {
+  if (!db) return [];
+  const snap = await getDocs(collection(db, 'users'));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+};

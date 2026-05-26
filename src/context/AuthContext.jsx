@@ -1,9 +1,10 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent } from '../services/authService';
-import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity } from '../services/userService';
+import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers } from '../services/userService';
 import { getAllExams, getActiveExams, addExam as fbAddExam, updateExam as fbUpdateExam, deleteExam as fbDeleteExam, toggleExamStatus as fbToggleExamStatus, toggleArchiveExam as fbToggleArchiveExam } from '../services/examService';
 import { getSchoolsConfig, saveSchoolsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, getCode } from '../services/planService';
+
 
 // ── Firebase availability guard ───────────────────────────────────────────────
 // If VITE_FIREBASE_API_KEY is not set (e.g. local dev without .env.local),
@@ -258,15 +259,28 @@ export function AuthProvider({ children }) {
     localStorage.setItem('mockExamHistory', JSON.stringify(mockExamHistory));
   }, [mockExamHistory]);
 
-  const saveMockExamResult = (result) => {
-    setMockExamHistory(prev => [
-      {
-        id: Math.random().toString(36).substr(2, 9),
-        date: new Date().toISOString(),
-        ...result
-      },
-      ...prev
-    ]);
+  const saveMockExamResult = async (result) => {
+    const localId = Math.random().toString(36).substr(2, 9);
+    const newResult = {
+      date: new Date().toISOString(),
+      ...result
+    };
+    
+    if (FIREBASE_ENABLED && user?.uid) {
+      try {
+        await saveMockResult(user.uid, newResult);
+        // reload history from firebase to be in sync
+        const fbHistory = await getMockHistory(user.uid);
+        setMockExamHistory(fbHistory);
+      } catch (e) {
+        console.error('[Firebase] Failed to save mock result:', e);
+      }
+    } else {
+      setMockExamHistory(prev => [
+        { id: localId, ...newResult },
+        ...prev
+      ]);
+    }
   };
 
 
@@ -356,11 +370,9 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  const addExam = (name, school, year, tier, questions, pdfUrl = null) => {
-    // Sanitize all question text fields at storage time to prevent CR/LF corruption
+  const addExam = async (name, school, year, tier, questions, pdfUrl = null) => {
     const cleanQuestions = sanitizeExams([{ questions }])[0].questions;
-    setExams([...exams, {
-      id: Math.random().toString(36).substr(2, 9),
+    const newExam = {
       name,
       school,
       year,
@@ -368,30 +380,94 @@ export function AuthProvider({ children }) {
       questions: cleanQuestions,
       pdfUrl,
       isActive: true,
+      isArchived: false,
       dateAdded: new Date().toISOString()
-    }]);
+    };
+    
+    if (FIREBASE_ENABLED) {
+      try {
+        const newId = await fbAddExam(newExam);
+        setExams(prev => [...prev, { id: newId, ...newExam }]);
+      } catch (e) {
+        console.error('[Firebase] Failed to add exam:', e);
+      }
+    } else {
+      setExams(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), ...newExam }]);
+    }
   };
 
-  const toggleExamStatus = (examId) => {
-    setExams(exams.map(e => e.id === examId ? { ...e, isActive: e.isActive === false ? true : false } : e));
+  const toggleExamStatus = async (examId) => {
+    const target = exams.find(e => e.id === examId);
+    if (!target) return;
+    if (FIREBASE_ENABLED) {
+      try {
+        await fbToggleExamStatus(examId, target.isActive);
+        setExams(prev => prev.map(e => e.id === examId ? { ...e, isActive: !e.isActive } : e));
+      } catch (e) {
+        console.error('[Firebase] Failed to toggle exam status:', e);
+      }
+    } else {
+      setExams(prev => prev.map(e => e.id === examId ? { ...e, isActive: !e.isActive } : e));
+    }
   };
 
-  const updateExamDetails = (examId, updates) => {
-    setExams(exams.map(e => e.id === examId ? { ...e, ...updates } : e));
+  const updateExamDetails = async (examId, updates) => {
+    if (FIREBASE_ENABLED) {
+      try {
+        await fbUpdateExam(examId, updates);
+        setExams(prev => prev.map(e => e.id === examId ? { ...e, ...updates } : e));
+      } catch (e) {
+        console.error('[Firebase] Failed to update exam details:', e);
+      }
+    } else {
+      setExams(prev => prev.map(e => e.id === examId ? { ...e, ...updates } : e));
+    }
   };
 
-  const deleteExam = (examId) => {
-    setExams(exams.filter(e => e.id !== examId));
+  const deleteExam = async (examId) => {
+    if (FIREBASE_ENABLED) {
+      try {
+        await fbDeleteExam(examId);
+        setExams(prev => prev.filter(e => e.id !== examId));
+      } catch (e) {
+        console.error('[Firebase] Failed to delete exam:', e);
+      }
+    } else {
+      setExams(prev => prev.filter(e => e.id !== examId));
+    }
   };
 
-  const toggleArchiveExam = (examId) => {
-    setExams(exams.map(e => e.id === examId ? { ...e, isArchived: !e.isArchived } : e));
+  const toggleArchiveExam = async (examId) => {
+    const target = exams.find(e => e.id === examId);
+    if (!target) return;
+    if (FIREBASE_ENABLED) {
+      try {
+        await fbToggleArchiveExam(examId, target.isArchived);
+        setExams(prev => prev.map(e => e.id === examId ? { ...e, isArchived: !e.isArchived } : e));
+      } catch (e) {
+        console.error('[Firebase] Failed to toggle archive status:', e);
+      }
+    } else {
+      setExams(prev => prev.map(e => e.id === examId ? { ...e, isArchived: !e.isArchived } : e));
+    }
   };
 
-  const updateUserTier = (userId, newTier) => {
-    setUsers(users.map(u => u.id === userId ? { ...u, tier: newTier } : u));
-    if (user && user.id === userId) {
-      setUser({ ...user, tier: newTier });
+  const updateUserTier = async (userId, newTier) => {
+    if (FIREBASE_ENABLED) {
+      try {
+        await updateUserDoc(userId, { tier: newTier });
+        setUsers(prev => prev.map(u => u.id === userId || u.uid === userId ? { ...u, tier: newTier } : u));
+        if (user && (user.id === userId || user.uid === userId)) {
+          setUser(u => ({ ...u, tier: newTier }));
+        }
+      } catch (e) {
+        console.error('[Firebase] Failed to update user tier:', e);
+      }
+    } else {
+      setUsers(users.map(u => u.id === userId ? { ...u, tier: newTier } : u));
+      if (user && user.id === userId) {
+        setUser({ ...user, tier: newTier });
+      }
     }
   };
 
@@ -463,8 +539,8 @@ export function AuthProvider({ children }) {
     localStorage.setItem('plans', JSON.stringify(plans));
   }, [plans]);
 
-  const addPlan = (name, price, durationDays, allowedSchools, description = '', isRecommended = false, features = []) => {
-    setPlans([...plans, {
+  const addPlan = async (name, price, durationDays, allowedSchools, description = '', isRecommended = false, features = []) => {
+    const newPlan = {
       id: 'plan_' + Math.random().toString(36).substr(2, 9),
       name,
       price: parseFloat(price) || 0,
@@ -478,63 +554,114 @@ export function AuthProvider({ children }) {
         "Simulateur de concours chronométré",
         "Heatmaps des faiblesses"
       ]
-    }]);
+    };
+    const updatedPlans = [...plans, newPlan];
+    setPlans(updatedPlans);
+    if (FIREBASE_ENABLED) {
+      try {
+        await savePlans(updatedPlans);
+      } catch (e) {
+        console.error('[Firebase] Failed to save plans config:', e);
+      }
+    }
   };
 
-  const removePlan = (planId) => {
-    setPlans(plans.filter(p => p.id !== planId));
+  const removePlan = async (planId) => {
+    const updatedPlans = plans.filter(p => p.id !== planId);
+    setPlans(updatedPlans);
+    if (FIREBASE_ENABLED) {
+      try {
+        await savePlans(updatedPlans);
+      } catch (e) {
+        console.error('[Firebase] Failed to remove plan:', e);
+      }
+    }
   };
 
-  const updatePlan = (planId, updates) => {
-    setPlans(plans.map(p => p.id === planId ? { ...p, ...updates } : p));
+  const updatePlan = async (planId, updates) => {
+    const updatedPlans = plans.map(p => p.id === planId ? { ...p, ...updates } : p);
+    setPlans(updatedPlans);
+    if (FIREBASE_ENABLED) {
+      try {
+        await savePlans(updatedPlans);
+      } catch (e) {
+        console.error('[Firebase] Failed to update plan:', e);
+      }
+    }
   };
 
-  const activateSubscription = (userId, planId, durationDays) => {
+  const activateSubscription = async (userId, planId, durationDays) => {
     const startDate = new Date();
     const endDate = new Date();
     endDate.setDate(startDate.getDate() + parseInt(durationDays));
 
-    const updatedUsers = users.map(u => {
-      if (u.id === userId) {
-        return {
-          ...u,
-          tier: 'premium',
-          subscription: {
-            planId,
-            status: 'active',
-            startDate: startDate.toISOString(),
-            endDate: endDate.toISOString()
-          }
-        };
+    const subscription = {
+      planId,
+      status: 'active',
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString()
+    };
+
+    if (FIREBASE_ENABLED) {
+      try {
+        await setUserSubscription(userId, subscription, 'premium');
+        setUsers(prev => prev.map(u => u.id === userId || u.uid === userId ? { ...u, tier: 'premium', subscription } : u));
+        if (user && (user.uid === userId || user.id === userId)) {
+          setUser(u => ({ ...u, tier: 'premium', subscription }));
+        }
+      } catch (e) {
+        console.error('[Firebase] Failed to activate subscription:', e);
       }
-      return u;
-    });
+    } else {
+      const updatedUsers = users.map(u => {
+        if (u.id === userId) {
+          return {
+            ...u,
+            tier: 'premium',
+            subscription
+          };
+        }
+        return u;
+      });
 
-    setUsers(updatedUsers);
+      setUsers(updatedUsers);
 
-    if (user && user.id === userId) {
-      const match = updatedUsers.find(u => u.id === userId);
-      setUser({ ...user, ...match });
+      if (user && user.id === userId) {
+        const match = updatedUsers.find(u => u.id === userId);
+        setUser({ ...user, ...match });
+      }
     }
   };
 
-  const cancelSubscription = (userId) => {
-    const updatedUsers = users.map(u => {
-      if (u.id === userId) {
-        return {
-          ...u,
-          tier: 'freemium',
-          subscription: null
-        };
+  const cancelSubscription = async (userId) => {
+    if (FIREBASE_ENABLED) {
+      try {
+        await setUserSubscription(userId, null, 'freemium');
+        setUsers(prev => prev.map(u => u.id === userId || u.uid === userId ? { ...u, tier: 'freemium', subscription: null } : u));
+        if (user && (user.uid === userId || user.id === userId)) {
+          setUser(u => ({ ...u, tier: 'freemium', subscription: null }));
+        }
+      } catch (e) {
+        console.error('[Firebase] Failed to cancel subscription:', e);
       }
-      return u;
-    });
+    } else {
+      const updatedUsers = users.map(u => {
+        if (u.id === userId) {
+          return {
+            ...u,
+            tier: 'freemium',
+            subscription: null
+          };
+        }
+        return u;
+      });
 
-    setUsers(updatedUsers);
+      setUsers(updatedUsers);
 
-    if (user && user.id === userId) {
-      const match = updatedUsers.find(u => u.id === userId);
-      setUser({ ...user, ...match });
+      if (user && user.id === userId) {
+        const match = updatedUsers.find(u => u.id === userId);
+        setUser({ ...user, ...match });
+      }
     }
   };
 
@@ -575,7 +702,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('activationCodes', JSON.stringify(activationCodes));
   }, [activationCodes]);
 
-  const generateActivationCodes = (planId, count, batchName) => {
+  const generateActivationCodes = async (planId, count, batchName) => {
     const newCodes = [];
     const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     for (let i = 0; i < count; i++) {
@@ -598,18 +725,35 @@ export function AuthProvider({ children }) {
       });
     }
     setActivationCodes(prev => [...newCodes, ...prev]);
+    if (FIREBASE_ENABLED) {
+      try {
+        await saveActivationCodes(newCodes);
+      } catch (e) {
+        console.error('[Firebase] Failed to save activation codes:', e);
+      }
+    }
     return newCodes;
   };
 
-  const redeemActivationCode = (codeStr) => {
+  const redeemActivationCode = async (codeStr) => {
     const cleanCode = codeStr.trim().toUpperCase();
-    const foundIdx = activationCodes.findIndex(c => c.code.toUpperCase() === cleanCode);
     
-    if (foundIdx === -1) {
+    let codeObj = null;
+    let foundIdx = -1;
+    
+    if (FIREBASE_ENABLED) {
+      codeObj = await getCode(cleanCode);
+    } else {
+      foundIdx = activationCodes.findIndex(c => c.code.toUpperCase() === cleanCode);
+      if (foundIdx !== -1) {
+        codeObj = activationCodes[foundIdx];
+      }
+    }
+    
+    if (!codeObj) {
       throw new Error("Code d'activation invalide. Veuillez vérifier la saisie.");
     }
     
-    const codeObj = activationCodes[foundIdx];
     if (codeObj.isUsed) {
       throw new Error(`Ce code a déjà été utilisé par ${codeObj.usedBy} le ${new Date(codeObj.usedAt).toLocaleDateString('fr-FR')}.`);
     }
@@ -623,18 +767,27 @@ export function AuthProvider({ children }) {
       throw new Error("Seuls les élèves connectés peuvent activer un abonnement.");
     }
     
-    // Mark code as used
-    const updatedCodes = [...activationCodes];
-    updatedCodes[foundIdx] = {
-      ...codeObj,
-      isUsed: true,
-      usedBy: user.name || user.email,
-      usedAt: new Date().toISOString()
-    };
-    setActivationCodes(updatedCodes);
-    
-    // Activate subscription
-    activateSubscription(user.id, plan.id, plan.durationDays);
+    if (FIREBASE_ENABLED) {
+      try {
+        await markCodeUsed(cleanCode, user.name || user.email);
+        setActivationCodes(prev => prev.map(c => c.code.toUpperCase() === cleanCode ? { ...c, isUsed: true, usedBy: user.name || user.email, usedAt: new Date().toISOString() } : c));
+        await activateSubscription(user.uid, plan.id, plan.durationDays);
+      } catch (e) {
+        console.error('[Firebase] Failed to redeem code:', e);
+        throw e;
+      }
+    } else {
+      // Mark code as used locally
+      const updatedCodes = [...activationCodes];
+      updatedCodes[foundIdx] = {
+        ...codeObj,
+        isUsed: true,
+        usedBy: user.name || user.email,
+        usedAt: new Date().toISOString()
+      };
+      setActivationCodes(updatedCodes);
+      activateSubscription(user.id, plan.id, plan.durationDays);
+    }
     
     return plan;
   };
@@ -642,6 +795,7 @@ export function AuthProvider({ children }) {
   // FSRS (Free Spaced Repetition Scheduler) Algorithm Implementation
   const updateCardProgress = (questionId, quality) => {
     // Quality: 0 = failed/forgot, 3 = hard, 4 = good, 5 = easy
+    let updatedCardState = null;
     setProgress((prev) => {
       const card = prev[questionId] || {
         difficulty: 5.0,
@@ -700,16 +854,24 @@ export function AuthProvider({ children }) {
       // Map difficulty back to easeFactor equivalent for stats backward-compatibility
       const easeFactor = 3.0 - (difficulty - 1.0) / 4.5;
 
+      updatedCardState = {
+        difficulty,
+        stability,
+        repetitions,
+        easeFactor,
+        lastReviewDate: now.toISOString(),
+        nextReviewDate: nextReviewDate.toISOString()
+      };
+
+      if (FIREBASE_ENABLED && user?.uid) {
+        saveQuestionProgress(user.uid, questionId, updatedCardState).catch(e =>
+          console.error('[Firebase] Failed to save card progress:', e)
+        );
+      }
+
       return {
         ...prev,
-        [questionId]: {
-          difficulty,
-          stability,
-          repetitions,
-          easeFactor,
-          lastReviewDate: now.toISOString(),
-          nextReviewDate: nextReviewDate.toISOString()
-        }
+        [questionId]: updatedCardState
       };
     });
 
@@ -726,9 +888,22 @@ export function AuthProvider({ children }) {
     dailyActivity[todayStr] = (dailyActivity[todayStr] || 0) + 1;
     localStorage.setItem('dailyActivity', JSON.stringify(dailyActivity));
 
+    if (FIREBASE_ENABLED && user?.uid) {
+      incrementDailyActivity(user.uid).catch(e =>
+        console.error('[Firebase] Failed to increment daily activity:', e)
+      );
+    }
+
     // Reward XP for good answers
     if (user && quality >= 3) {
-      setUser(u => ({ ...u, xp: (u.xp || 0) + (quality * 10) }));
+      const xpGain = quality * 10;
+      const newXp = (user.xp || 0) + xpGain;
+      setUser(u => ({ ...u, xp: newXp }));
+      if (FIREBASE_ENABLED && user.uid) {
+        updateUserDoc(user.uid, { xp: newXp }).catch(e =>
+          console.error('[Firebase] Failed to update XP in Firestore:', e)
+        );
+      }
     }
   };
 
@@ -830,34 +1005,155 @@ export function AuthProvider({ children }) {
     localStorage.setItem('schoolBranding', JSON.stringify(schoolBranding));
   }, [schoolBranding]);
 
-  const addSchool = (name) => {
+  // ── Firebase Firestore Syncing ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!FIREBASE_ENABLED) return;
+
+    const loadConfigAndExams = async () => {
+      try {
+        // Fetch Schools
+        const schoolsConfig = await getSchoolsConfig();
+        if (schoolsConfig && schoolsConfig.schools && schoolsConfig.schools.length > 0) {
+          setSchools(schoolsConfig.schools);
+          setSchoolBranding(schoolsConfig.branding || {});
+        } else {
+          // Seed defaults if config document doesn't exist
+          await saveSchoolsConfig(schools, schoolBranding);
+        }
+
+        // Fetch Plans
+        const fbPlans = await getPlans();
+        if (fbPlans && fbPlans.length > 0) {
+          setPlans(fbPlans);
+        } else {
+          // Seed default plans if not present
+          await savePlans(plans);
+        }
+
+        // Fetch Exams
+        const fbExams = await getAllExams();
+        if (fbExams && fbExams.length > 0) {
+          setExams(fbExams);
+        } else {
+          // Seed the default exam to Firestore
+          const defaultSeedExam = initialExams.find(e => e.id === "QVVOBFE7");
+          if (defaultSeedExam) {
+            await fbAddExam(defaultSeedExam);
+          }
+          setExams(initialExams);
+        }
+      } catch (e) {
+        console.warn('[Firebase] Error syncing config/exams:', e.message);
+      }
+    };
+
+    loadConfigAndExams();
+  }, [user]);
+
+  // Fetch User-specific data (progress, history) when a student logs in
+  useEffect(() => {
+    if (!FIREBASE_ENABLED || !user || user.role === 'admin') return;
+
+    const loadStudentData = async () => {
+      try {
+        const [fbProgress, fbHistory] = await Promise.all([
+          getAllProgress(user.uid),
+          getMockHistory(user.uid)
+        ]);
+        setProgress(fbProgress || {});
+        setMockExamHistory(fbHistory || []);
+      } catch (e) {
+        console.warn('[Firebase] Error loading student progress:', e.message);
+      }
+    };
+
+    loadStudentData();
+  }, [user]);
+
+  // Fetch all registered users for Admin Dashboard when Admin is logged in
+  useEffect(() => {
+    if (!FIREBASE_ENABLED || user?.role !== 'admin') return;
+
+    const loadAllUsers = async () => {
+      try {
+        const fbUsers = await getAllUsers();
+        if (fbUsers && fbUsers.length > 0) {
+          setUsers(fbUsers);
+        }
+        const fbCodes = await getAllCodes();
+        if (fbCodes) {
+          setActivationCodes(fbCodes);
+        }
+      } catch (e) {
+        console.warn('[Firebase] Error loading admin users/codes:', e.message);
+      }
+    };
+
+    loadAllUsers();
+  }, [user]);
+
+
+  const addSchool = async (name) => {
     if (name && !schools.includes(name)) {
-      setSchools([...schools, name]);
+      const updatedSchools = [...schools, name];
+      setSchools(updatedSchools);
+      if (FIREBASE_ENABLED) {
+        try {
+          await saveSchoolsConfig(updatedSchools, schoolBranding);
+        } catch (e) {
+          console.error('[Firebase] Failed to add school config:', e);
+        }
+      }
     }
   };
 
-  const removeSchool = (name) => {
-    setSchools(schools.filter(s => s !== name));
-    // Remove any branding for this school
-    setSchoolBranding(prev => { const n = { ...prev }; delete n[name]; return n; });
+  const removeSchool = async (name) => {
+    const updatedSchools = schools.filter(s => s !== name);
+    const updatedBranding = { ...schoolBranding };
+    delete updatedBranding[name];
+    setSchools(updatedSchools);
+    setSchoolBranding(updatedBranding);
+    if (FIREBASE_ENABLED) {
+      try {
+        await saveSchoolsConfig(updatedSchools, updatedBranding);
+      } catch (e) {
+        console.error('[Firebase] Failed to remove school config:', e);
+      }
+    }
   };
 
-  const renameSchool = (oldName, newName) => {
+  const renameSchool = async (oldName, newName) => {
     if (!newName || newName === oldName) return;
-    setSchools(prev => prev.map(s => s === oldName ? newName : s));
-    // Move branding to new name
-    setSchoolBranding(prev => {
-      const n = { ...prev };
-      if (n[oldName]) { n[newName] = n[oldName]; delete n[oldName]; }
-      return n;
-    });
-    // Update exams that reference this school
+    const updatedSchools = schools.map(s => s === oldName ? newName : s);
+    const updatedBranding = { ...schoolBranding };
+    if (updatedBranding[oldName]) {
+      updatedBranding[newName] = updatedBranding[oldName];
+      delete updatedBranding[oldName];
+    }
+    setSchools(updatedSchools);
+    setSchoolBranding(updatedBranding);
     setExams(prev => prev.map(e => e.school === oldName ? { ...e, school: newName } : e));
+    if (FIREBASE_ENABLED) {
+      try {
+        await saveSchoolsConfig(updatedSchools, updatedBranding);
+      } catch (e) {
+        console.error('[Firebase] Failed to rename school config:', e);
+      }
+    }
   };
 
-  const updateSchoolBranding = (name, patch) => {
-    setSchoolBranding(prev => ({ ...prev, [name]: { ...(prev[name] || {}), ...patch } }));
+  const updateSchoolBranding = async (name, patch) => {
+    const updatedBranding = { ...schoolBranding, [name]: { ...(schoolBranding[name] || {}), ...patch } };
+    setSchoolBranding(updatedBranding);
+    if (FIREBASE_ENABLED) {
+      try {
+        await saveSchoolsConfig(schools, updatedBranding);
+      } catch (e) {
+        console.error('[Firebase] Failed to update school branding:', e);
+      }
+    }
   };
+
 
   const isExamLocked = (exam) => {
     if (!exam) return true;
