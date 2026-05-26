@@ -1,15 +1,15 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent } from '../services/authService';
 import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers } from '../services/userService';
-import { getAllExams, getActiveExams, addExam as fbAddExam, updateExam as fbUpdateExam, deleteExam as fbDeleteExam, toggleExamStatus as fbToggleExamStatus, toggleArchiveExam as fbToggleArchiveExam } from '../services/examService';
+import { getAllExams, getActiveExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam } from '../services/examService';
 import { getSchoolsConfig, saveSchoolsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, getCode } from '../services/planService';
 
 
-// ── Firebase availability guard ───────────────────────────────────────────────
-// If VITE_FIREBASE_API_KEY is not set (e.g. local dev without .env.local),
+// ── Supabase availability guard ───────────────────────────────────────────────
+// If VITE_SUPABASE_URL is not set (e.g. local dev without .env.local),
 // the app falls back gracefully to localStorage-only mode.
-const FIREBASE_ENABLED = !!import.meta.env.VITE_FIREBASE_API_KEY;
+const SUPABASE_ENABLED = !!import.meta.env.VITE_SUPABASE_URL;
 
 const AuthContext = createContext();
 
@@ -125,20 +125,21 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // ── Firebase Auth listener ───────────────────────────────────────────────
-  // Stays in sync with Firebase Auth state changes (login, logout, token refresh).
-  // On sign-in, enriches the local user state with Firestore profile data.
+  // ── Supabase Auth listener ───────────────────────────────────────────────
+  // Stays in sync with Supabase Auth state changes (login, logout, token refresh).
+  // On sign-in, enriches the local user state with database profile data.
   useEffect(() => {
-    if (!FIREBASE_ENABLED) return;
-    const unsubscribe = onAuthChange(async (firebaseUser) => {
-      if (firebaseUser) {
+    if (!SUPABASE_ENABLED) return;
+    const unsubscribe = onAuthChange(async (supabaseUser) => {
+      if (supabaseUser) {
         try {
-          const profile = await getUserDoc(firebaseUser.uid);
+          const profile = await getUserDoc(supabaseUser.id);
           if (profile) {
             const enriched = {
-              uid:          firebaseUser.uid,
-              name:         profile.name || firebaseUser.displayName || 'Élève',
-              email:        firebaseUser.email,
+              uid:          supabaseUser.id,
+              id:           supabaseUser.id,
+              name:         profile.name || supabaseUser.user_metadata?.name || 'Élève',
+              email:        supabaseUser.email,
               role:         profile.role || 'student',
               tier:         profile.tier || 'freemium',
               xp:           profile.xp   || 0,
@@ -150,13 +151,13 @@ export function AuthProvider({ children }) {
             setUser(enriched);
           }
         } catch (e) {
-          console.warn('[Firebase] Failed to fetch user profile:', e.message);
+          console.warn('[Supabase] Failed to fetch user profile:', e.message);
         }
       } else {
-        // Firebase signed out — only clear if we were using Firebase auth
+        // Supabase signed out — only clear if we were using Supabase auth
         const saved = localStorage.getItem('user');
         const localUser = saved ? JSON.parse(saved) : null;
-        if (localUser?.uid) setUser(null); // uid means it was a Firebase user
+        if (localUser?.uid || localUser?.id) setUser(null);
       }
     });
     return () => unsubscribe();
@@ -266,14 +267,15 @@ export function AuthProvider({ children }) {
       ...result
     };
     
-    if (FIREBASE_ENABLED && user?.uid) {
+    if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
+      const userId = user.uid || user.id;
       try {
-        await saveMockResult(user.uid, newResult);
-        // reload history from firebase to be in sync
-        const fbHistory = await getMockHistory(user.uid);
-        setMockExamHistory(fbHistory);
+        await saveMockResult(userId, newResult);
+        // reload history from database to be in sync
+        const dbHistory = await getMockHistory(userId);
+        setMockExamHistory(dbHistory);
       } catch (e) {
-        console.error('[Firebase] Failed to save mock result:', e);
+        console.error('[Supabase] Failed to save mock result:', e);
       }
     } else {
       setMockExamHistory(prev => [
@@ -325,17 +327,17 @@ export function AuthProvider({ children }) {
   }, [users, user]);
 
   const login = async (email, password) => {
-    // ── Admin shortcut (no Firebase needed) ──────────────────────────────────
+    // ── Admin shortcut (no Supabase needed) ──────────────────────────────────
     if (email === 'admin@lconq.ma') {
-      setUser({ name: 'Directeur', email: email, role: 'admin' });
+      setUser({ name: 'Directeur', email: email, role: 'admin', uid: 'admin', id: 'admin' });
       return;
     }
 
-    // ── Firebase Auth login ───────────────────────────────────────────────────
-    if (FIREBASE_ENABLED) {
+    // ── Supabase Auth login ───────────────────────────────────────────────────
+    if (SUPABASE_ENABLED) {
       try {
-        const fbUser = await loginWithEmail(email, password);
-        setUser(fbUser);
+        const sbUser = await loginWithEmail(email, password);
+        setUser(sbUser);
         return;
       } catch (err) {
         if (err.message !== 'ADMIN_LOCAL') {
@@ -344,19 +346,40 @@ export function AuthProvider({ children }) {
       }
     }
 
-    // ── Fallback: legacy mock users (local dev without Firebase) ─────────────
+    // ── Fallback: legacy mock users (local dev without Supabase) ─────────────
     const existingUser = users.find(u => u.email === email);
     if (existingUser) {
-      setUser({ ...existingUser, role: 'student', rank: existingUser.tier === 'premium' ? 12 : 445, totalStudents: 1200, streak: 3 });
+      const mockUser = {
+        ...existingUser,
+        role: 'student',
+        rank: existingUser.tier === 'premium' ? 12 : 445,
+        totalStudents: 1200,
+        streak: 3,
+        uid: existingUser.id,
+        id: existingUser.id
+      };
+      setUser(mockUser);
     } else {
-      setUser({ name: 'Élève', email: email, role: 'student', tier: 'freemium', rank: 445, totalStudents: 1200, xp: 0, streak: 0 });
+      const mockUser = {
+        name: 'Élève',
+        email: email,
+        role: 'student',
+        tier: 'freemium',
+        rank: 445,
+        totalStudents: 1200,
+        xp: 0,
+        streak: 0,
+        uid: 'mock_student',
+        id: 'mock_student'
+      };
+      setUser(mockUser);
     }
   };
 
-  // ── Firebase registration ────────────────────────────────────────────────
+  // ── Supabase registration ────────────────────────────────────────────────
   const register = async (name, email, password) => {
-    if (!FIREBASE_ENABLED) {
-      throw new Error('Firebase is not configured. Add your .env.local file.');
+    if (!SUPABASE_ENABLED) {
+      throw new Error('Supabase is not configured. Add your .env.local file.');
     }
     const newUser = await registerStudent(name, email, password);
     setUser(newUser);
@@ -364,7 +387,7 @@ export function AuthProvider({ children }) {
   };
 
   const logout = async () => {
-    if (FIREBASE_ENABLED && user?.uid) {
+    if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
       try { await logoutUser(); } catch (e) { /* ignore */ }
     }
     setUser(null);
@@ -384,12 +407,12 @@ export function AuthProvider({ children }) {
       dateAdded: new Date().toISOString()
     };
     
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
-        const newId = await fbAddExam(newExam);
+        const newId = await dbAddExam(newExam);
         setExams(prev => [...prev, { id: newId, ...newExam }]);
       } catch (e) {
-        console.error('[Firebase] Failed to add exam:', e);
+        console.error('[Supabase] Failed to add exam:', e);
       }
     } else {
       setExams(prev => [...prev, { id: Math.random().toString(36).substr(2, 9), ...newExam }]);
@@ -399,12 +422,12 @@ export function AuthProvider({ children }) {
   const toggleExamStatus = async (examId) => {
     const target = exams.find(e => e.id === examId);
     if (!target) return;
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
-        await fbToggleExamStatus(examId, target.isActive);
+        await dbToggleExamStatus(examId, target.isActive);
         setExams(prev => prev.map(e => e.id === examId ? { ...e, isActive: !e.isActive } : e));
       } catch (e) {
-        console.error('[Firebase] Failed to toggle exam status:', e);
+        console.error('[Supabase] Failed to toggle exam status:', e);
       }
     } else {
       setExams(prev => prev.map(e => e.id === examId ? { ...e, isActive: !e.isActive } : e));
@@ -412,12 +435,12 @@ export function AuthProvider({ children }) {
   };
 
   const updateExamDetails = async (examId, updates) => {
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
-        await fbUpdateExam(examId, updates);
+        await dbUpdateExam(examId, updates);
         setExams(prev => prev.map(e => e.id === examId ? { ...e, ...updates } : e));
       } catch (e) {
-        console.error('[Firebase] Failed to update exam details:', e);
+        console.error('[Supabase] Failed to update exam details:', e);
       }
     } else {
       setExams(prev => prev.map(e => e.id === examId ? { ...e, ...updates } : e));
@@ -425,12 +448,12 @@ export function AuthProvider({ children }) {
   };
 
   const deleteExam = async (examId) => {
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
-        await fbDeleteExam(examId);
+        await dbDeleteExam(examId);
         setExams(prev => prev.filter(e => e.id !== examId));
       } catch (e) {
-        console.error('[Firebase] Failed to delete exam:', e);
+        console.error('[Supabase] Failed to delete exam:', e);
       }
     } else {
       setExams(prev => prev.filter(e => e.id !== examId));
@@ -440,12 +463,12 @@ export function AuthProvider({ children }) {
   const toggleArchiveExam = async (examId) => {
     const target = exams.find(e => e.id === examId);
     if (!target) return;
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
-        await fbToggleArchiveExam(examId, target.isArchived);
+        await dbToggleArchiveExam(examId, target.isArchived);
         setExams(prev => prev.map(e => e.id === examId ? { ...e, isArchived: !e.isArchived } : e));
       } catch (e) {
-        console.error('[Firebase] Failed to toggle archive status:', e);
+        console.error('[Supabase] Failed to toggle archive status:', e);
       }
     } else {
       setExams(prev => prev.map(e => e.id === examId ? { ...e, isArchived: !e.isArchived } : e));
@@ -453,7 +476,7 @@ export function AuthProvider({ children }) {
   };
 
   const updateUserTier = async (userId, newTier) => {
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
         await updateUserDoc(userId, { tier: newTier });
         setUsers(prev => prev.map(u => u.id === userId || u.uid === userId ? { ...u, tier: newTier } : u));
@@ -461,7 +484,7 @@ export function AuthProvider({ children }) {
           setUser(u => ({ ...u, tier: newTier }));
         }
       } catch (e) {
-        console.error('[Firebase] Failed to update user tier:', e);
+        console.error('[Supabase] Failed to update user tier:', e);
       }
     } else {
       setUsers(users.map(u => u.id === userId ? { ...u, tier: newTier } : u));
@@ -557,11 +580,11 @@ export function AuthProvider({ children }) {
     };
     const updatedPlans = [...plans, newPlan];
     setPlans(updatedPlans);
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
         await savePlans(updatedPlans);
       } catch (e) {
-        console.error('[Firebase] Failed to save plans config:', e);
+        console.error('[Supabase] Failed to save plans config:', e);
       }
     }
   };
@@ -569,11 +592,11 @@ export function AuthProvider({ children }) {
   const removePlan = async (planId) => {
     const updatedPlans = plans.filter(p => p.id !== planId);
     setPlans(updatedPlans);
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
         await savePlans(updatedPlans);
       } catch (e) {
-        console.error('[Firebase] Failed to remove plan:', e);
+        console.error('[Supabase] Failed to remove plan:', e);
       }
     }
   };
@@ -581,11 +604,11 @@ export function AuthProvider({ children }) {
   const updatePlan = async (planId, updates) => {
     const updatedPlans = plans.map(p => p.id === planId ? { ...p, ...updates } : p);
     setPlans(updatedPlans);
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
         await savePlans(updatedPlans);
       } catch (e) {
-        console.error('[Firebase] Failed to update plan:', e);
+        console.error('[Supabase] Failed to update plan:', e);
       }
     }
   };
@@ -602,7 +625,7 @@ export function AuthProvider({ children }) {
       endDate: endDate.toISOString()
     };
 
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
         await setUserSubscription(userId, subscription, 'premium');
         setUsers(prev => prev.map(u => u.id === userId || u.uid === userId ? { ...u, tier: 'premium', subscription } : u));
@@ -610,7 +633,7 @@ export function AuthProvider({ children }) {
           setUser(u => ({ ...u, tier: 'premium', subscription }));
         }
       } catch (e) {
-        console.error('[Firebase] Failed to activate subscription:', e);
+        console.error('[Supabase] Failed to activate subscription:', e);
       }
     } else {
       const updatedUsers = users.map(u => {
@@ -634,7 +657,7 @@ export function AuthProvider({ children }) {
   };
 
   const cancelSubscription = async (userId) => {
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
         await setUserSubscription(userId, null, 'freemium');
         setUsers(prev => prev.map(u => u.id === userId || u.uid === userId ? { ...u, tier: 'freemium', subscription: null } : u));
@@ -642,7 +665,7 @@ export function AuthProvider({ children }) {
           setUser(u => ({ ...u, tier: 'freemium', subscription: null }));
         }
       } catch (e) {
-        console.error('[Firebase] Failed to cancel subscription:', e);
+        console.error('[Supabase] Failed to cancel subscription:', e);
       }
     } else {
       const updatedUsers = users.map(u => {
@@ -725,11 +748,11 @@ export function AuthProvider({ children }) {
       });
     }
     setActivationCodes(prev => [...newCodes, ...prev]);
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
         await saveActivationCodes(newCodes);
       } catch (e) {
-        console.error('[Firebase] Failed to save activation codes:', e);
+        console.error('[Supabase] Failed to save activation codes:', e);
       }
     }
     return newCodes;
@@ -741,7 +764,7 @@ export function AuthProvider({ children }) {
     let codeObj = null;
     let foundIdx = -1;
     
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       codeObj = await getCode(cleanCode);
     } else {
       foundIdx = activationCodes.findIndex(c => c.code.toUpperCase() === cleanCode);
@@ -767,13 +790,13 @@ export function AuthProvider({ children }) {
       throw new Error("Seuls les élèves connectés peuvent activer un abonnement.");
     }
     
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
         await markCodeUsed(cleanCode, user.name || user.email);
         setActivationCodes(prev => prev.map(c => c.code.toUpperCase() === cleanCode ? { ...c, isUsed: true, usedBy: user.name || user.email, usedAt: new Date().toISOString() } : c));
-        await activateSubscription(user.uid, plan.id, plan.durationDays);
+        await activateSubscription(user.uid || user.id, plan.id, plan.durationDays);
       } catch (e) {
-        console.error('[Firebase] Failed to redeem code:', e);
+        console.error('[Supabase] Failed to redeem code:', e);
         throw e;
       }
     } else {
@@ -863,9 +886,9 @@ export function AuthProvider({ children }) {
         nextReviewDate: nextReviewDate.toISOString()
       };
 
-      if (FIREBASE_ENABLED && user?.uid) {
-        saveQuestionProgress(user.uid, questionId, updatedCardState).catch(e =>
-          console.error('[Firebase] Failed to save card progress:', e)
+      if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
+        saveQuestionProgress(user.uid || user.id, questionId, updatedCardState).catch(e =>
+          console.error('[Supabase] Failed to save card progress:', e)
         );
       }
 
@@ -888,9 +911,9 @@ export function AuthProvider({ children }) {
     dailyActivity[todayStr] = (dailyActivity[todayStr] || 0) + 1;
     localStorage.setItem('dailyActivity', JSON.stringify(dailyActivity));
 
-    if (FIREBASE_ENABLED && user?.uid) {
-      incrementDailyActivity(user.uid).catch(e =>
-        console.error('[Firebase] Failed to increment daily activity:', e)
+    if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
+      incrementDailyActivity(user.uid || user.id).catch(e =>
+        console.error('[Supabase] Failed to increment daily activity:', e)
       );
     }
 
@@ -899,9 +922,9 @@ export function AuthProvider({ children }) {
       const xpGain = quality * 10;
       const newXp = (user.xp || 0) + xpGain;
       setUser(u => ({ ...u, xp: newXp }));
-      if (FIREBASE_ENABLED && user.uid) {
-        updateUserDoc(user.uid, { xp: newXp }).catch(e =>
-          console.error('[Firebase] Failed to update XP in Firestore:', e)
+      if (SUPABASE_ENABLED && (user.uid || user.id)) {
+        updateUserDoc(user.uid || user.id, { xp: newXp }).catch(e =>
+          console.error('[Supabase] Failed to update XP in database:', e)
         );
       }
     }
@@ -1005,9 +1028,9 @@ export function AuthProvider({ children }) {
     localStorage.setItem('schoolBranding', JSON.stringify(schoolBranding));
   }, [schoolBranding]);
 
-  // ── Firebase Firestore Syncing ──────────────────────────────────────────────
+  // ── Supabase Database Syncing ──────────────────────────────────────────────
   useEffect(() => {
-    if (!FIREBASE_ENABLED) return;
+    if (!SUPABASE_ENABLED) return;
 
     const loadConfigAndExams = async () => {
       try {
@@ -1035,15 +1058,15 @@ export function AuthProvider({ children }) {
         if (fbExams && fbExams.length > 0) {
           setExams(fbExams);
         } else {
-          // Seed the default exam to Firestore
+          // Seed the default exam to Database
           const defaultSeedExam = initialExams.find(e => e.id === "QVVOBFE7");
           if (defaultSeedExam) {
-            await fbAddExam(defaultSeedExam);
+            await dbAddExam(defaultSeedExam);
           }
           setExams(initialExams);
         }
       } catch (e) {
-        console.warn('[Firebase] Error syncing config/exams:', e.message);
+        console.warn('[Supabase] Error syncing config/exams:', e.message);
       }
     };
 
@@ -1052,18 +1075,19 @@ export function AuthProvider({ children }) {
 
   // Fetch User-specific data (progress, history) when a student logs in
   useEffect(() => {
-    if (!FIREBASE_ENABLED || !user || user.role === 'admin') return;
+    if (!SUPABASE_ENABLED || !user || user.role === 'admin') return;
 
     const loadStudentData = async () => {
+      const userId = user.uid || user.id;
       try {
         const [fbProgress, fbHistory] = await Promise.all([
-          getAllProgress(user.uid),
-          getMockHistory(user.uid)
+          getAllProgress(userId),
+          getMockHistory(userId)
         ]);
         setProgress(fbProgress || {});
         setMockExamHistory(fbHistory || []);
       } catch (e) {
-        console.warn('[Firebase] Error loading student progress:', e.message);
+        console.warn('[Supabase] Error loading student progress:', e.message);
       }
     };
 
@@ -1072,7 +1096,7 @@ export function AuthProvider({ children }) {
 
   // Fetch all registered users for Admin Dashboard when Admin is logged in
   useEffect(() => {
-    if (!FIREBASE_ENABLED || user?.role !== 'admin') return;
+    if (!SUPABASE_ENABLED || user?.role !== 'admin') return;
 
     const loadAllUsers = async () => {
       try {
@@ -1085,7 +1109,7 @@ export function AuthProvider({ children }) {
           setActivationCodes(fbCodes);
         }
       } catch (e) {
-        console.warn('[Firebase] Error loading admin users/codes:', e.message);
+        console.warn('[Supabase] Error loading admin users/codes:', e.message);
       }
     };
 
@@ -1097,11 +1121,11 @@ export function AuthProvider({ children }) {
     if (name && !schools.includes(name)) {
       const updatedSchools = [...schools, name];
       setSchools(updatedSchools);
-      if (FIREBASE_ENABLED) {
+      if (SUPABASE_ENABLED) {
         try {
           await saveSchoolsConfig(updatedSchools, schoolBranding);
         } catch (e) {
-          console.error('[Firebase] Failed to add school config:', e);
+          console.error('[Supabase] Failed to add school config:', e);
         }
       }
     }
@@ -1113,11 +1137,11 @@ export function AuthProvider({ children }) {
     delete updatedBranding[name];
     setSchools(updatedSchools);
     setSchoolBranding(updatedBranding);
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
         await saveSchoolsConfig(updatedSchools, updatedBranding);
       } catch (e) {
-        console.error('[Firebase] Failed to remove school config:', e);
+        console.error('[Supabase] Failed to remove school config:', e);
       }
     }
   };
@@ -1133,11 +1157,11 @@ export function AuthProvider({ children }) {
     setSchools(updatedSchools);
     setSchoolBranding(updatedBranding);
     setExams(prev => prev.map(e => e.school === oldName ? { ...e, school: newName } : e));
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
         await saveSchoolsConfig(updatedSchools, updatedBranding);
       } catch (e) {
-        console.error('[Firebase] Failed to rename school config:', e);
+        console.error('[Supabase] Failed to rename school config:', e);
       }
     }
   };
@@ -1145,11 +1169,11 @@ export function AuthProvider({ children }) {
   const updateSchoolBranding = async (name, patch) => {
     const updatedBranding = { ...schoolBranding, [name]: { ...(schoolBranding[name] || {}), ...patch } };
     setSchoolBranding(updatedBranding);
-    if (FIREBASE_ENABLED) {
+    if (SUPABASE_ENABLED) {
       try {
         await saveSchoolsConfig(schools, updatedBranding);
       } catch (e) {
-        console.error('[Firebase] Failed to update school branding:', e);
+        console.error('[Supabase] Failed to update school branding:', e);
       }
     }
   };
@@ -1184,7 +1208,7 @@ export function AuthProvider({ children }) {
       schoolBranding, updateSchoolBranding,
       mockExamHistory, saveMockExamResult,
       isExamLocked,
-      firebaseEnabled: FIREBASE_ENABLED,
+      supabaseEnabled: SUPABASE_ENABLED,
     }}>
       {children}
     </AuthContext.Provider>

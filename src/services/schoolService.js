@@ -1,16 +1,8 @@
 // src/services/schoolService.js
-// Firestore service for schools list and per-school branding (logos, colors)
-// Returns defaults when db is null (no Firebase configured).
+// Supabase service for schools list and per-school branding (logos, colors)
+// Returns defaults when supabase is null (no Supabase configured).
 
-import {
-  doc,
-  getDoc,
-  setDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
-
-const SCHOOLS_REF = () => db ? doc(db, 'config', 'schools') : null;
+import { supabase } from '../lib/supabase';
 
 const DEFAULT_SCHOOLS = [
   'Médecine / Pharmacie',
@@ -23,35 +15,46 @@ const DEFAULT_SCHOOLS = [
 ];
 
 /**
- * Fetch schools config from Firestore.
+ * Fetch schools config from Supabase.
  * Returns { schools: string[], branding: Record<string, Object> }
  */
 export const getSchoolsConfig = async () => {
-  const ref = SCHOOLS_REF();
-  if (!ref) return { schools: DEFAULT_SCHOOLS, branding: {} };
+  if (!supabase) return { schools: DEFAULT_SCHOOLS, branding: {} };
 
-  const snap = await getDoc(ref);
-  if (!snap.exists()) {
+  const { data, error } = await supabase
+    .from('config')
+    .select('value')
+    .eq('key', 'schools')
+    .maybeSingle();
+
+  if (error || !data) {
     return { schools: DEFAULT_SCHOOLS, branding: {} };
   }
-  const data = snap.data();
+
+  const val = data.value || {};
   return {
-    schools:  data.schools  || DEFAULT_SCHOOLS,
-    branding: data.branding || {},
+    schools:  val.schools  || DEFAULT_SCHOOLS,
+    branding: val.branding || {},
   };
 };
 
 /**
- * Save the full schools config back to Firestore.
+ * Save the full schools config back to Supabase.
  * @param {string[]} schools
  * @param {Record<string, Object>} branding
  */
 export const saveSchoolsConfig = async (schools, branding) => {
-  const ref = SCHOOLS_REF();
-  if (!ref) return;
-  await setDoc(ref, {
-    schools,
-    branding,
-    updatedAt: serverTimestamp(),
-  });
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('config')
+    .upsert({
+      key: 'schools',
+      value: { schools, branding },
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('[Supabase] Failed to save schools config:', error);
+    throw error;
+  }
 };

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { BrainCircuit, Eye, EyeOff, Zap } from 'lucide-react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { BrainCircuit, Eye, EyeOff, Zap, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const TEST_ACCOUNTS = [
@@ -10,19 +10,60 @@ const TEST_ACCOUNTS = [
 ];
 
 export default function Login() {
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [showPwd, setShowPwd]   = useState(false);
-  const { login }               = useAuth();
-  const navigate                = useNavigate();
+  const { pathname }                      = useLocation();
+  const isRegisterRoute                   = pathname === '/register';
+  const [isRegistering, setIsRegistering] = useState(isRegisterRoute);
+  const [name, setName]                   = useState('');
+  const [email, setEmail]                 = useState('');
+  const [password, setPassword]           = useState('');
+  const [showPwd, setShowPwd]             = useState(false);
+  const [isLoading, setIsLoading]         = useState(false);
+  const [errorMsg, setErrorMsg]           = useState('');
 
-  const handleLogin = (e) => {
+  const { login, register }               = useAuth();
+  const navigate                          = useNavigate();
+
+  // Sync state with location path changes
+  React.useEffect(() => {
+    setIsRegistering(pathname === '/register');
+  }, [pathname]);
+
+  const handleAuthSubmit = async (e) => {
     e.preventDefault();
-    login(email, password);
-    navigate(email === 'admin@lconq.ma' ? '/admin/dashboard' : '/dashboard');
+    setIsLoading(true);
+    setErrorMsg('');
+
+    try {
+      if (isRegistering) {
+        if (!name.trim()) {
+          throw new Error('Veuillez saisir votre nom complet.');
+        }
+        await register(name.trim(), email, password);
+        navigate('/dashboard');
+      } else {
+        await login(email, password);
+        navigate(email === 'admin@lconq.ma' ? '/admin/dashboard' : '/dashboard');
+      }
+    } catch (err) {
+      console.error('[Auth] Error:', err);
+      // Clean up Supabase/Firebase native messages for friendly display
+      let msg = err.message || 'Une erreur est survenue.';
+      if (msg.includes('Invalid login credentials')) {
+        msg = 'Identifiants invalides. Veuillez vérifier votre email et mot de passe.';
+      } else if (msg.includes('User already registered') || msg.includes('already exists')) {
+        msg = 'Cette adresse email est déjà enregistrée. Essayez de vous connecter.';
+      } else if (msg.includes('Password should be at least')) {
+        msg = 'Le mot de passe doit contenir au moins 6 caractères.';
+      }
+      setErrorMsg(msg);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fillAccount = (acc) => {
+    navigate('/login');
+    setErrorMsg('');
     setEmail(acc.email);
     setPassword('password');
   };
@@ -64,7 +105,7 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right — login form */}
+      {/* Right — auth form */}
       <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '3rem 2rem' }}>
         <div style={{ width: '100%', maxWidth: 420 }}>
           {/* Back link */}
@@ -76,13 +117,85 @@ export default function Login() {
           </Link>
 
           <h1 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.4rem', letterSpacing: '-0.02em' }}>
-            Connexion
+            {isRegistering ? 'Créer un compte' : 'Connexion'}
           </h1>
-          <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '0.95rem' }}>
-            Accédez à votre espace de révision.
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+            {isRegistering ? 'Rejoignez la plateforme et préparez vos concours.' : 'Accédez à votre espace de révision.'}
           </p>
 
-          <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {/* Clean Tab Selector */}
+          <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+            <button
+              type="button"
+              onClick={() => { navigate('/login'); setErrorMsg(''); }}
+              style={{
+                flex: 1,
+                padding: '0.75rem 0',
+                background: 'none',
+                border: 'none',
+                borderBottom: !isRegistering ? '2px solid var(--violet)' : '2px solid transparent',
+                color: !isRegistering ? 'var(--text-main)' : 'var(--text-muted)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s'
+              }}
+            >
+              Connexion
+            </button>
+            <button
+              type="button"
+              onClick={() => { navigate('/register'); setErrorMsg(''); }}
+              style={{
+                flex: 1,
+                padding: '0.75rem 0',
+                background: 'none',
+                border: 'none',
+                borderBottom: isRegistering ? '2px solid var(--violet)' : '2px solid transparent',
+                color: isRegistering ? 'var(--text-main)' : 'var(--text-muted)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.15s'
+              }}
+            >
+              Inscription
+            </button>
+          </div>
+
+          {/* Error Alert Display */}
+          {errorMsg && (
+            <div style={{
+              background: 'rgba(239, 68, 68, 0.08)',
+              border: '1px solid rgba(239, 68, 68, 0.25)',
+              padding: '0.875rem 1rem',
+              borderRadius: '12px',
+              color: 'var(--danger)',
+              fontSize: '0.88rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '1.25rem'
+            }}>
+              <AlertCircle size={18} style={{ flexShrink: 0 }} />
+              <span style={{ fontWeight: 500 }}>{errorMsg}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleAuthSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            {isRegistering && (
+              <div className="input-group">
+                <label>Nom complet</label>
+                <input
+                  type="text"
+                  className="input-control"
+                  placeholder="Ex: Youssef Alaoui"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  disabled={isLoading}
+                  required
+                />
+              </div>
+            )}
+
             <div className="input-group">
               <label>Adresse email</label>
               <input
@@ -91,6 +204,7 @@ export default function Login() {
                 placeholder="votre@email.ma"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -104,12 +218,14 @@ export default function Login() {
                   placeholder="••••••••"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
+                  disabled={isLoading}
                   required
                   style={{ paddingRight: '3rem', width: '100%' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPwd(p => !p)}
+                  disabled={isLoading}
                   style={{ position: 'absolute', right: '0.875rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-subtle)', cursor: 'pointer' }}
                 >
                   {showPwd ? <EyeOff size={17} /> : <Eye size={17} />}
@@ -117,37 +233,45 @@ export default function Login() {
               </div>
             </div>
 
-            <button type="submit" className="btn" style={{ width: '100%', justifyContent: 'center', padding: '0.875rem', fontSize: '1rem' }}>
-              Se connecter
+            <button
+              type="submit"
+              className="btn"
+              disabled={isLoading}
+              style={{ width: '100%', justifyContent: 'center', padding: '0.875rem', fontSize: '1rem', background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}
+            >
+              {isLoading ? 'Opération en cours...' : isRegistering ? "S'inscrire" : 'Se connecter'}
             </button>
           </form>
 
-          {/* Test accounts */}
-          <div style={{ marginTop: '2rem', padding: '1.25rem', background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-            <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.875rem' }}>
-              Comptes de démonstration
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {TEST_ACCOUNTS.map(acc => (
-                <button
-                  key={acc.email}
-                  type="button"
-                  onClick={() => fillAccount(acc)}
-                  style={{
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    padding: '0.625rem 0.875rem', background: 'var(--bg-card)',
-                    border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
-                    cursor: 'pointer', transition: 'all 0.15s', width: '100%'
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-card)'; }}
-                >
-                  <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)' }}>{acc.label}</span>
-                  <span style={{ fontSize: '0.78rem', color: acc.color, fontWeight: 500 }}>{acc.email}</span>
-                </button>
-              ))}
+          {/* Test accounts - Only show in connection mode */}
+          {!isRegistering && (
+            <div style={{ marginTop: '2rem', padding: '1.25rem', background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
+              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.875rem' }}>
+                Comptes de démonstration
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {TEST_ACCOUNTS.map(acc => (
+                  <button
+                    key={acc.email}
+                    type="button"
+                    onClick={() => fillAccount(acc)}
+                    disabled={isLoading}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '0.625rem 0.875rem', background: 'var(--bg-card)',
+                      border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer', transition: 'all 0.15s', width: '100%'
+                    }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-card)'; }}
+                  >
+                    <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)' }}>{acc.label}</span>
+                    <span style={{ fontSize: '0.78rem', color: acc.color, fontWeight: 500 }}>{acc.email}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

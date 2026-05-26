@@ -1,24 +1,40 @@
 // src/services/examService.js
-// Firestore CRUD for exams — the core content of L'Conq
-// All functions return empty/null when db is null (no Firebase configured).
+// Supabase CRUD for exams — the core content of L'Conq
+// All functions return empty/null when supabase is null (no Supabase configured).
 
-import {
-  collection,
-  doc,
-  getDocs,
-  getDoc,
-  addDoc,
-  setDoc,
-  updateDoc,
-  deleteDoc,
-  query,
-  where,
-  orderBy,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 
-const EXAMS_COL = 'exams';
+// Helper to map exam fields to DB columns
+const mapExamToDB = (e) => ({
+  name: e.name,
+  school: e.school,
+  year: e.year,
+  tier: e.tier,
+  questions: e.questions,
+  pdf_url: e.pdfUrl || null,
+  is_active: e.isActive !== undefined ? e.isActive : true,
+  is_archived: e.isArchived !== undefined ? e.isArchived : false,
+  date_added: e.dateAdded || new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+});
+
+// Helper to map DB columns to exam fields
+const mapDBToExam = (row) => {
+  if (!row) return null;
+  return {
+    id: row.id,
+    name: row.name,
+    school: row.school,
+    year: row.year,
+    tier: row.tier,
+    questions: row.questions,
+    pdfUrl: row.pdf_url,
+    isActive: row.is_active,
+    isArchived: row.is_archived,
+    dateAdded: row.date_added,
+    updatedAt: row.updated_at,
+  };
+};
 
 // ─── Read ─────────────────────────────────────────────────────────────────────
 
@@ -26,91 +42,155 @@ const EXAMS_COL = 'exams';
  * Fetch ALL exams (admin view).
  */
 export const getAllExams = async () => {
-  if (!db) return [];
-  const snap = await getDocs(query(collection(db, EXAMS_COL), orderBy('dateAdded', 'desc')));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('exams')
+    .select('*')
+    .order('date_added', { ascending: false });
+
+  if (error) {
+    console.error('[Supabase] Failed to fetch all exams:', error);
+    return [];
+  }
+  return data.map(mapDBToExam);
 };
 
 /**
  * Fetch only active, non-archived exams (student view).
  */
 export const getActiveExams = async () => {
-  if (!db) return [];
-  const snap = await getDocs(
-    query(
-      collection(db, EXAMS_COL),
-      where('isActive', '==', true),
-      where('isArchived', '==', false)
-    )
-  );
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('exams')
+    .select('*')
+    .eq('is_active', true)
+    .eq('is_archived', false);
+
+  if (error) {
+    console.error('[Supabase] Failed to fetch active exams:', error);
+    return [];
+  }
+  return data.map(mapDBToExam);
 };
 
 /**
  * Fetch a single exam by ID.
  */
 export const getExamById = async (examId) => {
-  if (!db) return null;
-  const snap = await getDoc(doc(db, EXAMS_COL, examId));
-  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('exams')
+    .select('*')
+    .eq('id', examId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return mapDBToExam(data);
 };
 
 // ─── Write ────────────────────────────────────────────────────────────────────
 
 /**
- * Add a new exam to Firestore.
+ * Add a new exam to Supabase.
  * @param {Object} examData — { name, school, year, tier, questions, pdfUrl }
  * @returns {Promise<string>} — new exam ID
  */
 export const addExam = async (examData) => {
-  if (!db) return null;
-  const ref = await addDoc(collection(db, EXAMS_COL), {
-    ...examData,
-    isActive: true,
-    isArchived: false,
-    dateAdded: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-  return ref.id;
+  if (!supabase) return null;
+  const id = examData.id || Math.random().toString(36).substr(2, 9).toUpperCase();
+  const dbExam = {
+    id,
+    ...mapExamToDB(examData),
+  };
+
+  const { error } = await supabase
+    .from('exams')
+    .insert(dbExam);
+
+  if (error) {
+    console.error('[Supabase] Failed to add exam:', error);
+    throw error;
+  }
+  return id;
 };
 
 /**
  * Update specific fields of an exam.
  */
 export const updateExam = async (examId, updates) => {
-  if (!db) return;
-  await updateDoc(doc(db, EXAMS_COL, examId), {
-    ...updates,
-    updatedAt: serverTimestamp(),
-  });
+  if (!supabase) return;
+  const dbUpdates = {};
+  if (updates.name !== undefined) dbUpdates.name = updates.name;
+  if (updates.school !== undefined) dbUpdates.school = updates.school;
+  if (updates.year !== undefined) dbUpdates.year = updates.year;
+  if (updates.tier !== undefined) dbUpdates.tier = updates.tier;
+  if (updates.questions !== undefined) dbUpdates.questions = updates.questions;
+  if (updates.pdfUrl !== undefined) dbUpdates.pdf_url = updates.pdfUrl;
+  if (updates.isActive !== undefined) dbUpdates.is_active = updates.isActive;
+  if (updates.isArchived !== undefined) dbUpdates.is_archived = updates.isArchived;
+  dbUpdates.updated_at = new Date().toISOString();
+
+  const { error } = await supabase
+    .from('exams')
+    .update(dbUpdates)
+    .eq('id', examId);
+
+  if (error) {
+    console.error('[Supabase] Failed to update exam:', error);
+    throw error;
+  }
 };
 
 /**
  * Toggle the active/inactive status of an exam.
  */
 export const toggleExamStatus = async (examId, currentStatus) => {
-  if (!db) return;
-  await updateDoc(doc(db, EXAMS_COL, examId), {
-    isActive: !currentStatus,
-    updatedAt: serverTimestamp(),
-  });
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('exams')
+    .update({
+      is_active: !currentStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', examId);
+
+  if (error) {
+    console.error('[Supabase] Failed to toggle exam status:', error);
+    throw error;
+  }
 };
 
 /**
  * Toggle archived status of an exam.
  */
 export const toggleArchiveExam = async (examId, currentArchived) => {
-  if (!db) return;
-  await updateDoc(doc(db, EXAMS_COL, examId), {
-    isArchived: !currentArchived,
-    updatedAt: serverTimestamp(),
-  });
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('exams')
+    .update({
+      is_archived: !currentArchived,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', examId);
+
+  if (error) {
+    console.error('[Supabase] Failed to toggle archive status:', error);
+    throw error;
+  }
 };
 
 /**
  * Permanently delete an exam.
  */
 export const deleteExam = async (examId) => {
-  if (!db) return;
-  await deleteDoc(doc(db, EXAMS_COL, examId));
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('exams')
+    .delete()
+    .eq('id', examId);
+
+  if (error) {
+    console.error('[Supabase] Failed to delete exam:', error);
+    throw error;
+  }
 };

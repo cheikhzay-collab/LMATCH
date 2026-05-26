@@ -1,38 +1,71 @@
 // src/services/planService.js
-// Firestore service for subscription plans and activation codes
-// Returns empty defaults when db is null (no Firebase configured).
+// Supabase service for subscription plans and activation codes
+// Returns empty defaults when supabase is null (no Supabase configured).
 
-import {
-  doc,
-  getDoc,
-  setDoc,
-  getDocs,
-  collection,
-  updateDoc,
-  serverTimestamp,
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
+
+// Helper to map code fields to DB columns
+const mapCodeToDB = (c) => ({
+  code: c.code,
+  plan_id: c.planId,
+  is_used: c.isUsed,
+  used_by: c.usedBy,
+  used_at: c.usedAt || null,
+  batch_name: c.batchName,
+  created_at: c.createdDate || c.createdAt || new Date().toISOString(),
+});
+
+// Helper to map DB columns to code fields
+const mapDBToCode = (row) => {
+  if (!row) return null;
+  return {
+    id: row.code,
+    code: row.code,
+    planId: row.plan_id,
+    isUsed: row.is_used,
+    usedBy: row.used_by || '',
+    usedAt: row.used_at || '',
+    batchName: row.batch_name,
+    createdDate: row.created_at,
+  };
+};
 
 // ─── Plans ────────────────────────────────────────────────────────────────────
 
 /**
- * Fetch all subscription plans from Firestore.
+ * Fetch all subscription plans from Supabase.
  * @returns {Promise<Plan[]>}
  */
 export const getPlans = async () => {
-  if (!db) return [];
-  const snap = await getDoc(doc(db, 'config', 'plans'));
-  if (!snap.exists()) return [];
-  return snap.data().plans || [];
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('config')
+    .select('value')
+    .eq('key', 'plans')
+    .maybeSingle();
+
+  if (error || !data) return [];
+  return data.value?.plans || [];
 };
 
 /**
- * Overwrite the full plans array in Firestore.
+ * Overwrite the full plans array in Supabase.
  * @param {Plan[]} plans
  */
 export const savePlans = async (plans) => {
-  if (!db) return;
-  await setDoc(doc(db, 'config', 'plans'), { plans, updatedAt: serverTimestamp() });
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('config')
+    .upsert({
+      key: 'plans',
+      value: { plans },
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('[Supabase] Failed to save plans:', error);
+    throw error;
+  }
 };
 
 // ─── Activation Codes ─────────────────────────────────────────────────────────
@@ -42,25 +75,35 @@ export const savePlans = async (plans) => {
  * @returns {Promise<ActivationCode[]>}
  */
 export const getAllCodes = async () => {
-  if (!db) return [];
-  const snap = await getDocs(collection(db, 'activationCodes'));
-  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('activation_codes')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[Supabase] Failed to fetch activation codes:', error);
+    return [];
+  }
+  return data.map(mapDBToCode);
 };
 
 /**
- * Save a batch of new activation codes to Firestore.
- * Uses the code string as the document ID for fast lookups.
+ * Save a batch of new activation codes to Supabase.
+ * Uses the code string as the primary key.
  * @param {ActivationCode[]} codes
  */
 export const saveActivationCodes = async (codes) => {
-  if (!db) return;
-  const writes = codes.map(c =>
-    setDoc(doc(db, 'activationCodes', c.code), {
-      ...c,
-      createdAt: serverTimestamp(),
-    })
-  );
-  await Promise.all(writes);
+  if (!supabase) return;
+  const dbCodes = codes.map(mapCodeToDB);
+  const { error } = await supabase
+    .from('activation_codes')
+    .insert(dbCodes);
+
+  if (error) {
+    console.error('[Supabase] Failed to save activation codes:', error);
+    throw error;
+  }
 };
 
 /**
@@ -69,12 +112,20 @@ export const saveActivationCodes = async (codes) => {
  * @param {string} usedBy — user name or email
  */
 export const markCodeUsed = async (code, usedBy) => {
-  if (!db) return;
-  await updateDoc(doc(db, 'activationCodes', code), {
-    isUsed:  true,
-    usedBy,
-    usedAt:  serverTimestamp(),
-  });
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('activation_codes')
+    .update({
+      is_used: true,
+      used_by: usedBy,
+      used_at: new Date().toISOString(),
+    })
+    .eq('code', code);
+
+  if (error) {
+    console.error('[Supabase] Failed to mark code as used:', error);
+    throw error;
+  }
 };
 
 /**
@@ -82,7 +133,13 @@ export const markCodeUsed = async (code, usedBy) => {
  * @returns {Promise<ActivationCode|null>}
  */
 export const getCode = async (code) => {
-  if (!db) return null;
-  const snap = await getDoc(doc(db, 'activationCodes', code));
-  return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('activation_codes')
+    .select('*')
+    .eq('code', code)
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return mapDBToCode(data);
 };

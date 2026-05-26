@@ -92,7 +92,7 @@ export default function LandingPage() {
               <Link to="/login" className="btn-ghost landing-nav-cta" style={{ textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>
                 Connexion
               </Link>
-              <Link to="/login" className="btn" style={{ textDecoration: 'none', padding: '0.6rem 1rem', fontSize: '0.88rem' }}>
+              <Link to="/register" className="btn" style={{ textDecoration: 'none', padding: '0.6rem 1rem', fontSize: '0.88rem' }}>
                 Commencer <ArrowRight size={14} />
               </Link>
             </>
@@ -148,7 +148,7 @@ export default function LandingPage() {
               </>
             ) : (
               <>
-                <Link to="/login" className="btn-emerald" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
+                <Link to="/register" className="btn-emerald" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
                   <Zap size={18} /> Démarrer gratuitement
                 </Link>
                 <Link to="/login" className="btn-outline" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
@@ -231,7 +231,7 @@ export default function LandingPage() {
                 ))}
               </ul>
             </div>
-            <Link to={user ? "/dashboard" : "/login"} className="btn-outline" style={{ width: '100%', textDecoration: 'none', justifyContent: 'center' }}>
+            <Link to={user ? "/dashboard" : "/register"} className="btn-outline" style={{ width: '100%', textDecoration: 'none', justifyContent: 'center' }}>
               {user ? "Accéder à mon espace" : "S'inscrire"}
             </Link>
           </div>
@@ -316,7 +316,7 @@ export default function LandingPage() {
                   </ul>
                 </div>
                 
-                <Link to={user ? "/subscription" : "/login"} className="btn" style={{ 
+                <Link to={user ? "/subscription" : "/register"} className="btn" style={{ 
                   width: '100%', 
                   textDecoration: 'none', 
                   justifyContent: 'center', 

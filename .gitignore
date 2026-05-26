@@ -30,3 +30,7 @@ scratch
 *.njsproj
 *.sln
 *.sw?
+
+# Agent files and directories
+.agents/
+skills-lock.json

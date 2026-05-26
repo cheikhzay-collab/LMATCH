@@ -1,27 +1,32 @@
 // src/services/authService.js
-// Firebase Authentication service — email/password sign-in
-// All functions are no-ops when Firebase is not initialized (no .env.local).
+// Supabase Authentication service — email/password sign-in
+// All functions are no-ops when Supabase is not initialized (no .env.local).
 
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-} from 'firebase/auth';
-import { auth } from '../lib/firebase';
+import { supabase } from '../lib/supabase';
 import { createUserDoc, getUserDoc } from './userService';
 
 /**
- * Register a new student account and create their Firestore document.
+ * Register a new student account and create their profile document.
  * @param {string} name
  * @param {string} email
  * @param {string} password
  * @returns {Promise<{uid, name, email, role, tier}>}
  */
 export const registerStudent = async (name, email, password) => {
-  const credential = await createUserWithEmailAndPassword(auth, email, password);
-  await updateProfile(credential.user, { displayName: name });
+  if (!supabase) throw new Error('Supabase is not configured.');
+  
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: {
+        name,
+      },
+    },
+  });
+
+  if (error) throw error;
+  if (!data.user) throw new Error('Registration failed.');
 
   const userData = {
     name,
@@ -36,52 +41,69 @@ export const registerStudent = async (name, email, password) => {
     subscription: null,
   };
 
-  await createUserDoc(credential.user.uid, userData);
-  return { uid: credential.user.uid, ...userData };
+  await createUserDoc(data.user.id, userData);
+  return { uid: data.user.id, id: data.user.id, ...userData };
 };
 
 /**
  * Sign in with email and password.
- * Fetches the Firestore user document to get role/tier/subscription.
- * Falls back to admin check for the hardcoded admin email.
+ * Fetches the Supabase user profile to get role/tier/subscription.
  */
 export const loginWithEmail = async (email, password) => {
-  // Hardcoded admin account (no Firebase Auth — direct Firestore check)
   if (email === 'admin@lconq.ma') {
-    // Admin doesn't go through Firebase Auth to avoid exposing secrets in code.
-    // In production, create this account in Firebase Auth console.
-    throw new Error('ADMIN_LOCAL'); // handled by AuthContext legacy fallback
+    throw new Error('ADMIN_LOCAL');
   }
 
-  const credential = await signInWithEmailAndPassword(auth, email, password);
-  const firestoreUser = await getUserDoc(credential.user.uid);
+  if (!supabase) throw new Error('Supabase is not configured.');
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) throw error;
+  if (!data.user) throw new Error('Login failed.');
+
+  const profile = await getUserDoc(data.user.id);
 
   return {
-    uid: credential.user.uid,
-    name: firestoreUser?.name || credential.user.displayName || 'Élève',
-    email: credential.user.email,
-    role: firestoreUser?.role || 'student',
-    tier: firestoreUser?.tier || 'freemium',
-    xp: firestoreUser?.xp || 0,
-    streak: firestoreUser?.streak || 0,
-    rank: firestoreUser?.rank || null,
-    totalStudents: firestoreUser?.totalStudents || 1200,
-    subscription: firestoreUser?.subscription || null,
+    uid: data.user.id,
+    id: data.user.id,
+    name: profile?.name || data.user.user_metadata?.name || 'Élève',
+    email: data.user.email,
+    role: profile?.role || 'student',
+    tier: profile?.tier || 'freemium',
+    xp: profile?.xp || 0,
+    streak: profile?.streak || 0,
+    rank: profile?.rank || null,
+    totalStudents: profile?.totalStudents || 1200,
+    subscription: profile?.subscription || null,
   };
 };
 
 /**
  * Sign out the current user.
  */
-export const logoutUser = () => auth ? signOut(auth) : Promise.resolve();
+export const logoutUser = () => supabase ? supabase.auth.signOut() : Promise.resolve();
 
 /**
- * Subscribe to Firebase auth state changes.
- * Returns a no-op unsubscribe when Firebase is not configured.
- * @param {(user: import('firebase/auth').User|null) => void} callback
+ * Subscribe to Supabase auth state changes.
+ * Returns a no-op unsubscribe when Supabase is not configured.
+ * @param {(user: Object|null) => void} callback
  * @returns {() => void} unsubscribe function
  */
 export const onAuthChange = (callback) => {
-  if (!auth) return () => {}; // no-op unsubscribe when Firebase not configured
-  return onAuthStateChanged(auth, callback);
+  if (!supabase) return () => {};
+  
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    async (event, session) => {
+      callback(session?.user || null);
+    }
+  );
+  
+  return () => {
+    if (subscription) {
+      subscription.unsubscribe();
+    }
+  };
 };
