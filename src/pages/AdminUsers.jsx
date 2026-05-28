@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Crown, User, Search, Users, Activity, TrendingUp, ChevronRight 
+  Crown, User, Search, Users, Activity, TrendingUp, ChevronRight, RefreshCw 
 } from 'lucide-react';
 
 export default function AdminUsers() {
   const { users, updateUserTier, refreshAdminData } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -16,14 +17,24 @@ export default function AdminUsers() {
     }
   }, [refreshAdminData]);
 
+  const handleRefresh = async () => {
+    if (!refreshAdminData) return;
+    setIsRefreshing(true);
+    try {
+      await refreshAdminData();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const toggleTier = (userId, currentTier) => {
     const newTier = currentTier === 'premium' ? 'freemium' : 'premium';
     updateUserTier(userId, newTier);
   };
 
   const filteredUsers = users.filter(u => 
-    u.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.email.toLowerCase().includes(searchTerm.toLowerCase())
+    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const stats = [
@@ -46,7 +57,28 @@ export default function AdminUsers() {
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>Cliquez sur un élève pour consulter son profil et suivre sa progression.</p>
         </div>
+        <button
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '0.5rem',
+            padding: '0.6rem 1.2rem',
+            background: 'var(--bg-glass)',
+            border: '1px solid var(--border)',
+            borderRadius: '10px',
+            color: 'var(--text-muted)',
+            fontWeight: 600, fontSize: '0.875rem',
+            cursor: isRefreshing ? 'wait' : 'pointer',
+            transition: 'all 0.2s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--violet)'; e.currentTarget.style.color = 'var(--violet)'; }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+        >
+          <RefreshCw size={15} style={{ animation: isRefreshing ? 'spin 0.7s linear infinite' : 'none' }} />
+          {isRefreshing ? 'Chargement...' : 'Actualiser'}
+        </button>
       </header>
+      <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
 
       {/* ── Stats Row ── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
@@ -96,7 +128,21 @@ export default function AdminUsers() {
             </tr>
           </thead>
           <tbody>
-            {filteredUsers.map(u => (
+            {filteredUsers.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                  <Users size={40} style={{ margin: '0 auto 1rem', opacity: 0.3, display: 'block' }} />
+                  <p style={{ margin: 0, fontWeight: 600 }}>
+                    {searchTerm ? 'Aucun élève trouvé pour cette recherche.' : 'Aucun élève inscrit pour le moment.'}
+                  </p>
+                  {!searchTerm && (
+                    <button onClick={handleRefresh} style={{ marginTop: '0.75rem', padding: '0.5rem 1rem', background: 'var(--violet)', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 600 }}>
+                      Actualiser la liste
+                    </button>
+                  )}
+                </td>
+              </tr>
+            ) : filteredUsers.map(u => (
               <tr 
                 key={u.id} 
                 className="table-row-hover" 
@@ -110,7 +156,7 @@ export default function AdminUsers() {
                       background: 'linear-gradient(45deg, var(--primary), var(--accent))',
                       display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: 'white', fontSize: '0.9rem'
                     }}>
-                      {u.name.charAt(0)}
+                      {u.name?.charAt(0) || '?'}
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{u.name}</div>
