@@ -22,6 +22,7 @@ const mapProfileToDB = (profile) => ({
 const mapDBToProfile = (row) => {
   if (!row) return null;
   return {
+    id: row.id,
     uid: row.id,
     name: row.name,
     email: row.email,
