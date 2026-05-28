@@ -8,8 +8,25 @@ import { useAuth } from '../context/AuthContext';
 const FOCUS_ROUTES = ['/exam', '/study'];
 
 export default function Layout() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const location = useLocation();
+
+  if (loading) {
+    return (
+      <div style={{
+        position: 'fixed',
+        inset: 0,
+        background: '#0D1117',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 9999
+      }}>
+        <div style={{ color: 'white', fontFamily: 'sans-serif', fontSize: '1.1rem', fontWeight: 600 }}>Chargement...</div>
+      </div>
+    );
+  }
 
   if (!user) {
     return <Navigate to="/login" replace />;

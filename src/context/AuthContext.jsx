@@ -124,62 +124,70 @@ export function AuthProvider({ children }) {
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
+  const [loading, setLoading] = useState(SUPABASE_ENABLED);
 
   // ── Supabase Auth listener ───────────────────────────────────────────────
   // Stays in sync with Supabase Auth state changes (login, logout, token refresh).
   // On sign-in, enriches the local user state with database profile data.
   useEffect(() => {
-    if (!SUPABASE_ENABLED) return;
+    if (!SUPABASE_ENABLED) {
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthChange(async (supabaseUser) => {
-      if (supabaseUser) {
-        try {
-          let profile = await getUserDoc(supabaseUser.id);
-          if (!profile) {
-            // Auto-create profile if missing (e.g. first-time Google OAuth)
-            const defaultProfile = {
-              name:         supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || 'Élève',
-              email:        supabaseUser.email,
-              role:         'student',
-              tier:         'freemium',
-              xp:           0,
-              streak:       0,
-              rank:         null,
-              totalStudents: 1200,
-              joined:       new Date().toISOString(),
-              subscription: null,
-            };
-            try {
-              await createUserDoc(supabaseUser.id, defaultProfile);
-              profile = { ...defaultProfile, uid: supabaseUser.id, id: supabaseUser.id };
-            } catch (createErr) {
-              console.warn('[Supabase] Failed to auto-create user profile:', createErr.message);
+      try {
+        if (supabaseUser) {
+          try {
+            let profile = await getUserDoc(supabaseUser.id);
+            if (!profile) {
+              // Auto-create profile if missing (e.g. first-time Google OAuth)
+              const defaultProfile = {
+                name:         supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || 'Élève',
+                email:        supabaseUser.email,
+                role:         'student',
+                tier:         'freemium',
+                xp:           0,
+                streak:       0,
+                rank:         null,
+                totalStudents: 1200,
+                joined:       new Date().toISOString(),
+                subscription: null,
+              };
+              try {
+                await createUserDoc(supabaseUser.id, defaultProfile);
+                profile = { ...defaultProfile, uid: supabaseUser.id, id: supabaseUser.id };
+              } catch (createErr) {
+                console.warn('[Supabase] Failed to auto-create user profile:', createErr.message);
+              }
             }
-          }
 
-          if (profile) {
-            const enriched = {
-              uid:          supabaseUser.id,
-              id:           supabaseUser.id,
-              name:         profile.name || supabaseUser.user_metadata?.name || 'Élève',
-              email:        supabaseUser.email,
-              role:         profile.role || 'student',
-              tier:         profile.tier || 'freemium',
-              xp:           profile.xp   || 0,
-              streak:       profile.streak || 0,
-              rank:         profile.rank  || null,
-              totalStudents: profile.totalStudents || 1200,
-              subscription: profile.subscription || null,
-            };
-            setUser(enriched);
+            if (profile) {
+              const enriched = {
+                uid:          supabaseUser.id,
+                id:           supabaseUser.id,
+                name:         profile.name || supabaseUser.user_metadata?.name || 'Élève',
+                email:        supabaseUser.email,
+                role:         profile.role || 'student',
+                tier:         profile.tier || 'freemium',
+                xp:           profile.xp   || 0,
+                streak:       profile.streak || 0,
+                rank:         profile.rank  || null,
+                totalStudents: profile.totalStudents || 1200,
+                subscription: profile.subscription || null,
+              };
+              setUser(enriched);
+            }
+          } catch (e) {
+            console.warn('[Supabase] Failed to fetch or initialize user profile:', e.message);
           }
-        } catch (e) {
-          console.warn('[Supabase] Failed to fetch or initialize user profile:', e.message);
+        } else {
+          // Supabase signed out — only clear if we were using Supabase auth
+          const saved = localStorage.getItem('user');
+          const localUser = saved ? JSON.parse(saved) : null;
+          if (localUser?.uid || localUser?.id) setUser(null);
         }
-      } else {
-        // Supabase signed out — only clear if we were using Supabase auth
-        const saved = localStorage.getItem('user');
-        const localUser = saved ? JSON.parse(saved) : null;
-        if (localUser?.uid || localUser?.id) setUser(null);
+      } finally {
+        setLoading(false);
       }
     });
     return () => unsubscribe();
@@ -1261,6 +1269,7 @@ export function AuthProvider({ children }) {
       isExamLocked,
       supabaseEnabled: SUPABASE_ENABLED,
       refreshAdminData,
+      loading,
     }}>
       {children}
     </AuthContext.Provider>
