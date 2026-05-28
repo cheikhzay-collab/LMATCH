@@ -23,6 +23,7 @@ import AdminMarketing from './pages/AdminMarketing';
 import OMRScannerPage from './pages/OMRScannerPage';
 import SubscriptionPage from './pages/SubscriptionPage';
 import RankingPage from './pages/RankingPage';
+import AuthCallback from './pages/AuthCallback';
 
 function AppContent() {
   return (
@@ -30,6 +31,7 @@ function AppContent() {
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Login />} />
+      <Route path="/auth/callback" element={<AuthCallback />} />
       
       {/* Protected Routes inside Layout */}
       <Route element={<Layout />}>

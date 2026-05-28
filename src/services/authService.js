@@ -45,6 +45,14 @@ export const registerStudent = async (name, email, password) => {
     subscription: null,
   };
 
+  // Try to manually create profile in DB (safety net in case the trigger didn't run)
+  try {
+    await createUserDoc(data.user.id, userData);
+  } catch (profileErr) {
+    // Profile may already exist from the trigger — ignore conflict errors
+    console.warn('[Auth] Profile upsert warning (safe to ignore if duplicate):', profileErr.message);
+  }
+
   const needsConfirmation = !data.session;
   return { uid: data.user.id, id: data.user.id, ...userData, needsConfirmation };
 };
@@ -90,14 +98,22 @@ export const loginWithEmail = async (email, password) => {
 
 /**
  * Sign in with Google OAuth.
+ * Uses the current origin as the redirect base so it works both locally and on Vercel.
  */
 export const loginWithGoogle = async () => {
   if (!supabase) throw new Error('Supabase is not configured.');
 
+  // Build redirect URL: always go to /auth/callback which then redirects to /dashboard
+  const redirectTo = `${window.location.origin}/auth/callback`;
+
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin + '/dashboard',
+      redirectTo,
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
     },
   });
 
