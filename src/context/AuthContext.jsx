@@ -432,7 +432,9 @@ export function AuthProvider({ children }) {
       throw new Error('Supabase is not configured. Add your .env.local file.');
     }
     const newUser = await registerStudent(name, email, password);
-    setUser(newUser);
+    if (!newUser.needsConfirmation) {
+      setUser(newUser);
+    }
     return newUser;
   };
 

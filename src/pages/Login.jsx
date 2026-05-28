@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { BrainCircuit, Eye, EyeOff, Zap, AlertCircle } from 'lucide-react';
+import { BrainCircuit, Eye, EyeOff, Zap, AlertCircle, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 
@@ -15,6 +15,7 @@ export default function Login() {
   const [showPwd, setShowPwd]             = useState(false);
   const [isLoading, setIsLoading]         = useState(false);
   const [errorMsg, setErrorMsg]           = useState('');
+  const [successMsg, setSuccessMsg]       = useState('');
 
   const { login, register, loginWithGoogle } = useAuth();
   const navigate                          = useNavigate();
@@ -28,13 +29,19 @@ export default function Login() {
     e.preventDefault();
     setIsLoading(true);
     setErrorMsg('');
+    setSuccessMsg('');
 
     try {
       if (isRegistering) {
         if (!name.trim()) {
           throw new Error('Veuillez saisir votre nom complet.');
         }
-        await register(name.trim(), email, password);
+        const newUser = await register(name.trim(), email, password);
+        if (newUser && newUser.needsConfirmation) {
+          setSuccessMsg("Compte créé avec succès ! Un e-mail de confirmation vous a été envoyé. Veuillez cliquer sur le lien dans l'e-mail pour activer votre compte avant de vous connecter.");
+          setIsLoading(false);
+          return;
+        }
         navigate('/dashboard');
       } else {
         await login(email, password);
@@ -182,6 +189,25 @@ export default function Login() {
             }}>
               <AlertCircle size={18} style={{ flexShrink: 0 }} />
               <span style={{ fontWeight: 500 }}>{errorMsg}</span>
+            </div>
+          )}
+
+          {/* Success Alert Display */}
+          {successMsg && (
+            <div style={{
+              background: 'rgba(16, 185, 129, 0.08)',
+              border: '1px solid rgba(16, 185, 129, 0.25)',
+              padding: '0.875rem 1rem',
+              borderRadius: '12px',
+              color: 'var(--emerald)',
+              fontSize: '0.88rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '1.25rem'
+            }}>
+              <Check size={18} style={{ flexShrink: 0 }} />
+              <span style={{ fontWeight: 500 }}>{successMsg}</span>
             </div>
           )}
 

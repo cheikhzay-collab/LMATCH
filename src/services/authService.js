@@ -45,7 +45,8 @@ export const registerStudent = async (name, email, password) => {
     subscription: null,
   };
 
-  return { uid: data.user.id, id: data.user.id, ...userData };
+  const needsConfirmation = !data.session;
+  return { uid: data.user.id, id: data.user.id, ...userData, needsConfirmation };
 };
 
 /**
