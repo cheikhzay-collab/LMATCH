@@ -298,13 +298,27 @@ export const getRecentActivity = async (uid, days = 90) => {
 
 /**
  * Fetch all registered users from database (Admin only).
+ * Uses the get_all_profiles() SECURITY DEFINER RPC to bypass RLS.
  * @returns {Promise<Array>}
  */
 export const getAllUsers = async () => {
   if (!supabase) return [];
+
+  // Try RPC first (bypasses RLS — for admin dashboard)
+  try {
+    const { data: rpcData, error: rpcError } = await supabase.rpc('get_all_profiles');
+    if (!rpcError && rpcData) {
+      return rpcData.map(mapDBToProfile);
+    }
+  } catch (rpcErr) {
+    console.warn('[Supabase] RPC get_all_profiles failed, falling back to direct query:', rpcErr.message);
+  }
+
+  // Fallback: direct query (works if authenticated with proper RLS policy)
   const { data, error } = await supabase
     .from('profiles')
-    .select('*');
+    .select('*')
+    .order('joined', { ascending: false });
   if (error) {
     console.error('[Supabase] Failed to fetch all users:', error);
     return [];

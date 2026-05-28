@@ -89,7 +89,13 @@ export const loginWithEmail = async (email, password) => {
       subscription: profile?.subscription || null,
     };
   } catch (err) {
-    if (email === 'admin@lconq.ma') {
+    // ADMIN_LOCAL fallback: only if the error is NOT credentials-related
+    // (i.e., the admin account doesn't exist in Supabase yet)
+    const isCredentialError = err.message?.includes('Invalid login credentials') ||
+      err.message?.includes('Email not confirmed') ||
+      err.message?.includes('invalid_credentials');
+
+    if (email === 'admin@lconq.ma' && !isCredentialError) {
       throw new Error('ADMIN_LOCAL');
     }
     throw err;
