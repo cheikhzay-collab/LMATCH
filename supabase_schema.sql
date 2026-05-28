@@ -192,16 +192,14 @@ create policy "Users can manage their own activity." on public.activity
 
 -- 8. Profile Update Protection Trigger
 -- Prevents non-admin users from changing their own role or tier
+-- Uses is_admin() SECURITY DEFINER function to avoid infinite recursion
 create or replace function public.check_profile_update()
 returns trigger
 security definer set search_path = public
 language plpgsql as $$
 begin
   if (old.role is distinct from new.role or old.tier is distinct from new.tier) then
-    if not (exists (
-      select 1 from public.profiles
-      where id = auth.uid() and role = 'admin'
-    )) then
+    if not public.is_admin() then
       new.role := old.role;
       new.tier := old.tier;
     end if;

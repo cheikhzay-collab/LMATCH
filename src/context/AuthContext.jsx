@@ -134,6 +134,16 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
+
+    // Handle hash-based OAuth redirect (when Supabase returns #access_token= in the URL)
+    // This happens when the redirect URL in Supabase dashboard doesn't exactly match
+    // what the app sent, so Supabase falls back to the Site URL with a hash fragment
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token=') && window.location.pathname !== '/auth/callback') {
+      // The supabase client will automatically parse the hash and set the session
+      // We just need to wait for the SIGNED_IN event below
+    }
+
     const unsubscribe = onAuthChange(async (supabaseUser) => {
       try {
         if (supabaseUser) {
@@ -142,7 +152,7 @@ export function AuthProvider({ children }) {
             if (!profile) {
               // Auto-create profile if missing (e.g. first-time Google OAuth)
               const defaultProfile = {
-                name:         supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || 'Élève',
+                name:         supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || split_part_email(supabaseUser.email) || 'Élève',
                 email:        supabaseUser.email,
                 role:         'student',
                 tier:         'freemium',
@@ -165,7 +175,7 @@ export function AuthProvider({ children }) {
               const enriched = {
                 uid:          supabaseUser.id,
                 id:           supabaseUser.id,
-                name:         profile.name || supabaseUser.user_metadata?.name || 'Élève',
+                name:         profile.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || 'Élève',
                 email:        supabaseUser.email,
                 role:         profile.role || 'student',
                 tier:         profile.tier || 'freemium',
@@ -192,6 +202,10 @@ export function AuthProvider({ children }) {
     });
     return () => unsubscribe();
   }, []);
+
+  // Helper: extract readable name from email prefix
+  const split_part_email = (email) => email ? email.split('@')[0] : 'Élève';
+
 
   const { exams: initialExams, needsSave } = loadAndMigrateExams();
   const [exams, setExams] = useState(initialExams);

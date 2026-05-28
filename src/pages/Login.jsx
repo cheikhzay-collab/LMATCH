@@ -69,14 +69,16 @@ export default function Login() {
     setErrorMsg('');
     try {
       await loginWithGoogle();
-      navigate('/dashboard');
+      // Note: loginWithGoogle redirects the browser to Google's OAuth page.
+      // The browser will navigate away and return via /auth/callback.
+      // No navigate() needed here — it would never execute.
     } catch (err) {
       console.error('[Auth] Google Error:', err);
       let msg = err.message || 'Une erreur est survenue lors de la connexion Google.';
       setErrorMsg(msg);
-    } finally {
       setIsLoading(false);
     }
+    // Don't call setIsLoading(false) in finally since the page will redirect
   };
 
 

@@ -103,6 +103,9 @@ export const loginWithEmail = async (email, password) => {
 export const loginWithGoogle = async () => {
   if (!supabase) throw new Error('Supabase is not configured.');
 
+  // Mark that we started an OAuth flow — used by OAuthRedirectGuard to redirect to /dashboard
+  sessionStorage.setItem('_oauth_in_progress', '1');
+
   // Build redirect URL: always go to /auth/callback which then redirects to /dashboard
   const redirectTo = `${window.location.origin}/auth/callback`;
 
@@ -117,7 +120,10 @@ export const loginWithGoogle = async () => {
     },
   });
 
-  if (error) throw error;
+  if (error) {
+    sessionStorage.removeItem('_oauth_in_progress');
+    throw error;
+  }
   return data;
 };
 
