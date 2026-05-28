@@ -15,6 +15,10 @@ import { createUserDoc, getUserDoc } from './userService';
 export const registerStudent = async (name, email, password) => {
   if (!supabase) throw new Error('Supabase is not configured.');
   
+  if (email.toLowerCase().trim() === 'admin@lconq.ma') {
+    throw new Error('Inscription impossible avec cette adresse e-mail.');
+  }
+  
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -41,7 +45,6 @@ export const registerStudent = async (name, email, password) => {
     subscription: null,
   };
 
-  await createUserDoc(data.user.id, userData);
   return { uid: data.user.id, id: data.user.id, ...userData };
 };
 
@@ -50,35 +53,38 @@ export const registerStudent = async (name, email, password) => {
  * Fetches the Supabase user profile to get role/tier/subscription.
  */
 export const loginWithEmail = async (email, password) => {
-  if (email === 'admin@lconq.ma') {
-    throw new Error('ADMIN_LOCAL');
-  }
-
   if (!supabase) throw new Error('Supabase is not configured.');
 
-  const { data, error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  try {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-  if (error) throw error;
-  if (!data.user) throw new Error('Login failed.');
+    if (error) throw error;
+    if (!data.user) throw new Error('Login failed.');
 
-  const profile = await getUserDoc(data.user.id);
+    const profile = await getUserDoc(data.user.id);
 
-  return {
-    uid: data.user.id,
-    id: data.user.id,
-    name: profile?.name || data.user.user_metadata?.name || 'Élève',
-    email: data.user.email,
-    role: profile?.role || 'student',
-    tier: profile?.tier || 'freemium',
-    xp: profile?.xp || 0,
-    streak: profile?.streak || 0,
-    rank: profile?.rank || null,
-    totalStudents: profile?.totalStudents || 1200,
-    subscription: profile?.subscription || null,
-  };
+    return {
+      uid: data.user.id,
+      id: data.user.id,
+      name: profile?.name || data.user.user_metadata?.name || 'Directeur',
+      email: data.user.email,
+      role: profile?.role || 'student',
+      tier: profile?.tier || 'freemium',
+      xp: profile?.xp || 0,
+      streak: profile?.streak || 0,
+      rank: profile?.rank || null,
+      totalStudents: profile?.totalStudents || 1200,
+      subscription: profile?.subscription || null,
+    };
+  } catch (err) {
+    if (email === 'admin@lconq.ma') {
+      throw new Error('ADMIN_LOCAL');
+    }
+    throw err;
+  }
 };
 
 /**

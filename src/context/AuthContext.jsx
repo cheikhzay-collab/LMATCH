@@ -308,11 +308,14 @@ export function AuthProvider({ children }) {
   };
 
 
-  const [users, setUsers] = useState([
-    { id: '1', name: 'Youssef Alaoui', email: 'youssef@massar.ma', tier: 'freemium', joined: '2026-05-10', xp: 450 },
-    { id: '2', name: 'Sara Bennani', email: 'premium@lconq.ma', tier: 'premium', joined: '2026-05-01', xp: 8450 },
-    { id: '3', name: 'Aymane Idrissi', email: 'free@lconq.ma', tier: 'freemium', joined: '2026-05-12', xp: 120 },
-  ]);
+  const [users, setUsers] = useState(() => {
+    if (SUPABASE_ENABLED) return [];
+    return [
+      { id: '1', name: 'Youssef Alaoui', email: 'youssef@massar.ma', tier: 'freemium', joined: '2026-05-10', xp: 450 },
+      { id: '2', name: 'Sara Bennani', email: 'premium@lconq.ma', tier: 'premium', joined: '2026-05-01', xp: 8450 },
+      { id: '3', name: 'Aymane Idrissi', email: 'free@lconq.ma', tier: 'freemium', joined: '2026-05-12', xp: 120 },
+    ];
+  });
 
   // Check subscription expiration on mount/updates
   useEffect(() => {
@@ -349,12 +352,6 @@ export function AuthProvider({ children }) {
   }, [users, user]);
 
   const login = async (email, password) => {
-    // ── Admin shortcut (no Supabase needed) ──────────────────────────────────
-    if (email === 'admin@lconq.ma') {
-      setUser({ name: 'Directeur', email: email, role: 'admin', uid: 'admin', id: 'admin' });
-      return;
-    }
-
     // ── Supabase Auth login ───────────────────────────────────────────────────
     if (SUPABASE_ENABLED) {
       try {
@@ -362,10 +359,18 @@ export function AuthProvider({ children }) {
         setUser(sbUser);
         return;
       } catch (err) {
-        if (err.message !== 'ADMIN_LOCAL') {
-          throw err; // re-throw so the login form can show the error
+        if (err.message === 'ADMIN_LOCAL') {
+          setUser({ name: 'Directeur', email: email, role: 'admin', uid: 'admin', id: 'admin' });
+          return;
         }
+        throw err;
       }
+    }
+
+    // ── Fallback when Supabase is disabled ────────────────────────────────────
+    if (email === 'admin@lconq.ma') {
+      setUser({ name: 'Directeur', email: email, role: 'admin', uid: 'admin', id: 'admin' });
+      return;
     }
 
     // ── Fallback: legacy mock users (local dev without Supabase) ─────────────
@@ -1139,27 +1144,26 @@ export function AuthProvider({ children }) {
     loadStudentData();
   }, [user]);
 
+  const refreshAdminData = useCallback(async () => {
+    if (!SUPABASE_ENABLED || user?.role !== 'admin') return;
+    try {
+      const fbUsers = await getAllUsers();
+      if (fbUsers) {
+        setUsers(fbUsers);
+      }
+      const fbCodes = await getAllCodes();
+      if (fbCodes) {
+        setActivationCodes(fbCodes);
+      }
+    } catch (e) {
+      console.warn('[Supabase] Error loading admin users/codes:', e.message);
+    }
+  }, [user]);
+
   // Fetch all registered users for Admin Dashboard when Admin is logged in
   useEffect(() => {
-    if (!SUPABASE_ENABLED || user?.role !== 'admin') return;
-
-    const loadAllUsers = async () => {
-      try {
-        const fbUsers = await getAllUsers();
-        if (fbUsers && fbUsers.length > 0) {
-          setUsers(fbUsers);
-        }
-        const fbCodes = await getAllCodes();
-        if (fbCodes) {
-          setActivationCodes(fbCodes);
-        }
-      } catch (e) {
-        console.warn('[Supabase] Error loading admin users/codes:', e.message);
-      }
-    };
-
-    loadAllUsers();
-  }, [user]);
+    refreshAdminData();
+  }, [refreshAdminData]);
 
 
   const addSchool = async (name) => {
@@ -1254,6 +1258,7 @@ export function AuthProvider({ children }) {
       mockExamHistory, saveMockExamResult,
       isExamLocked,
       supabaseEnabled: SUPABASE_ENABLED,
+      refreshAdminData,
     }}>
       {children}
     </AuthContext.Provider>

@@ -3,11 +3,7 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { BrainCircuit, Eye, EyeOff, Zap, AlertCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const TEST_ACCOUNTS = [
-  { label: 'Admin',        email: 'admin@lconq.ma',   role: 'admin', color: 'var(--violet)' },
-  { label: 'Élève Premium', email: 'premium@lconq.ma', role: 'student', color: 'var(--emerald)' },
-  { label: 'Élève Free',   email: 'free@lconq.ma',    role: 'student', color: 'var(--text-muted)' },
-];
+
 
 export default function Login() {
   const { pathname }                      = useLocation();
@@ -76,12 +72,6 @@ export default function Login() {
     }
   };
 
-  const fillAccount = (acc) => {
-    navigate('/login');
-    setErrorMsg('');
-    setEmail(acc.email);
-    setPassword('password');
-  };
 
   return (
     <div style={{
@@ -302,35 +292,7 @@ export default function Login() {
             Continuer avec Google
           </button>
 
-          {/* Test accounts - Only show in connection mode */}
-          {!isRegistering && (
-            <div style={{ marginTop: '2rem', padding: '1.25rem', background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)' }}>
-              <p style={{ fontSize: '0.78rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.875rem' }}>
-                Comptes de démonstration
-              </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                {TEST_ACCOUNTS.map(acc => (
-                  <button
-                    key={acc.email}
-                    type="button"
-                    onClick={() => fillAccount(acc)}
-                    disabled={isLoading}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      padding: '0.625rem 0.875rem', background: 'var(--bg-card)',
-                      border: '1px solid var(--border)', borderRadius: 'var(--radius-md)',
-                      cursor: 'pointer', transition: 'all 0.15s', width: '100%'
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--border-hover)'; e.currentTarget.style.background = 'var(--bg-hover)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.background = 'var(--bg-card)'; }}
-                  >
-                    <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)' }}>{acc.label}</span>
-                    <span style={{ fontSize: '0.78rem', color: acc.color, fontWeight: 500 }}>{acc.email}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
     </div>

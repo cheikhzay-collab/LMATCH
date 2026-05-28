@@ -1,11 +1,18 @@
+import React, { useEffect } from 'react';
 import { LayoutDashboard, Users, BookOpen, CircleDollarSign, TrendingUp, Camera } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AreaChart, Area, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function AdminOverview() {
-  const { users, exams } = useAuth();
+  const { users, exams, refreshAdminData } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (refreshAdminData) {
+      refreshAdminData();
+    }
+  }, [refreshAdminData]);
 
   const totalPremium = users.filter(u => u.tier === 'premium').length;
   const totalRevenue = totalPremium * 99; // 99 Dh per premium user

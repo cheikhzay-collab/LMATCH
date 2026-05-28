@@ -21,6 +21,20 @@ create table if not exists public.profiles (
 -- Enable Row Level Security (RLS)
 alter table public.profiles enable row level security;
 
+-- Helper function to check if a user is an admin
+-- Defined as SECURITY DEFINER to bypass RLS policies when querying the profiles table
+create or replace function public.is_admin()
+returns boolean
+security definer set search_path = public
+language plpgsql as $$
+begin
+  return exists (
+    select 1 from public.profiles
+    where profiles.id = auth.uid() and profiles.role = 'admin'
+  );
+end;
+$$;
+
 -- Policies for Profiles
 create policy "Users can view their own profile." on public.profiles
   for select using (auth.uid() = id);
@@ -32,12 +46,7 @@ create policy "Users can insert their own profile." on public.profiles
   for insert with check (auth.uid() = id);
 
 create policy "Admins can do everything on profiles." on public.profiles
-  for all using (
-    exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
-    )
-  );
+  for all using (public.is_admin());
 
 -- Function and trigger to automatically create a profile when a user signs up
 create or replace function public.handle_new_user()
@@ -78,12 +87,7 @@ create policy "Anyone can read configs." on public.config
   for select using (true);
 
 create policy "Admins can write configs." on public.config
-  for all using (
-    exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
-    )
-  );
+  for all using (public.is_admin());
 
 -- 3. Exams Table
 create table if not exists public.exams (
@@ -106,12 +110,7 @@ create policy "Anyone can view active and non-archived exams." on public.exams
   for select using (true);
 
 create policy "Admins can manage exams." on public.exams
-  for all using (
-    exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
-    )
-  );
+  for all using (public.is_admin());
 
 -- 4. Activation Codes Table
 create table if not exists public.activation_codes (
@@ -133,12 +132,7 @@ create policy "Authenticated users can update activation codes." on public.activ
   for update using (auth.role() = 'authenticated');
 
 create policy "Admins can manage activation codes." on public.activation_codes
-  for all using (
-    exists (
-      select 1 from public.profiles
-      where profiles.id = auth.uid() and profiles.role = 'admin'
-    )
-  );
+  for all using (public.is_admin());
 
 -- 5. Progress Table (SRS/FSRS cards)
 create table if not exists public.progress (
@@ -195,3 +189,27 @@ alter table public.activity enable row level security;
 
 create policy "Users can manage their own activity." on public.activity
   for all using (auth.uid() = user_id);
+
+-- 8. Profile Update Protection Trigger
+-- Prevents non-admin users from changing their own role or tier
+create or replace function public.check_profile_update()
+returns trigger
+security definer set search_path = public
+language plpgsql as $$
+begin
+  if (old.role is distinct from new.role or old.tier is distinct from new.tier) then
+    if not (exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'admin'
+    )) then
+      new.role := old.role;
+      new.tier := old.tier;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create or replace trigger check_profile_update_trigger
+  before update on public.profiles
+  for each row execute procedure public.check_profile_update();

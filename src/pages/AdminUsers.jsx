@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -6,9 +6,15 @@ import {
 } from 'lucide-react';
 
 export default function AdminUsers() {
-  const { users, updateUserTier } = useAuth();
+  const { users, updateUserTier, refreshAdminData } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (refreshAdminData) {
+      refreshAdminData();
+    }
+  }, [refreshAdminData]);
 
   const toggleTier = (userId, currentTier) => {
     const newTier = currentTier === 'premium' ? 'freemium' : 'premium';
