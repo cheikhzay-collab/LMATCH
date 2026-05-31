@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Timer, ArrowLeft, CheckCircle2, XCircle, Lightbulb, Trophy, Flame, Zap, ChevronLeft, ChevronRight, TrendingUp, Lock } from 'lucide-react';
+import { Timer, ArrowLeft, CheckCircle2, XCircle, Lightbulb, Trophy, Flame, Zap, ChevronLeft, ChevronRight, TrendingUp, Lock, LayoutGrid } from 'lucide-react';
 
 import { renderWithMath } from '../utils/mathRenderer';
 import DiagnosticReport from '../components/DiagnosticReport';
@@ -372,6 +372,7 @@ export default function MockExamMode() {
   const [answers, setAnswers]           = useState({});
   const [combo, setCombo]               = useState(0);
   const [selectedImageZoom, setSelectedImageZoom] = useState(null);
+  const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
 
   const hasSavedResult = React.useRef(false);
 
@@ -530,12 +531,56 @@ export default function MockExamMode() {
               ? `${Math.floor(timeLeft/3600)}:${Math.floor((timeLeft%3600)/60).toString().padStart(2,'0')}:${(timeLeft%60).toString().padStart(2,'0')}`
               : `${Math.floor(timeLeft/60)}:${(timeLeft%60).toString().padStart(2,'0')}`}
           </div>
+          <button
+            onClick={() => setIsNavDrawerOpen(true)}
+            className="mobile-only-toggle btn-ghost"
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              justifyContent: 'center',
+              padding: '0.4rem', 
+              borderRadius: '8px',
+              background: 'var(--bg-glass)',
+              border: '1px solid var(--border)',
+              color: 'var(--text-main)',
+              cursor: 'pointer'
+            }}
+            title="Grille de navigation"
+          >
+            <LayoutGrid size={16} />
+          </button>
         </div>
       </div>
 
       {/* ── Progress bar ── */}
       <div className="progress-track" style={{ borderRadius: 0, height: '4px', flexShrink: 0 }}>
         <div className="progress-fill" style={{ width: `${progress}%` }} />
+      </div>
+
+      {/* ── Mobile Stats Sub-header ── */}
+      <div className="mobile-only-stats-bar" style={{
+        display: 'none',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '0.45rem 1rem',
+        background: 'var(--bg-glass)',
+        borderBottom: '1px solid var(--border)',
+        fontSize: '0.72rem',
+        color: 'var(--text-muted)',
+        fontWeight: 700,
+        flexShrink: 0
+      }}>
+        <div>Question {currentIndex + 1}/{questions.length}</div>
+        <div style={{ display: 'flex', gap: '0.8rem' }}>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--emerald)', display: 'inline-block' }} />
+            {answeredCount} Fait
+          </span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+            <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--warning)', display: 'inline-block' }} />
+            {questions.length - answeredCount} Reste
+          </span>
+        </div>
       </div>
 
       {/* ── Bento Body ── */}
@@ -560,12 +605,22 @@ export default function MockExamMode() {
           {/* Question Card (Middle/Right or Full Width) */}
           <div className="glass-card animate-fade-in" key={currentIndex} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
             {/* Topic & Question Header row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexShrink: 0 }}>
-              <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem', flexShrink: 0 }}>
+              <span style={{ 
+                fontSize: '0.76rem', 
+                color: 'var(--violet)', 
+                fontWeight: 800, 
+                textTransform: 'uppercase', 
+                letterSpacing: '0.08em',
+                background: 'var(--violet-soft)',
+                padding: '0.25rem 0.6rem',
+                borderRadius: '6px',
+                border: '1px solid rgba(99, 102, 241, 0.15)'
+              }}>
                 Question {currentIndex + 1} sur {questions.length}
               </span>
               {currentQuestion.topic && (
-                <span className="topic-badge" style={{ margin: 0, padding: '0.2rem 0.6rem', fontSize: '0.68rem', borderRadius: '4px' }}>
+                <span className="topic-badge" style={{ margin: 0, padding: '0.25rem 0.6rem', fontSize: '0.7rem', borderRadius: '6px', fontWeight: 700 }}>
                   {currentQuestion.topic}
                 </span>
               )}
@@ -573,7 +628,15 @@ export default function MockExamMode() {
 
             {/* Scrollable Question and Options Area */}
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', paddingRight: '4px', marginBottom: '0.5rem' }}>
-              <div className="question-box" style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1.25rem', lineHeight: '1.5', flexShrink: 0 }}>
+              <div className="question-box" style={{ 
+                fontSize: '1.15rem', 
+                fontWeight: 700, 
+                marginBottom: '1.5rem', 
+                lineHeight: '1.6', 
+                color: 'var(--text-main)',
+                letterSpacing: '-0.01em',
+                flexShrink: 0 
+              }}>
                 {renderWithMath(currentQuestion.question)}
               </div>
 
@@ -629,9 +692,28 @@ export default function MockExamMode() {
             </div>
 
             {/* Pinned Nav Footer */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '0.75rem', flexShrink: 0 }}>
-              <button className="btn-outline" disabled={currentIndex === 0} onClick={goPrev}
-                style={{ padding: '0.5rem 1.25rem', opacity: currentIndex === 0 ? 0.4 : 1, fontSize: '0.85rem' }}>
+            <div style={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              borderTop: '1px solid var(--border)', 
+              paddingTop: '0.75rem', 
+              paddingBottom: 'env(safe-area-inset-bottom, 0px)', 
+              flexShrink: 0 
+            }}>
+              <button 
+                className="btn-outline" 
+                disabled={currentIndex === 0} 
+                onClick={goPrev}
+                style={{ 
+                  padding: '0.5rem 1.25rem', 
+                  fontSize: '0.85rem',
+                  opacity: currentIndex === 0 ? 0.45 : 1,
+                  cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
+                  borderColor: currentIndex === 0 ? 'var(--border)' : 'var(--border)',
+                  color: currentIndex === 0 ? 'var(--text-subtle)' : 'var(--text-main)',
+                  background: currentIndex === 0 ? 'var(--bg-glass)' : 'transparent',
+                }}
+              >
                 <ChevronLeft size={16} /> Précédent
               </button>
               {currentIndex === questions.length - 1 ? (
@@ -768,6 +850,149 @@ export default function MockExamMode() {
 
             </div>
 
+          </div>
+        </div>
+      </div>
+
+      {/* ── Mobile Navigation Grid Drawer ── */}
+      {isNavDrawerOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.65)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            zIndex: 1000,
+            animation: 'fade-in-overlay 0.2s ease-out'
+          }}
+          onClick={() => setIsNavDrawerOpen(false)}
+        />
+      )}
+      
+      <div style={{
+        position: 'fixed',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        background: 'var(--bg-base)',
+        borderTopLeftRadius: '24px',
+        borderTopRightRadius: '24px',
+        borderTop: '1px solid var(--border)',
+        padding: '1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom, 0px))',
+        zIndex: 1001,
+        transform: isNavDrawerOpen ? 'translateY(0)' : 'translateY(100%)',
+        transition: 'transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: '0 -8px 30px rgba(0,0,0,0.5)',
+        maxHeight: '75vh',
+        display: 'flex',
+        flexDirection: 'column',
+      }}>
+        {/* Drawer Drag Indicator / Top Handle */}
+        <div 
+          style={{
+            width: '40px',
+            height: '4px',
+            background: 'var(--border)',
+            borderRadius: '99px',
+            margin: '0 auto 1.25rem',
+            cursor: 'pointer'
+          }} 
+          onClick={() => setIsNavDrawerOpen(false)} 
+        />
+        
+        {/* Drawer Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexShrink: 0 }}>
+          <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>Grille de Navigation</h3>
+          <button 
+            className="btn-ghost" 
+            onClick={() => setIsNavDrawerOpen(false)}
+            style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, borderRadius: '6px', background: 'var(--bg-glass)', border: '1px solid var(--border)' }}
+          >
+            Fermer
+          </button>
+        </div>
+        
+        {/* Drawer Content Area (Scrollable) */}
+        <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', paddingRight: '2px' }}>
+          {/* Progress stats in 4-column compact row */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem', flexShrink: 0 }}>
+            <div style={{ textAlign: 'center', background: 'var(--bg-glass)', borderRadius: '6px', padding: '0.4rem 0.25rem', border: '1px solid var(--border)' }}>
+              <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--violet)', margin: 0, lineHeight: 1.1 }}>{currentIndex + 1}</p>
+              <p style={{ fontSize: '0.6rem', color: 'var(--text-subtle)', margin: 0, fontWeight: 700 }}>Actuel</p>
+            </div>
+            <div style={{ textAlign: 'center', background: 'var(--bg-glass)', borderRadius: '6px', padding: '0.4rem 0.25rem', border: '1px solid var(--border)' }}>
+              <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--emerald)', margin: 0, lineHeight: 1.1 }}>{answeredCount}</p>
+              <p style={{ fontSize: '0.6rem', color: 'var(--text-subtle)', margin: 0, fontWeight: 700 }}>Fait</p>
+            </div>
+            <div style={{ textAlign: 'center', background: 'var(--bg-glass)', borderRadius: '6px', padding: '0.4rem 0.25rem', border: '1px solid var(--border)' }}>
+              <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--warning)', margin: 0, lineHeight: 1.1 }}>{questions.length - answeredCount}</p>
+              <p style={{ fontSize: '0.6rem', color: 'var(--text-subtle)', margin: 0, fontWeight: 700 }}>Reste</p>
+            </div>
+            <div style={{ textAlign: 'center', background: 'var(--bg-glass)', borderRadius: '6px', padding: '0.4rem 0.25rem', border: '1px solid var(--border)' }}>
+              <p style={{ fontSize: '1.05rem', fontWeight: 800, margin: 0, lineHeight: 1.1 }}>{questions.length}</p>
+              <p style={{ fontSize: '0.6rem', color: 'var(--text-subtle)', margin: 0, fontWeight: 700 }}>Total</p>
+            </div>
+          </div>
+          
+          {/* Scrollable grid navigator */}
+          <div style={{ marginBottom: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.35rem' }}>
+              {questions.map((q, i) => {
+                const isCurrent = i === currentIndex;
+                const isAnswered = !!answers[q.id];
+                
+                let btnStyle = {
+                  padding: '0.6rem 0',
+                  borderRadius: '8px',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontFamily: 'inherit',
+                  textAlign: 'center',
+                  display: 'block',
+                  width: '100%',
+                };
+                
+                if (isCurrent) {
+                  btnStyle = {
+                    ...btnStyle,
+                    border: '2px solid var(--violet)',
+                    background: 'rgba(99, 102, 241, 0.16)',
+                    color: 'var(--violet)',
+                    boxShadow: '0 0 10px rgba(99, 102, 241, 0.35)',
+                  };
+                } else if (isAnswered) {
+                  btnStyle = {
+                    ...btnStyle,
+                    border: '1px solid rgba(16, 185, 129, 0.4)',
+                    background: 'rgba(16, 185, 129, 0.12)',
+                    color: 'var(--emerald)',
+                  };
+                } else {
+                  btnStyle = {
+                    ...btnStyle,
+                    border: '1px solid var(--border)',
+                    background: 'var(--bg-glass)',
+                    color: 'var(--text-muted)',
+                  };
+                }
+                
+                return (
+                  <button
+                    key={q.id}
+                    onClick={() => {
+                      setCurrentIndex(i);
+                      setIsNavDrawerOpen(false);
+                    }}
+                    style={btnStyle}
+                  >
+                    {i + 1}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

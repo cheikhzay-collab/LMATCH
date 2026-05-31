@@ -1612,6 +1612,32 @@ body.light-theme .astuce-tabs {
   border-left: 3px solid var(--border);
 }
 
+.mobile-only-stats-bar {
+  display: none !important;
+}
+
+.mobile-only-toggle {
+  display: none !important;
+}
+
+/* Animations for Mobile Drawer */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+@keyframes fade-in-overlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 768px) {
   .exam-card-premium {
     flex-direction: column;
@@ -1639,26 +1665,74 @@ body.light-theme .astuce-tabs {
     grid-template-columns: 1fr !important;
   }
 
+  body:has(.focus-layout) {
+    overflow: hidden !important;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    height: -webkit-fill-available;
+  }
+
+  .focus-layout {
+    height: 100dvh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .focus-body {
+    padding: 0.6rem 0.75rem !important;
+    flex: 1 !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
   .mock-exam-grid,
   .mock-exam-grid.has-context {
-    grid-template-columns: 1fr !important;
-    height: auto !important;
-    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    height: 100% !important;
+    overflow: hidden !important;
+    gap: 0.6rem !important;
   }
-  /* Hide circular timer on mobile since it's in the header */
-  .mock-exam-grid > div:last-child > div:first-child {
+
+  /* Hide circular timer & nav grid sidebar in standard flow on mobile since we use header & drawer */
+  .mock-exam-grid > div:last-child {
     display: none !important;
   }
-  .mock-exam-grid > div:last-child {
-    height: auto !important;
-    overflow-y: visible !important;
-  }
+
+  /* Context Panel in mobile */
   .mock-exam-grid > div:first-child {
+    max-height: 25vh !important;
     height: auto !important;
-    max-height: 400px;
+    overflow-y: auto !important;
+    flex-shrink: 0 !important;
+    padding: 1rem !important;
   }
+
+  /* Question Card in mobile */
   .mock-exam-grid > div:nth-child(2) {
-    height: auto !important;
+    flex: 1 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+    max-height: none !important;
+    padding: 1rem !important;
+  }
+
+  .mobile-only-stats-bar {
+    display: flex !important;
+  }
+
+  .mobile-only-toggle {
+    display: flex !important;
   }
 
   .verify-grid-row {
