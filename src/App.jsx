@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 import LandingPage from './pages/LandingPage';
@@ -64,6 +64,58 @@ function OAuthRedirectGuard() {
 }
 
 function AppContent() {
+  const location = useLocation();
+
+  React.useEffect(() => {
+    const path = location.pathname;
+    let title = "L'Conq";
+
+    if (path === '/') {
+      title = "L'Conq — Préparation aux Concours Grandes Écoles du Maroc";
+    } else if (path === '/login') {
+      title = "Connexion — L'Conq";
+    } else if (path === '/register') {
+      title = "Inscription — L'Conq";
+    } else if (path === '/dashboard') {
+      title = "Tableau de Bord — L'Conq";
+    } else if (path === '/subscription') {
+      title = "Mon Abonnement — L'Conq";
+    } else if (path === '/schools') {
+      title = "Choix des Écoles — L'Conq";
+    } else if (path.startsWith('/schools/')) {
+      const school = decodeURIComponent(path.split('/')[2] || '');
+      title = school ? `${school} — L'Conq` : "Concours — L'Conq";
+    } else if (path === '/study') {
+      title = "Mode Révision (SRS) — L'Conq";
+    } else if (path === '/exam') {
+      title = "Examen Blanc Chronométré — L'Conq";
+    } else if (path === '/scanner') {
+      title = "Scanner Intelligent OMR — L'Conq";
+    } else if (path === '/ranking') {
+      title = "Classement National — L'Conq";
+    } else if (path === '/admin/dashboard') {
+      title = "Admin : Vue d'ensemble — L'Conq";
+    } else if (path === '/admin/exams') {
+      title = "Admin : Bibliothèque Concours — L'Conq";
+    } else if (path === '/admin/users') {
+      title = "Admin : Gestion des Élèves — L'Conq";
+    } else if (path.startsWith('/admin/users/')) {
+      title = "Admin : Dossier de l'Élève — L'Conq";
+    } else if (path === '/admin/upload') {
+      title = "Admin : Upload de Sujets — L'Conq";
+    } else if (path === '/admin/ai-import') {
+      title = "Admin : Importateur de Sujets IA — L'Conq";
+    } else if (path === '/admin/ebooks') {
+      title = "Admin : Générateur d'E-Books — L'Conq";
+    } else if (path === '/admin/marketing') {
+      title = "Admin : Marketing & Contenus IA — L'Conq";
+    } else if (path === '/admin/settings') {
+      title = "Admin : Paramètres Système — L'Conq";
+    }
+
+    document.title = title;
+  }, [location]);
+
   return (
     <>
       <OAuthRedirectGuard />

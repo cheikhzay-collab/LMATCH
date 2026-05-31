@@ -30,14 +30,14 @@ export default function SubscriptionPage() {
     ? Math.ceil((new Date(user.subscription.endDate) - new Date()) / (1000 * 3600 * 24))
     : 0;
 
-  const handleRedeem = (e) => {
+  const handleRedeem = async (e) => {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
     if (!voucherCode.trim()) return;
 
     try {
-      const plan = redeemActivationCode(voucherCode.trim());
+      const plan = await redeemActivationCode(voucherCode.trim());
       setSuccessMsg(`Félicitations ! Votre code a été validé. Le pack "${plan.name}" est désormais actif pour une durée de ${plan.durationDays} jours.`);
       setVoucherCode('');
       // Clear message after 5 seconds
@@ -56,9 +56,9 @@ export default function SubscriptionPage() {
     setSuccessMsg('');
 
     // Simulate standard credit card processing lag
-    setTimeout(() => {
+    setTimeout(async () => {
       try {
-        activateSubscription(user.id, selectedPlan.id, selectedPlan.durationDays);
+        await activateSubscription(user?.uid || user?.id, selectedPlan.id, selectedPlan.durationDays);
         setSuccessMsg(`Paiement simulé avec succès ! Le pack Premium "${selectedPlan.name}" a été activé instantanément pour ${selectedPlan.durationDays} jours.`);
         setSelectedPlan(null);
         setIsProcessing(false);
