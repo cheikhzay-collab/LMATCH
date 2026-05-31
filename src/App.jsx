@@ -38,7 +38,7 @@ function OAuthRedirectGuard() {
 
   React.useEffect(() => {
     const hash = window.location.hash;
-    if (hash && hash.includes('access_token=')) {
+    if (hash && hash.includes('access_token=') && window.location.pathname !== '/auth/callback') {
       // Clear the hash from the address bar (cosmetic + security)
       window.history.replaceState(null, '', window.location.pathname);
     }
