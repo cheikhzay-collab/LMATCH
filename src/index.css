@@ -2101,7 +2101,7 @@ body.light-theme .astuce-tabs {
   }
   
   .flashcard-content-pane {
-    padding: 1rem 0.875rem !important;
+    padding: 1rem 0.875rem 1.5rem !important;
     justify-content: flex-start !important;
   }
   
