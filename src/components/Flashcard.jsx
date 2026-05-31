@@ -43,7 +43,7 @@ export default function Flashcard({ card, onNext }) {
   const handleOptionClick = (optionId) => revealCard(optionId);
   const handleReveal      = ()         => revealCard('skipped');
 
-  const isCorrect = selectedOption === card.correct_answer;
+  const isCorrect = selectedOption && card.correct_answer && selectedOption.toLowerCase() === card.correct_answer.toLowerCase();
 
   // renderWithMath and renderOptionText are now from '../utils/mathRenderer'
   const renderOptionText = (text) => renderWithMath(text);
@@ -336,27 +336,27 @@ export default function Flashcard({ card, onNext }) {
                 gap: '0.6rem',
                 fontSize: '0.9rem',
                 fontWeight: 700,
-                background: selectedOption === card.correct_answer 
-                  ? 'rgba(16, 185, 129, 0.08)' 
-                  : selectedOption === 'skipped'
-                    ? 'rgba(124, 58, 237, 0.08)'
-                    : 'rgba(239, 68, 68, 0.08)',
-                border: '1px solid',
-                borderColor: selectedOption === card.correct_answer 
-                  ? 'var(--emerald)' 
-                  : selectedOption === 'skipped'
-                    ? 'var(--violet)'
-                    : 'var(--danger)',
-                color: selectedOption === card.correct_answer 
-                  ? 'var(--emerald)' 
-                  : selectedOption === 'skipped'
-                    ? 'var(--violet)'
-                    : 'var(--danger)',
-                boxShadow: selectedOption === card.correct_answer 
-                  ? 'var(--shadow-glow-emerald)' 
-                  : 'none'
+                background: isCorrect 
+                 ? 'rgba(16, 185, 129, 0.08)' 
+                 : selectedOption === 'skipped'
+                   ? 'rgba(124, 58, 237, 0.08)'
+                   : 'rgba(239, 68, 68, 0.08)',
+               border: '1px solid',
+               borderColor: isCorrect 
+                 ? 'var(--emerald)' 
+                 : selectedOption === 'skipped'
+                   ? 'var(--violet)'
+                   : 'var(--danger)',
+               color: isCorrect 
+                 ? 'var(--emerald)' 
+                 : selectedOption === 'skipped'
+                   ? 'var(--violet)'
+                   : 'var(--danger)',
+               boxShadow: isCorrect 
+                 ? 'var(--shadow-glow-emerald)' 
+                 : 'none'
               }}>
-                {selectedOption === card.correct_answer ? (
+                {isCorrect ? (
                   <>
                     <CheckCircle2 size={18} />
                     <span>Bravo ! C'est la bonne réponse ✨</span>
@@ -382,9 +382,12 @@ export default function Flashcard({ card, onNext }) {
               {/* Disabled options list showing correct vs chosen answer */}
               <div className="options-grid" style={{ marginBottom: '0.8rem' }}>
                  {card.options.map((opt, optIdx) => {
+                   const isOptCorrect = opt.id && card.correct_answer && opt.id.toLowerCase() === card.correct_answer.toLowerCase();
+                   const isOptSelected = opt.id && selectedOption && opt.id.toLowerCase() === selectedOption.toLowerCase();
+
                    let btnClass = "option-btn";
-                   if (opt.id === card.correct_answer) btnClass += " correct";
-                   else if (opt.id === selectedOption) btnClass += " wrong";
+                   if (isOptCorrect) btnClass += " correct";
+                   else if (isOptSelected) btnClass += " wrong";
 
                    return (
                      <button 
@@ -398,8 +401,8 @@ export default function Flashcard({ card, onNext }) {
                        <div style={{ flex: 1 }}>
                          {renderOptionText(opt.text)}
                        </div>
-                       {opt.id === card.correct_answer && <CheckCircle2 size={16} color="#10b981" />}
-                       {selectedOption === opt.id && opt.id !== card.correct_answer && <XCircle size={16} color="#f87171" />}
+                       {isOptCorrect && <CheckCircle2 size={16} color="#10b981" />}
+                       {isOptSelected && !isOptCorrect && <XCircle size={16} color="#f87171" />}
                      </button>
                    );
                  })}
@@ -450,7 +453,7 @@ export default function Flashcard({ card, onNext }) {
 
               {/* SRS Rating Actions */}
               <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
-                {selectedOption === 'skipped' || selectedOption !== card.correct_answer ? (
+                {selectedOption === 'skipped' || !isCorrect ? (
                   <button className="btn" style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem' }} onClick={() => handleEvaluation(0)}>
                     J'ai compris ✓
                   </button>
