@@ -1,20 +1,49 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getAllProgress, getMockHistory } from '../services/userService';
 import { 
   ArrowLeft, Crown, User, Calendar, Target, Award, 
-  BarChart3, Clock, CheckCircle2, XCircle, BookOpen, TrendingUp 
+  BarChart3, Clock, BookOpen, TrendingUp, Loader2
 } from 'lucide-react';
 
 export default function AdminStudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { users, exams, plans, activateSubscription, cancelSubscription } = useAuth();
+  const { users, plans, activateSubscription, cancelSubscription } = useAuth();
   
-  const student = users.find(u => u.id === id);
+  const student = users.find(u => u.id === id || u.uid === id);
 
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [selectedDuration, setSelectedDuration] = useState('365');
+  
+  // Real Database Student Details
+  const [realHistory, setRealHistory] = useState([]);
+  const [realProgress, setRealProgress] = useState({});
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  useEffect(() => {
+    if (!student) return;
+
+    const fetchStudentData = async () => {
+      setLoadingStats(true);
+      try {
+        const uid = student.id || student.uid;
+        const [historyData, progressData] = await Promise.all([
+          getMockHistory(uid),
+          getAllProgress(uid)
+        ]);
+        setRealHistory(historyData || []);
+        setRealProgress(progressData || {});
+      } catch (e) {
+        console.error('[Admin] Failed to load real student stats:', e);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchStudentData();
+  }, [student]);
 
   useEffect(() => {
     if (plans && plans.length > 0 && !selectedPlanId) {
@@ -24,22 +53,69 @@ export default function AdminStudentDetail() {
 
   if (!student) return <div style={{ padding: '2rem' }}>Utilisateur non trouvé.</div>;
 
-  // Mock stats for the student
-  const performanceData = [
-    { subject: 'Mathématiques', score: 85, color: 'var(--primary)' },
-    { subject: 'Physique', score: 72, color: 'var(--accent)' },
-    { subject: 'Chimie', score: 91, color: 'var(--emerald)' },
-    { subject: 'SVT', score: 64, color: 'var(--warning)' },
-  ];
+  // ── Calculate real academic progression parameters ──
+  const now = new Date();
+  
+  // 1. SRS Cards Count
+  const cardsLearned = Object.keys(realProgress).length;
+  
+  // 2. SRS Cards Due
+  const cardsDue = Object.values(realProgress).filter(c => {
+    return c.nextReviewDate && new Date(c.nextReviewDate) <= now;
+  }).length;
+  
+  // 3. Average Mastery based on stability / repetitions
+  const totalCards = Object.values(realProgress).length;
+  const cardsMastered = Object.values(realProgress).filter(c => c.repetitions >= 3).length;
+  const averageMastery = totalCards > 0 ? Math.round((cardsMastered / totalCards) * 100) : 0;
 
-  const recentHistory = [
-    { exam: 'Concours Médecine Oujda', date: '15 Mai 2026', result: '18/20', status: 'pass' },
-    { exam: 'ENSA Casablanca 2023', date: '12 Mai 2026', result: '14/20', status: 'pass' },
-    { exam: 'Concours Pharmacie Rabat', date: '10 Mai 2026', result: '08/20', status: 'fail' },
-  ];
+  // 4. Calculate real performance by Concours School
+  const schoolPerformance = {};
+  realHistory.forEach(item => {
+    if (!schoolPerformance[item.school]) {
+      schoolPerformance[item.school] = { totalPct: 0, count: 0 };
+    }
+    schoolPerformance[item.school].totalPct += item.pct || 0;
+    schoolPerformance[item.school].count += 1;
+  });
+
+  const colors = ['var(--primary)', 'var(--accent)', 'var(--warning)', 'var(--danger)'];
+  const performanceData = Object.keys(schoolPerformance).map((schoolName, idx) => {
+    const data = schoolPerformance[schoolName];
+    const avg = Math.round(data.totalPct / data.count);
+    return {
+      subject: `Concours ${schoolName}`,
+      score: avg,
+      color: colors[idx % colors.length]
+    };
+  });
+
+  // Default subject masteries if no mock tests were passed yet
+  if (performanceData.length === 0) {
+    performanceData.push(
+      { subject: 'Mathématiques (Global)', score: 0, color: 'var(--primary)' },
+      { subject: 'Physique-Chimie (Global)', score: 0, color: 'var(--accent)' },
+      { subject: 'SVT (Global)', score: 0, color: 'var(--warning)' }
+    );
+  }
+
+  // 5. Format real history items
+  const recentHistory = realHistory.slice(0, 10).map(item => {
+    const percentage = Math.round(item.pct || 0);
+    const dateStr = item.date 
+      ? new Date(item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) 
+      : 'Récemment';
+    return {
+      exam: item.examName,
+      date: dateStr,
+      result: `${item.score}/${item.maxScore} (${percentage}%)`,
+      status: percentage >= 50 ? 'pass' : 'fail'
+    };
+  });
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto' }}>
+    <div className="animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto', direction: 'ltr', textAlign: 'left' }}>
+      
       {/* ── Top Navigation ── */}
       <div style={{ marginBottom: '2rem', display:'flex', alignItems:'center', gap:'1rem' }}>
         <button 
@@ -52,8 +128,11 @@ export default function AdminStudentDetail() {
       </div>
 
       <div className="dashboard-grid">
+        
         {/* ── LEFT COLUMN: Profile & Quick Stats ── */}
         <div className="col-span-4" style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
+          
+          {/* Profile Card */}
           <div className="glass-panel" style={{ padding: '2.5rem', textAlign: 'center' }}>
             <div style={{ 
               width: '100px', height: '100px', borderRadius: '50%', 
@@ -62,12 +141,12 @@ export default function AdminStudentDetail() {
               justifyContent: 'center', fontSize: '2.5rem', fontWeight: 900, color: 'white',
               boxShadow: '0 10px 25px -5px rgba(79, 70, 229, 0.4)'
             }}>
-              {student.name.charAt(0)}
+              {student.name ? student.name.charAt(0) : 'U'}
             </div>
-            <h2 style={{ margin: '0 0 0.5rem 0' }}>{student.name}</h2>
+            <h2 style={{ margin: '0 0 0.5rem 0' }}>{student.name || 'Étudiant'}</h2>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem', color:'var(--text-muted)', marginBottom:'1.5rem' }}>
               <Calendar size={16} />
-              <span>Membre depuis {student.joined || 'Mai 2026'}</span>
+              <span>Membre depuis {student.joined ? new Date(student.joined).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : 'Mai 2026'}</span>
             </div>
             
             <div style={{ display:'flex', gap:'1rem' }}>
@@ -80,7 +159,7 @@ export default function AdminStudentDetail() {
                <div style={{ flex:1, padding:'1rem', background:'rgba(255,255,255,0.02)', borderRadius:'12px', border:'1px solid var(--border)' }}>
                   <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'0.25rem' }}>Score Total</div>
                   <div style={{ fontWeight:800, color:'var(--emerald)', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.4rem' }}>
-                    <TrendingUp size={16} /> {student.xp} XP
+                    <TrendingUp size={16} /> {student.xp || 0} XP
                   </div>
                </div>
              </div>
@@ -115,7 +194,7 @@ export default function AdminStudentDetail() {
                   
                   <button 
                     type="button" 
-                    onClick={() => cancelSubscription(student.id)}
+                    onClick={() => cancelSubscription(student.id || student.uid)}
                     className="btn-outline"
                     style={{ width: '100%', borderColor: 'rgba(239, 68, 68, 0.5)', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.05)', padding: '0.6rem', fontSize: '0.85rem' }}
                   >
@@ -154,7 +233,7 @@ export default function AdminStudentDetail() {
                 
                 <button 
                   type="button" 
-                  onClick={() => activateSubscription(student.id, selectedPlanId, selectedDuration)}
+                  onClick={() => activateSubscription(student.id || student.uid, selectedPlanId, selectedDuration)}
                   className="btn"
                   style={{ width: '100%', padding: '0.65rem', justifyContent: 'center', fontSize: '0.85rem' }}
                 >
@@ -164,81 +243,109 @@ export default function AdminStudentDetail() {
             )}
           </div>
 
+          {/* ── SRS Objectifs ── */}
           <div className="glass-panel" style={{ padding:'2rem' }}>
             <h4 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
-              <Target size={20} color="var(--primary)" /> Objectifs SRS
+              <Target size={20} color="var(--primary)" /> Objectifs Mémorisation (SRS)
             </h4>
-            <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontSize:'0.9rem' }}>Cartes Apprises</span>
-                <span style={{ fontWeight:800 }}>124</span>
+            
+            {loadingStats ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '1rem 0' }}>
+                <Loader2 className="animate-spin" size={24} color="var(--primary)" />
               </div>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontSize:'0.9rem' }}>En attente (Due)</span>
-                <span style={{ fontWeight:800, color:'var(--warning)' }}>12</span>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:'1rem' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:'0.9rem' }}>Fiches Apprises</span>
+                  <span style={{ fontWeight:800 }}>{cardsLearned}</span>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:'0.9rem' }}>En attente de révision</span>
+                  <span style={{ fontWeight:800, color:'var(--warning)' }}>{cardsDue}</span>
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <span style={{ fontSize:'0.9rem' }}>Taux de Maîtrise</span>
+                  <span style={{ fontWeight:800, color:'var(--emerald)' }}>{averageMastery}%</span>
+                </div>
               </div>
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                <span style={{ fontSize:'0.9rem' }}>Maîtrise Totale</span>
-                <span style={{ fontWeight:800, color:'var(--emerald)' }}>85%</span>
-              </div>
-            </div>
+            )}
           </div>
         </div>
 
         {/* ── RIGHT COLUMN: Detailed Analytics ── */}
         <div className="col-span-8" style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
           
+          {/* Subject / School Performance */}
           <div className="glass-panel" style={{ padding:'2rem' }}>
             <h3 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
-              <BarChart3 size={24} color="var(--accent)" /> Maîtrise des Matières
+              <BarChart3 size={24} color="var(--accent)" /> Maîtrise par Type de Concours
             </h3>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2rem' }}>
-              {performanceData.map(data => (
-                <div key={data.subject}>
-                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.5rem', fontSize:'0.9rem' }}>
-                    <span style={{ fontWeight:600 }}>{data.subject}</span>
-                    <span style={{ fontWeight:900, color: data.color }}>{data.score}%</span>
+            
+            {loadingStats ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
+                <Loader2 className="animate-spin" size={32} color="var(--primary)" />
+              </div>
+            ) : (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2rem' }}>
+                {performanceData.map(data => (
+                  <div key={data.subject}>
+                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.5rem', fontSize:'0.9rem' }}>
+                      <span style={{ fontWeight:600 }}>{data.subject}</span>
+                      <span style={{ fontWeight:900, color: data.color }}>{data.score}%</span>
+                    </div>
+                    <div style={{ height:'10px', background:'rgba(255,255,255,0.05)', borderRadius:'5px' }}>
+                      <div style={{ width:`${data.score}%`, height:'100%', background:data.color, borderRadius:'5px', boxShadow:`0 0 10px ${data.color}40` }}></div>
+                    </div>
                   </div>
-                  <div style={{ height:'10px', background:'rgba(255,255,255,0.05)', borderRadius:'5px' }}>
-                    <div style={{ width:`${data.score}%`, height:'100%', background:data.color, borderRadius:'5px', boxShadow:`0 0 10px ${data.color}40` }}></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
+          {/* Exam Result History */}
           <div className="glass-panel" style={{ padding:'2rem' }}>
             <h3 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
-              <Clock size={24} color="var(--violet)" /> Historique des Examens
+              <Clock size={24} color="var(--violet)" /> Historique Réel des Examens Blancs
             </h3>
-            <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-              {recentHistory.map((item, idx) => (
-                <div key={idx} style={{ padding:'1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'1rem', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'1.25rem' }}>
-                    <div style={{ 
-                      width:'48px', height:'48px', borderRadius:'12px', 
-                      background: item.status === 'pass' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                      display:'flex', alignItems:'center', justifyContent:'center',
-                      color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)'
-                    }}>
-                      <BookOpen size={24} />
+            
+            {loadingStats ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
+                <Loader2 className="animate-spin" size={32} color="var(--primary)" />
+              </div>
+            ) : recentHistory.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
+                Aucun examen blanc n'a été passé pour le moment.
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+                {recentHistory.map((item, idx) => (
+                  <div key={idx} style={{ padding:'1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'1rem', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:'1.25rem' }}>
+                      <div style={{ 
+                        width:'48px', height:'48px', borderRadius:'12px', 
+                        background: item.status === 'pass' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)'
+                      }}>
+                        <BookOpen size={24} />
+                      </div>
+                      <div>
+                        <div style={{ fontWeight:800, fontSize:'1.05rem' }}>{item.exam}</div>
+                        <div style={{ fontSize:'0.85rem', color:'var(--text-muted)' }}>Date : {item.date}</div>
+                      </div>
                     </div>
-                    <div>
-                      <div style={{ fontWeight:800, fontSize:'1.05rem' }}>{item.exam}</div>
-                      <div style={{ fontSize:'0.85rem', color:'var(--text-muted)' }}>Passé le {item.date}</div>
+                    <div style={{ textAlign:'right' }}>
+                      <div style={{ fontSize:'1.25rem', fontWeight:900, color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)' }}>
+                        {item.result}
+                      </div>
+                      <div style={{ fontSize:'0.75rem', fontWeight:800, textTransform:'uppercase', color:'var(--text-muted)' }}>
+                        {item.status === 'pass' ? 'REÇU' : 'ÉCHEC'}
+                      </div>
                     </div>
                   </div>
-                  <div style={{ textAlign:'right' }}>
-                    <div style={{ fontSize:'1.25rem', fontWeight:900, color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)' }}>
-                      {item.result}
-                    </div>
-                    <div style={{ fontSize:'0.75rem', fontWeight:800, textTransform:'uppercase', color:'var(--text-muted)' }}>
-                      {item.status === 'pass' ? 'RÉUSSI' : 'ÉCHEC'}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
         </div>
