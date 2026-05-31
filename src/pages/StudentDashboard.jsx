@@ -1,26 +1,13 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Trophy, Flame, Target, BrainCircuit, Play, Lock,
   Zap, TrendingUp, BookOpen, Clock, Camera, LayoutDashboard,
-  CheckCircle2, AlertCircle, Award, History, FileText, Printer,
-  ChevronRight, GraduationCap
+  CheckCircle2, AlertCircle, Award, History, FileText, Printer
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer, Cell, AreaChart, Area, YAxis, CartesianGrid } from 'recharts';
 import { generateEbookHTML, generateStudentReportHTML, openPrintWindow } from '../utils/generateExamPDF';
-
-// ── Mobile detection hook ──
-function useIsMobile() {
-  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
-  useEffect(() => {
-    const mq = window.matchMedia('(max-width: 768px)');
-    const handler = (e) => setIsMobile(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
-  }, []);
-  return isMobile;
-}
 
 function ChartTooltip({ active, payload }) {
   if (active && payload && payload.length) {
@@ -298,246 +285,6 @@ export default function StudentDashboard() {
     openPrintWindow(html);
   };
 
-  const isMobile = useIsMobile();
-
-  // ── MOBILE RENDER ────────────────────────────────────────────────────────
-  if (isMobile) {
-    return (
-      <div className="animate-fade-in">
-
-        {/* ── Mobile Hero Card ── */}
-        <div className="mobile-hero-card">
-          <div style={{ position: 'relative', zIndex: 1 }}>
-            <p className="mob-page-greeting">Bonjour 👋</p>
-            <h1 className="mob-page-title" style={{ color: '#fff' }}>{user?.name?.split(' ')[0]}</h1>
-            <p style={{ color: 'rgba(255,255,255,0.75)', fontSize: '0.82rem', margin: '0.4rem 0 1.25rem', fontWeight: 500 }}>
-              {stats.dueToday > 0
-                ? `${stats.dueToday} fiches à réviser aujourd'hui 🔥`
-                : 'Toutes tes révisions sont à jour ✅'}
-            </p>
-            {/* Hero CTA */}
-            <button
-              onClick={() => navigate('/study')}
-              style={{
-                width: '100%', padding: '0.875rem', borderRadius: '16px',
-                background: 'rgba(255,255,255,0.2)',
-                border: '1.5px solid rgba(255,255,255,0.35)',
-                color: '#fff', fontWeight: 900, fontSize: '0.95rem',
-                fontFamily: 'inherit', cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-                backdropFilter: 'blur(10px)', transition: 'all 0.2s'
-              }}
-            >
-              <BrainCircuit size={18} />
-              Lancer la révision du jour
-              {stats.dueToday > 0 && (
-                <span style={{
-                  background: 'var(--danger)', borderRadius: '99px',
-                  padding: '0.1rem 0.5rem', fontSize: '0.7rem', fontWeight: 900
-                }}>{stats.dueToday}</span>
-              )}
-            </button>
-          </div>
-          {/* Decorative stat chips */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', position: 'relative', zIndex: 1 }}>
-            {[
-              { icon: '🔥', val: `${stats.streak}j`, label: 'Série' },
-              { icon: '⚡', val: user?.xp ?? 0, label: 'XP' },
-              { icon: '🏆', val: `#${stats.rank}`, label: 'Rang' },
-            ].map(chip => (
-              <div key={chip.label} style={{
-                flex: 1, background: 'rgba(255,255,255,0.12)',
-                borderRadius: '12px', padding: '0.55rem 0.4rem',
-                textAlign: 'center', border: '1px solid rgba(255,255,255,0.18)'
-              }}>
-                <div style={{ fontSize: '0.95rem', marginBottom: '1px' }}>{chip.icon}</div>
-                <div style={{ fontWeight: 900, fontSize: '0.9rem', color: '#fff', lineHeight: 1 }}>{chip.val}</div>
-                <div style={{ fontSize: '0.56rem', color: 'rgba(255,255,255,0.65)', fontWeight: 600, marginTop: '2px' }}>{chip.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Quick Actions ── */}
-        <div className="mobile-quick-actions">
-          {[
-            { icon: '📚', label: 'Réviser', color: '#716DF2', bg: 'rgba(113,109,242,0.12)', action: () => navigate('/study') },
-            { icon: '📷', label: 'Scanner', color: '#10B981', bg: 'rgba(16,185,129,0.12)', action: () => navigate('/scanner') },
-            { icon: '🎯', label: 'Examen', color: '#EF4444', bg: 'rgba(239,68,68,0.12)', action: () => navigate('/schools') },
-            { icon: '🏆', label: 'Classement', color: '#F59E0B', bg: 'rgba(245,158,11,0.12)', action: () => navigate('/ranking') },
-          ].map(qa => (
-            <button key={qa.label} className="mobile-qa-btn" onClick={qa.action}>
-              <div className="mobile-qa-icon" style={{ background: qa.bg }}>
-                <span style={{ fontSize: '1.3rem' }}>{qa.icon}</span>
-              </div>
-              <span className="mobile-qa-label">{qa.label}</span>
-            </button>
-          ))}
-        </div>
-
-        {/* ── Modules de Révision ── */}
-        <div className="mobile-section-header">
-          <span className="mobile-section-title">📖 Mes Modules</span>
-          <button className="mobile-section-link" onClick={() => navigate('/schools')}>Voir tout</button>
-        </div>
-
-        {activeExams.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)', background: 'var(--bg-card)', borderRadius: '20px', border: '1px solid var(--border)' }}>
-            <BrainCircuit size={36} style={{ opacity: 0.3, marginBottom: '0.75rem' }} />
-            <p style={{ fontWeight: 600, fontSize: '0.9rem', margin: 0 }}>Aucun module disponible</p>
-          </div>
-        ) : (
-          <div className="mobile-scroll-row" style={{ marginBottom: '1.5rem' }}>
-            {activeExams.map(exam => {
-              const dueCount = getDueCount(exam.questions);
-              const isCompleted = dueCount === 0;
-              const isLocked = isExamLocked(exam);
-              return (
-                <div
-                  key={exam.id}
-                  className="mobile-exam-mini-card"
-                  onClick={() => !isLocked && navigate('/study', { state: { examId: exam.id } })}
-                  style={{ opacity: isLocked ? 0.65 : 1 }}
-                >
-                  <div style={{
-                    width: 40, height: 40, borderRadius: '12px', marginBottom: '0.65rem',
-                    background: isLocked ? 'var(--bg-glass)' : isCompleted ? 'rgba(16,185,129,0.12)' : 'var(--violet-soft)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: isLocked ? 'var(--text-subtle)' : isCompleted ? 'var(--emerald)' : 'var(--violet)'
-                  }}>
-                    {isLocked ? <Lock size={18} /> : <BookOpen size={20} />}
-                  </div>
-                  <p style={{ margin: '0 0 0.25rem', fontWeight: 800, fontSize: '0.82rem', color: 'var(--text-main)', lineHeight: 1.3 }}>
-                    {exam.name}
-                  </p>
-                  <p style={{ margin: 0, fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                    {exam.questions.length} QCM • {exam.year}
-                  </p>
-                  {!isLocked && !isCompleted && (
-                    <div style={{
-                      marginTop: '0.65rem', padding: '0.3rem 0.6rem',
-                      background: 'var(--violet-soft)', borderRadius: '8px',
-                      fontSize: '0.65rem', fontWeight: 800, color: 'var(--violet)',
-                      display: 'inline-flex', alignItems: 'center', gap: '3px'
-                    }}>
-                      <Clock size={10} /> {dueCount} dues
-                    </div>
-                  )}
-                  {isCompleted && !isLocked && (
-                    <div style={{
-                      marginTop: '0.65rem', padding: '0.3rem 0.6rem',
-                      background: 'rgba(16,185,129,0.1)', borderRadius: '8px',
-                      fontSize: '0.65rem', fontWeight: 800, color: 'var(--emerald)',
-                      display: 'inline-flex', alignItems: 'center', gap: '3px'
-                    }}>
-                      <CheckCircle2 size={10} /> Maîtrisé
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* ── Pedagogical Tip ── */}
-        <div style={{
-          background: 'var(--bg-card)', border: `1.5px solid ${tip.color}33`,
-          borderRadius: '20px', padding: '1.1rem 1.25rem',
-          display: 'flex', gap: '0.875rem', alignItems: 'flex-start',
-          marginBottom: '1.25rem'
-        }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: '12px', flexShrink: 0,
-            background: `${tip.color}15`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <tip.icon size={20} color={tip.color} />
-          </div>
-          <div>
-            <p style={{ margin: '0 0 0.2rem', fontWeight: 800, fontSize: '0.88rem', color: tip.color }}>{tip.title}</p>
-            <p style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>{tip.desc}</p>
-          </div>
-        </div>
-
-        {/* ── Weekly Activity Chart ── */}
-        <div style={{
-          background: 'var(--bg-card)', border: '1px solid var(--border)',
-          borderRadius: '20px', padding: '1.1rem 1.25rem',
-          marginBottom: '1.5rem', boxShadow: 'var(--shadow-card)'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
-            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: 'var(--text-main)' }}>📊 Activité Hebdomadaire</span>
-            <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              {stats.weeklyActivity ? stats.weeklyActivity.reduce((acc, curr) => acc + (curr.count || 0), 0) : 0} révisions
-            </span>
-          </div>
-          <div style={{ height: 120, width: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={stats.weeklyActivity || []} barSize={12}>
-                <XAxis dataKey="name" stroke="var(--text-subtle)" fontSize={9} tickLine={false} axisLine={false} />
-                <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.02)' }} />
-                <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {(stats.weeklyActivity || []).map((entry, i) => {
-                    const fill = entry.count >= 20 ? 'var(--emerald)' : entry.count > 0 ? 'var(--violet)' : 'var(--border)';
-                    return <Cell key={i} fill={fill} />;
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        {/* ── Mock Exam History (last 3) ── */}
-        {mockExamHistory && mockExamHistory.length > 0 && (
-          <>
-            <div className="mobile-section-header">
-              <span className="mobile-section-title">📊 Derniers Examens</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.5rem' }}>
-              {[...mockExamHistory].slice(0, 3).map((item, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: '0.875rem',
-                  padding: '0.875rem 1rem',
-                  background: 'var(--bg-card)', border: '1px solid var(--border)',
-                  borderRadius: '16px'
-                }}>
-                  <div style={{
-                    width: 42, height: 42, borderRadius: '12px', flexShrink: 0,
-                    background: item.pct >= 70 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontWeight: 900, fontSize: '0.88rem',
-                    color: item.pct >= 70 ? 'var(--emerald)' : 'var(--danger)'
-                  }}>
-                    {item.pct}%
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ margin: 0, fontWeight: 700, fontSize: '0.82rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {item.examName}
-                    </p>
-                    <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                      {item.score}/{item.maxScore} pts
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleDownloadReport(item)}
-                    style={{
-                      background: 'var(--bg-glass)', border: '1px solid var(--border)',
-                      borderRadius: '10px', padding: '0.4rem 0.6rem', cursor: 'pointer',
-                      color: 'var(--text-muted)', display: 'flex', alignItems: 'center'
-                    }}
-                  >
-                    <Printer size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  }
-
-  // ── DESKTOP RENDER ───────────────────────────────────────────────────────
   return (
     <div className="animate-fade-in">
       {/* ── Header ── */}
@@ -555,23 +302,64 @@ export default function StudentDashboard() {
             Prêt pour votre session de Spaced Repetition du jour ?
           </p>
         </div>
+        
+        {/* Quick Actions Button Group */}
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
-          <button
+          {/* Daily Guided Review Button */}
+          <button 
             className="btn"
             onClick={() => navigate('/study')}
-            style={{ background: 'linear-gradient(135deg, var(--violet), #4f46e5)', border: 'none', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', boxShadow: '0 10px 25px rgba(124, 58, 237, 0.25)', color: '#fff' }}
+            style={{ 
+              background: 'linear-gradient(135deg, var(--violet), #4f46e5)', 
+              border: 'none', 
+              fontWeight: 800, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              boxShadow: '0 10px 25px rgba(124, 58, 237, 0.25)',
+              transform: 'translateY(0)',
+              transition: 'all 0.2s ease',
+              color: '#fff'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 12px 30px rgba(124, 58, 237, 0.35)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(124, 58, 237, 0.25)'; }}
           >
             <BrainCircuit size={16} /> Révision Guidée Quotidienne
             {stats.dueToday > 0 && (
-              <span style={{ background: 'var(--danger)', color: '#fff', borderRadius: '99px', padding: '0.1rem 0.5rem', fontSize: '0.7rem', fontWeight: 900, marginLeft: '0.25rem' }}>
+              <span style={{ 
+                background: 'var(--danger)', 
+                color: '#fff', 
+                borderRadius: '99px', 
+                padding: '0.1rem 0.5rem', 
+                fontSize: '0.7rem', 
+                fontWeight: 900,
+                marginLeft: '0.25rem',
+                boxShadow: '0 2px 8px rgba(239, 68, 68, 0.4)'
+              }}>
                 {stats.dueToday}
               </span>
             )}
           </button>
-          <button
+
+          {/* Quick OMR Scan Button */}
+          <button 
             className="btn-outline"
             onClick={() => navigate('/scanner')}
-            style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 1.5rem', color: 'var(--text-main)' }}
+            style={{ 
+              background: 'var(--bg-glass)', 
+              border: '1px solid var(--border)', 
+              fontWeight: 800, 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              padding: '0.75rem 1.5rem',
+              transform: 'translateY(0)',
+              transition: 'all 0.2s ease',
+              color: 'var(--text-main)'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.background = 'var(--bg-glass)'; }}
           >
             <Camera size={16} /> Scanner une feuille OMR
           </button>
