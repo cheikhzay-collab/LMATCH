@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
-import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription } from '../services/userService';
+import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard } from '../services/userService';
 import { getAllExams, getActiveExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam } from '../services/examService';
 import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, getCode } from '../services/planService';
@@ -329,6 +329,18 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     localStorage.setItem('mockExamHistory', JSON.stringify(mockExamHistory));
   }, [mockExamHistory]);
+
+  const [leaderboard, setLeaderboard] = useState([]);
+
+  const refreshLeaderboard = useCallback(async () => {
+    if (!SUPABASE_ENABLED) return;
+    try {
+      const data = await getLeaderboard();
+      setLeaderboard(data || []);
+    } catch (e) {
+      console.warn('[Supabase] Failed to refresh leaderboard:', e.message);
+    }
+  }, []);
 
   const saveMockExamResult = async (result) => {
     const localId = Math.random().toString(36).substr(2, 9);
@@ -1088,10 +1100,24 @@ export function AuthProvider({ children }) {
 
     const globalMasteryPct = totalCards > 0 ? Math.round((masteredCards / totalCards) * 100) : 0;
 
-    // Dynamic live rank based on XP
-    const totalStudents = user?.totalStudents || 1200;
+    // Dynamic live rank based on real leaderboard or XP fallback
+    let totalStudents = user?.totalStudents || 1200;
+    let rank = 1200;
     const userXp = user?.xp || 0;
-    const rank = Math.max(1, Math.min(totalStudents, Math.round(totalStudents * Math.pow(0.9992, userXp))));
+
+    if (SUPABASE_ENABLED && leaderboard && leaderboard.length > 0) {
+      totalStudents = leaderboard.length;
+      const userIndex = leaderboard.findIndex(u => u.name === user?.name || u.email === user?.email);
+      if (userIndex !== -1) {
+        rank = userIndex + 1;
+      } else {
+        const higherXpCount = leaderboard.filter(u => u.xp > userXp).length;
+        rank = higherXpCount + 1;
+      }
+    } else {
+      totalStudents = user?.totalStudents || 1200;
+      rank = Math.max(1, Math.min(totalStudents, Math.round(totalStudents * Math.pow(0.9992, userXp))));
+    }
 
     return {
       totalCards, masteredCards, learningCards,
@@ -1179,19 +1205,28 @@ export function AuthProvider({ children }) {
     loadConfigAndExams();
   }, [user]);
 
-  // Fetch User-specific data (progress, history) when a student logs in
+  // Fetch User-specific data (progress, history, activity, leaderboard) when a student logs in
   useEffect(() => {
     if (!SUPABASE_ENABLED || !user || user.role === 'admin') return;
 
     const loadStudentData = async () => {
       const userId = user.uid || user.id;
       try {
-        const [fbProgress, fbHistory] = await Promise.all([
+        const [fbProgress, fbHistory, fbActivity, fbLeaderboard] = await Promise.all([
           getAllProgress(userId),
-          getMockHistory(userId)
+          getMockHistory(userId),
+          getRecentActivity(userId),
+          getLeaderboard()
         ]);
         setProgress(fbProgress || {});
         setMockExamHistory(fbHistory || []);
+        setLeaderboard(fbLeaderboard || []);
+
+        if (fbActivity) {
+          localStorage.setItem('dailyActivity', JSON.stringify(fbActivity));
+          const dates = Object.keys(fbActivity);
+          localStorage.setItem('reviewDates', JSON.stringify(dates));
+        }
       } catch (e) {
         console.warn('[Supabase] Error loading student progress:', e.message);
       }
@@ -1312,6 +1347,7 @@ export function AuthProvider({ children }) {
       schools, addSchool, removeSchool, renameSchool,
       schoolBranding, updateSchoolBranding,
       mockExamHistory, saveMockExamResult,
+      leaderboard, refreshLeaderboard,
       isExamLocked,
       supabaseEnabled: SUPABASE_ENABLED,
       refreshAdminData,

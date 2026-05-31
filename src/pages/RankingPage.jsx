@@ -4,7 +4,7 @@ import { getLeaderboard } from '../services/userService';
 import { Trophy, Flame, Crown, Medal, Award, Search, School, Zap, ChevronUp, ChevronDown } from 'lucide-react';
 
 export default function RankingPage() {
-  const { user, getStudentStats } = useAuth();
+  const { user, getStudentStats, leaderboard: dbLeaderboard, refreshLeaderboard } = useAuth();
   const stats = getStudentStats();
   
   const [filterSchool, setFilterSchool] = useState('All');
@@ -20,16 +20,12 @@ export default function RankingPage() {
     return parts[0].slice(0, 2).toUpperCase();
   };
 
-  const [realLeaderboard, setRealLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchLeaderboardData = async () => {
       try {
-        const data = await getLeaderboard();
-        if (data && data.length > 0) {
-          setRealLeaderboard(data);
-        }
+        await refreshLeaderboard();
       } catch (err) {
         console.error('[Ranking] Failed to load real leaderboard:', err);
       } finally {
@@ -37,38 +33,15 @@ export default function RankingPage() {
       }
     };
     fetchLeaderboardData();
-  }, []);
+  }, [refreshLeaderboard]);
 
-  // 1. Define standard mock lists as fallbacks or seeds
-  const mockTopThree = [
-    { name: 'Amine Slaoui', school: 'ENSA', xp: 9550, streak: 34, change: 'up', tier: 'premium' },
-    { name: 'Chaimae Boutaleb', school: 'Médecine / Pharmacie', xp: 9120, streak: 22, change: 'same', tier: 'premium' },
-    { name: 'Reda El Amrani', school: 'Général (Prépa)', xp: 8850, streak: 18, change: 'down', tier: 'premium' }
-  ];
-
-  const mockGeneralList = [
-    { name: 'Sara Bennani', school: 'Médecine / Pharmacie', xp: 8450, streak: 12, change: 'up', tier: 'premium' },
-    { name: 'Anas Meziane', school: 'ENSAM', xp: 7900, streak: 9, change: 'up', tier: 'premium' },
-    { name: 'Yasmine Filali', school: 'ENCG', xp: 7420, streak: 15, change: 'down', tier: 'freemium' },
-    { name: 'Mehdi Jouahri', school: 'INPT', xp: 6980, streak: 8, change: 'same', tier: 'premium' },
-    { name: 'Salma Tazi', school: 'INSEA', xp: 6510, streak: 6, change: 'up', tier: 'freemium' },
-    { name: 'Walid Berrada', school: 'ENSA', xp: 6100, streak: 11, change: 'down', tier: 'freemium' }
-  ];
-
-  // 2. Fetch or construct the list of profiles
-  // We combine the real leaderboard fetched from DB with our seed mock lists to ensure
-  // a populated leaderboard while fully integrating real database users.
+  // 1. Define or construct the list of profiles from real database
   const mergedUsersMap = new Map();
 
-  // Add mock users first
-  [...mockTopThree, ...mockGeneralList].forEach(u => {
-    mergedUsersMap.set(u.name.toLowerCase(), u);
-  });
-
-  // Overwrite or add real users from database
-  realLeaderboard.forEach((u, idx) => {
+  // Add real users from database
+  (dbLeaderboard || []).forEach((u, idx) => {
     if (!u.name) return;
-    const school = u.tier === 'premium' ? 'Médecine / Pharmacie' : ['ENSA', 'ENSAM', 'Général (Prépa)', 'ENCG'][idx % 4];
+    const school = u.school || (u.tier === 'premium' ? 'Médecine / Pharmacie' : ['ENSA', 'ENSAM', 'Général (Prépa)', 'ENCG'][idx % 4]);
     mergedUsersMap.set(u.name.toLowerCase(), {
       name: u.name,
       xp: u.xp || 0,
@@ -88,7 +61,7 @@ export default function RankingPage() {
       streak: stats.streak || 0,
       tier: user.tier || 'freemium',
       school: userSchool,
-      change: 'up',
+      change: 'same',
       isCurrentUser: true
     });
   }
@@ -105,15 +78,15 @@ export default function RankingPage() {
 
   // Separate top 3 and general list
   const topThree = rankedLeaderboard.slice(0, 3);
-  const generalList = rankedLeaderboard.slice(3, 9); // ranks 4 to 9
+  const generalList = rankedLeaderboard.slice(3); // ranks 4+
 
   // Calculate current user's rank
   const currentUserRowIndex = rankedLeaderboard.findIndex(item => item.name === user?.name);
-  const currentUserRank = currentUserRowIndex !== -1 ? currentUserRowIndex + 1 : (stats.rank || 12);
+  const currentUserRank = currentUserRowIndex !== -1 ? currentUserRowIndex + 1 : (stats.rank || 1);
   const currentUserXP = user?.xp || 0;
   const currentUserStreak = stats.streak || 0;
 
-  // Create a simulated list of surrounding users for the current student if they are not in the top 9
+  // Create a list of surrounding users for the current student if they are not in the top 9
   const isCurrentUserInTopNine = currentUserRank <= 9;
 
   let leaderboard = [...generalList];
@@ -127,37 +100,22 @@ export default function RankingPage() {
       xp: currentUserXP,
       streak: currentUserStreak,
       isCurrentUser: true,
-      change: 'up'
+      change: 'same'
     };
 
-    const neighborAbove = rankedLeaderboard[currentUserRank - 2] || {
-      rank: currentUserRank - 1,
-      name: 'Driss Alami',
-      school: 'ENSA',
-      xp: currentUserXP + 120,
-      streak: Math.max(1, currentUserStreak - 1),
-      change: 'up'
-    };
-
-    const neighborBelow = rankedLeaderboard[currentUserRank] || {
-      rank: currentUserRank + 1,
-      name: 'Kawtar Naciri',
-      school: 'ENCG',
-      xp: Math.max(0, currentUserXP - 90),
-      streak: currentUserStreak + 2,
-      change: 'down'
-    };
+    const neighborAbove = rankedLeaderboard[currentUserRank - 2] || null;
+    const neighborBelow = rankedLeaderboard[currentUserRank] || null;
 
     // Insert spacer and neighbors
     leaderboard = [
-      ...generalList,
+      ...generalList.slice(0, 6),
       { isSpacer: true, key: 'spacer-1' },
-      neighborAbove,
+      ...(neighborAbove ? [neighborAbove] : []),
       userRow,
-      neighborBelow,
+      ...(neighborBelow ? [neighborBelow] : []),
       { isSpacer: true, key: 'spacer-2' },
-      rankedLeaderboard[rankedLeaderboard.length - 1] || { rank: stats.totalStudents || 1200, name: 'Zouhair Fahmi', school: 'Général (Prépa)', xp: 120, streak: 0, change: 'same' }
-    ];
+      rankedLeaderboard[rankedLeaderboard.length - 1]
+    ].filter(Boolean);
   } else {
     // If current user is in the list, tag them
     leaderboard = leaderboard.map(item => 
@@ -291,110 +249,137 @@ export default function RankingPage() {
       </div>
 
       {/* ── Podium Section (Top 3 Displays) ── */}
-      {displayTopThree.length === 3 && searchQuery === '' && (
-        <div className="podium-wrapper">
-          
-          {/* Rank 2 (Silver) */}
-          <div className="podium-pillar" style={{
-            height: '190px',
-            background: 'linear-gradient(to top, rgba(148, 163, 184, 0.08) 0%, rgba(148, 163, 184, 0.01) 100%)',
-            border: '1px solid rgba(148, 163, 184, 0.15)'
-          }}>
-            <div className="podium-avatar-container">
-              <div className="podium-avatar podium-avatar-glow-2" style={{ background: 'linear-gradient(135deg, #94A3B8 0%, #475569 100%)' }}>
-                {getInitials(displayTopThree[1].name)}
-              </div>
-              <div className="rank-badge-pill rank-badge-silver">
-                2
-              </div>
-            </div>
-            <div style={{ textAlign: 'center', zIndex: 1, width: '100%' }}>
-              <div className="podium-name">
-                {displayTopThree[1].name}
-              </div>
-              <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center', marginTop: '0.2rem' }}>
-                <School size={11} /> {displayTopThree[1].school}
-              </div>
-              <div style={{ marginTop: '0.5rem', fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)' }}>
-                {displayTopThree[1].xp} XP
-              </div>
-              <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.2rem', justifyContent: 'center', marginTop: '0.25rem' }}>
-                <Flame size={12} /> {displayTopThree[1].streak}j
-              </div>
-            </div>
-            <div className="podium-watermark watermark-silver">2</div>
-          </div>
-
-          {/* Rank 1 (Gold) */}
-          <div className="podium-pillar" style={{
-            height: '240px',
-            background: 'linear-gradient(to top, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.02) 100%)',
-            border: '1px solid rgba(245, 158, 11, 0.25)',
-            transform: 'scale(1.04) translateY(-10px)'
-          }}>
-            {/* Crown decoration floating on top */}
-            <div style={{ position: 'absolute', top: '-22px', color: '#F59E0B', zIndex: 3 }}>
-              <Crown size={26} fill="#F59E0B" strokeWidth={1.5} />
-            </div>
+      {displayTopThree.length > 0 && searchQuery === '' && (() => {
+        const goldUser = displayTopThree[0] || null;
+        const silverUser = displayTopThree[1] || null;
+        const bronzeUser = displayTopThree[2] || null;
+        
+        return (
+          <div className="podium-wrapper">
             
-            <div className="podium-avatar-container">
-              <div className="podium-avatar podium-avatar-glow-1" style={{ background: 'linear-gradient(135deg, #FBBF24 0%, #D97706 100%)' }}>
-                {getInitials(displayTopThree[0].name)}
+            {/* Rank 2 (Silver) */}
+            <div className="podium-pillar" style={{
+              height: '190px',
+              background: 'linear-gradient(to top, rgba(148, 163, 184, 0.08) 0%, rgba(148, 163, 184, 0.01) 100%)',
+              border: '1px solid rgba(148, 163, 184, 0.15)',
+              opacity: silverUser ? 1 : 0.4
+            }}>
+              <div className="podium-avatar-container">
+                <div className="podium-avatar podium-avatar-glow-2" style={{ background: silverUser ? 'linear-gradient(135deg, #94A3B8 0%, #475569 100%)' : 'var(--border)' }}>
+                  {silverUser ? getInitials(silverUser.name) : '?'}
+                </div>
+                <div className="rank-badge-pill rank-badge-silver">
+                  2
+                </div>
               </div>
-              <div className="rank-badge-pill rank-badge-gold">
-                1
+              <div style={{ textAlign: 'center', zIndex: 1, width: '100%' }}>
+                <div className="podium-name">
+                  {silverUser ? silverUser.name : 'Place vacante'}
+                </div>
+                {silverUser ? (
+                  <>
+                    <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center', marginTop: '0.2rem' }}>
+                      <School size={11} /> {silverUser.school}
+                    </div>
+                    <div style={{ marginTop: '0.5rem', fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                      {silverUser.xp} XP
+                    </div>
+                    <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.2rem', justifyContent: 'center', marginTop: '0.25rem' }}>
+                      <Flame size={12} /> {silverUser.streak}j
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>En attente...</div>
+                )}
               </div>
+              <div className="podium-watermark watermark-silver">2</div>
             </div>
-            <div style={{ textAlign: 'center', zIndex: 1, width: '100%' }}>
-              <div className="podium-name" style={{ fontWeight: 900 }}>
-                {displayTopThree[0].name}
-              </div>
-              <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center', marginTop: '0.2rem' }}>
-                <School size={11} /> {displayTopThree[0].school}
-              </div>
-              <div style={{ marginTop: '0.5rem', fontWeight: 900, fontSize: '1.05rem', color: '#f59e0b' }}>
-                {displayTopThree[0].xp} XP
-              </div>
-              <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.2rem', justifyContent: 'center', marginTop: '0.25rem' }}>
-                <Flame size={13} /> {displayTopThree[0].streak}j
-              </div>
-            </div>
-            <div className="podium-watermark watermark-gold">1</div>
-          </div>
 
-          {/* Rank 3 (Bronze) */}
-          <div className="podium-pillar" style={{
-            height: '170px',
-            background: 'linear-gradient(to top, rgba(180, 83, 9, 0.08) 0%, rgba(180, 83, 9, 0.01) 100%)',
-            border: '1px solid rgba(180, 83, 9, 0.15)'
-          }}>
-            <div className="podium-avatar-container">
-              <div className="podium-avatar podium-avatar-glow-3" style={{ background: 'linear-gradient(135deg, #CA8A04 0%, #78350F 100%)' }}>
-                {getInitials(displayTopThree[2].name)}
+            {/* Rank 1 (Gold) */}
+            <div className="podium-pillar" style={{
+              height: '240px',
+              background: 'linear-gradient(to top, rgba(245, 158, 11, 0.1) 0%, rgba(245, 158, 11, 0.02) 100%)',
+              border: '1px solid rgba(245, 158, 11, 0.25)',
+              transform: 'scale(1.04) translateY(-10px)',
+              opacity: goldUser ? 1 : 0.4
+            }}>
+              {/* Crown decoration floating on top */}
+              <div style={{ position: 'absolute', top: '-22px', color: '#F59E0B', zIndex: 3 }}>
+                <Crown size={26} fill="#F59E0B" strokeWidth={1.5} />
               </div>
-              <div className="rank-badge-pill rank-badge-bronze">
-                3
+              
+              <div className="podium-avatar-container">
+                <div className="podium-avatar podium-avatar-glow-1" style={{ background: goldUser ? 'linear-gradient(135deg, #FBBF24 0%, #D97706 100%)' : 'var(--border)' }}>
+                  {goldUser ? getInitials(goldUser.name) : '?'}
+                </div>
+                <div className="rank-badge-pill rank-badge-gold">
+                  1
+                </div>
               </div>
+              <div style={{ textAlign: 'center', zIndex: 1, width: '100%' }}>
+                <div className="podium-name" style={{ fontWeight: 900 }}>
+                  {goldUser ? goldUser.name : 'Place vacante'}
+                </div>
+                {goldUser ? (
+                  <>
+                    <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center', marginTop: '0.2rem' }}>
+                      <School size={11} /> {goldUser.school}
+                    </div>
+                    <div style={{ marginTop: '0.5rem', fontWeight: 900, fontSize: '1.05rem', color: '#f59e0b' }}>
+                      {goldUser.xp} XP
+                    </div>
+                    <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.76rem', fontWeight: 700, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.2rem', justifyContent: 'center', marginTop: '0.25rem' }}>
+                      <Flame size={13} /> {goldUser.streak}j
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>En attente...</div>
+                )}
+              </div>
+              <div className="podium-watermark watermark-gold">1</div>
             </div>
-            <div style={{ textAlign: 'center', zIndex: 1, width: '100%' }}>
-              <div className="podium-name">
-                {displayTopThree[2].name}
-              </div>
-              <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center', marginTop: '0.2rem' }}>
-                <School size={11} /> {displayTopThree[2].school}
-              </div>
-              <div style={{ marginTop: '0.5rem', fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)' }}>
-                {displayTopThree[2].xp} XP
-              </div>
-              <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.2rem', justifyContent: 'center', marginTop: '0.25rem' }}>
-                <Flame size={12} /> {displayTopThree[2].streak}j
-              </div>
-            </div>
-            <div className="podium-watermark watermark-bronze">3</div>
-          </div>
 
-        </div>
-      )}
+            {/* Rank 3 (Bronze) */}
+            <div className="podium-pillar" style={{
+              height: '170px',
+              background: 'linear-gradient(to top, rgba(180, 83, 9, 0.08) 0%, rgba(180, 83, 9, 0.01) 100%)',
+              border: '1px solid rgba(180, 83, 9, 0.15)',
+              opacity: bronzeUser ? 1 : 0.4
+            }}>
+              <div className="podium-avatar-container">
+                <div className="podium-avatar podium-avatar-glow-3" style={{ background: bronzeUser ? 'linear-gradient(135deg, #CA8A04 0%, #78350F 100%)' : 'var(--border)' }}>
+                  {bronzeUser ? getInitials(bronzeUser.name) : '?'}
+                </div>
+                <div className="rank-badge-pill rank-badge-bronze">
+                  3
+                </div>
+              </div>
+              <div style={{ textAlign: 'center', zIndex: 1, width: '100%' }}>
+                <div className="podium-name">
+                  {bronzeUser ? bronzeUser.name : 'Place vacante'}
+                </div>
+                {bronzeUser ? (
+                  <>
+                    <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem', justifyContent: 'center', marginTop: '0.2rem' }}>
+                      <School size={11} /> {bronzeUser.school}
+                    </div>
+                    <div style={{ marginTop: '0.5rem', fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                      {bronzeUser.xp} XP
+                    </div>
+                    <div className="leaderboard-col-hide-mobile" style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.2rem', justifyContent: 'center', marginTop: '0.25rem' }}>
+                      <Flame size={12} /> {bronzeUser.streak}j
+                    </div>
+                  </>
+                ) : (
+                  <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>En attente...</div>
+                )}
+              </div>
+              <div className="podium-watermark watermark-bronze">3</div>
+            </div>
+
+          </div>
+        );
+      })()}
 
       {/* ── Search and School Filters ── */}
       <div className="filters-search-wrapper">
