@@ -2,24 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { deleteUser } from '../services/userService';
-import { Trash } from 'lucide-react';
-
-// inside component
-const handleDelete = async (uid, e) => {
-  e.stopPropagation();
-  if (!window.confirm('هل تريد حذف هذا المستخدم بشكل دائم؟')) return;
-  const success = await deleteUser(uid);
-  if (success) {
-    await refreshAdminData();
-  }
-};
-
+import { Users, Crown, Activity, TrendingUp, RefreshCw, Search, User, ChevronRight, Trash } from 'lucide-react';
 
 export default function AdminUsers() {
   const { users, updateUserTier, refreshAdminData } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
+
+  const handleDelete = async (uid, e) => {
+    e.stopPropagation();
+    if (!window.confirm('هل تريد حذف هذا المستخدم بشكل دائم؟')) return;
+    const success = await deleteUser(uid);
+    if (success) {
+      await refreshAdminData();
+    }
+  };
 
   useEffect(() => {
     if (refreshAdminData) {
