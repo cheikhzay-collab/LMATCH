@@ -287,7 +287,7 @@ export default function Flashcard({ card, onNext }) {
                      <div className="option-letter">
                        {opt.id}
                      </div>
-                     <div style={{ flex: 1 }}>
+                     <div style={{ flex: 1, minWidth: 0 }}>
                        {renderOptionText(opt.text)}
                      </div>
                    </button>
@@ -398,7 +398,7 @@ export default function Flashcard({ card, onNext }) {
                        <div className="option-letter">
                          {opt.id}
                        </div>
-                       <div style={{ flex: 1 }}>
+                       <div style={{ flex: 1, minWidth: 0 }}>
                          {renderOptionText(opt.text)}
                        </div>
                        {isOptCorrect && <CheckCircle2 size={16} color="#10b981" />}

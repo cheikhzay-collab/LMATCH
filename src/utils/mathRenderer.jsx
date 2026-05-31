@@ -84,9 +84,8 @@ export function SafeInlineMath({ math }) {
   const html = renderInlineKatex(math);
   return (
     <span
-      className="notranslate"
+      className="notranslate inline-math-container"
       translate="no"
-      style={{ display: 'inline-block' }}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

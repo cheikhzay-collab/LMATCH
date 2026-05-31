@@ -1208,6 +1208,18 @@ body.light-theme .astuce-tabs {
 
 /* ─── KATEX OVERRIDES ────────────────────────────────────────────── */
 .katex { color: var(--text-main) !important; }
+.inline-math-container {
+  display: inline-block;
+  max-width: 100%;
+  vertical-align: middle;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.inline-math-container::-webkit-scrollbar {
+  display: none;
+}
 
 /* ─── ANIMATIONS ─────────────────────────────────────────────────── */
 @keyframes fadeIn {
@@ -2124,9 +2136,13 @@ body.light-theme .astuce-tabs {
   }
   
   .flashcard-context-text {
-    font-size: 1.1rem;
+    font-size: 1.05rem;
     line-height: 1.5;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
   }
+  
+
   
   .flashcard-question-box {
     font-size: 1.05rem;
