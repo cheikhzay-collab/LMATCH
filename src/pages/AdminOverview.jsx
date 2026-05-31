@@ -77,27 +77,27 @@ export default function AdminOverview() {
       id: 'omr-1',
       type: 'omr',
       title: 'Conflit de lecture OMR',
-      student: 'ياسين كمال',
-      details: 'تظليل مزدوج في السؤال 12 (نسبة الثقة 48% فقط)',
-      time: 'منذ 5 دقائق',
+      student: 'Yassine Kamel',
+      details: 'Double marquage détecté sur la question 12 (indice de confiance 48%).',
+      time: 'Il y a 5 min',
       severity: 'high',
     },
     {
       id: 'parent-1',
       type: 'parent',
-      title: 'طلب تواصل من ولي أمر',
-      student: 'أمل العلمي',
-      details: 'مناقشة هبوط مستوى الاشتقاق الرياضي للتلميذة',
-      time: 'منذ 20 دقيقة',
+      title: 'Rappel parent demandé',
+      student: 'Amal Alami',
+      details: "Baisse de performance signalée sur l'étude des dérivées mathématiques.",
+      time: 'Il y a 20 min',
       severity: 'medium',
     },
     {
       id: 'code-1',
       type: 'code',
-      title: 'كود تفعيل معلق',
-      student: 'أمين الودادي',
-      details: 'إدخال خاطئ متكرر مع وجود إيصال دفع صحيح بحاجة لتفعيل يدوي',
-      time: 'منذ ساعة',
+      title: "Code d'activation bloqué",
+      student: 'Amine Ouadadi',
+      details: 'Erreurs de saisie répétées avec un reçu de paiement valide fourni.',
+      time: 'Il y a 1h',
       severity: 'low',
     }
   ]);
@@ -127,7 +127,7 @@ export default function AdminOverview() {
             </p>
             {showDerivative && payload[1] && (
               <p style={{ margin: 0, fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', gap: '1.5rem', alignItems: 'center' }}>
-                <span>Vitesse f'(t) :</span>
+                <span>Vitesse f\'(t) :</span>
                 <strong style={{ color: 'var(--violet)', fontSize: '1rem' }}>
                   {payload[1].value > 0 ? `+${payload[1].value}` : payload[1].value}% / sem
                 </strong>
@@ -141,7 +141,7 @@ export default function AdminOverview() {
   };
 
   return (
-    <div className="animate-fade-in" style={{ direction: 'rtl', textAlign: 'right' }}>
+    <div className="animate-fade-in" style={{ direction: 'ltr', textAlign: 'left' }}>
       
       {/* ── HEADER WITH AI-OMR ENGINE PULSE ── */}
       <header style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2.5rem', flexWrap: 'wrap', gap: '1.5rem' }}>
@@ -150,9 +150,9 @@ export default function AdminOverview() {
             <div style={{ width: 44, height: 44, borderRadius: '14px', background: 'linear-gradient(135deg, var(--violet), var(--emerald))', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(113, 109, 242, 0.2)' }}>
               <LayoutDashboard size={22} color="#fff" />
             </div>
-            <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, color: 'var(--text-main)' }}>مركز التحكم الذكي</h1>
+            <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, color: 'var(--text-main)' }}>Tableau de bord intelligent</h1>
           </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>مرحبًا بك في لوحة تحكّم منصة L'Conq لتوجيه الأداء والتحصيل الدراسي.</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>Pilotez l'activité globale et suivez les performances académiques des élèves.</p>
         </div>
 
         {/* AI-OMR Engine Status Hub */}
@@ -166,10 +166,10 @@ export default function AdminOverview() {
             </span>
             <div style={{ textDirection: 'ltr', textAlign: 'left' }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                {omrStatus === 'processing' ? `معالجة OMR: دفعة ${omrProgress}/45` : 'محرك الذكاء الاصطناعي: جاهز'}
+                {omrStatus === 'processing' ? `Moteur OMR : Lot ${omrProgress}/45` : 'Moteur IA OMR : Prêt'}
               </div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                {omrStatus === 'processing' ? 'جاري معالجة نماذج الإجابة...' : 'خامل - انقر للتشغيل التشبيهي'}
+                {omrStatus === 'processing' ? 'Traitement des copies en cours...' : 'Inactif - Cliquer pour simuler'}
               </div>
             </div>
           </div>
@@ -190,7 +190,7 @@ export default function AdminOverview() {
               boxShadow: '0 8px 20px rgba(124, 58, 237, 0.2)'
             }}
           >
-            <Camera size={15} /> تصوير أوراق OMR
+            <Camera size={15} /> Scanner les QCM
           </button>
         </div>
       </header>
@@ -201,13 +201,13 @@ export default function AdminOverview() {
         {/* Card 1 */}
         <div className="col-span-3 glass-panel stat-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem', gap: '0.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>معدل الحضور والتفاعل</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>Engagement étudiant</span>
             <div style={{ padding: '0.4rem', borderRadius: '10px', background: 'var(--violet-soft)', color: 'var(--violet)' }}><Users size={18} /></div>
           </div>
           <div>
             <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>88.4%</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--emerald)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
-              <Sparkles size={12} /> التوقع التنبؤي: 93.0% (▲) غداً
+              <Sparkles size={12} /> Prédiction IA : 93.0% (▲) demain
             </div>
           </div>
         </div>
@@ -215,13 +215,13 @@ export default function AdminOverview() {
         {/* Card 2 */}
         <div className="col-span-3 glass-panel stat-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem', gap: '0.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>إتمام المهام الذكية</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>Succès des devoirs IA</span>
             <div style={{ padding: '0.4rem', borderRadius: '10px', background: 'var(--emerald-soft)', color: 'var(--emerald)' }}><Award size={18} /></div>
           </div>
           <div>
             <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>72.1%</div>
             <div style={{ fontSize: '0.78rem', color: '#E2B874', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
-              <Sparkles size={12} /> توقع نمو +4.5% الأسبوع المقبل
+              <Sparkles size={12} /> Hausse de +4.5% estimée la sem. pro.
             </div>
           </div>
         </div>
@@ -229,13 +229,13 @@ export default function AdminOverview() {
         {/* Card 3 */}
         <div className="col-span-3 glass-panel stat-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem', gap: '0.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>تنبيهات التدخل البشري</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>Interventions requises</span>
             <div style={{ padding: '0.4rem', borderRadius: '10px', background: 'var(--danger-soft)', color: 'var(--danger)' }}><AlertTriangle size={18} /></div>
           </div>
           <div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>{actionItems.length} حالات</div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>{actionItems.length} alertes</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
-              <RefreshCw size={12} className={omrStatus === 'processing' ? 'animate-spin' : ''} /> تقدير تصفية الحالات: 12 دقيقة
+              <RefreshCw size={12} className={omrStatus === 'processing' ? 'animate-spin' : ''} /> Résolution estimée : 12 min
             </div>
           </div>
         </div>
@@ -243,13 +243,13 @@ export default function AdminOverview() {
         {/* Card 4 */}
         <div className="col-span-3 glass-panel stat-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem', gap: '0.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>مؤشر التمكن التراكمي</span>
+            <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>Index de maîtrise</span>
             <div style={{ padding: '0.4rem', borderRadius: '10px', background: 'var(--warning-soft)', color: 'var(--warning)' }}><Activity size={18} /></div>
           </div>
           <div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>67.8 <small style={{ fontSize: '0.8rem', fontWeight: 500 }}>نقطة</small></div>
+            <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>67.8 <small style={{ fontSize: '0.8rem', fontWeight: 500 }}>pts</small></div>
             <div style={{ fontSize: '0.78rem', color: 'var(--emerald)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
-              <Sparkles size={12} /> تقدير AI: 71.2 (▲) بنهاية الدورة
+              <Sparkles size={12} /> Cible de fin de cycle : 71.2 (▲)
             </div>
           </div>
         </div>
@@ -263,8 +263,8 @@ export default function AdminOverview() {
         <div className="col-span-8 glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>مستويات التحصيل وتفوق الرياضيات</h3>
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>مستويات الفهم الأكاديمي للطلاب f(t) ومعدلات تسارع الفهم f'(t)</p>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>Niveaux d'assimilation et de vitesse académique</h3>
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Visualisation analytique de l'apprentissage cumulé f(t) et de sa dérivée f'(t)</p>
             </div>
             
             {/* Mathematical Toggles */}
@@ -282,7 +282,7 @@ export default function AdminOverview() {
                   fontWeight: !showDerivative ? 800 : 500
                 }}
               >
-                الدالة f(t) الأساسية
+                Fonction f(t) principale
               </button>
               <button 
                 onClick={() => setShowDerivative(true)}
@@ -300,7 +300,7 @@ export default function AdminOverview() {
                   gap: '0.3rem'
                 }}
               >
-                المشتقة f'(t) (معدل التغير)
+                Dérivée f'(t) (Variation)
               </button>
             </div>
           </div>
@@ -361,12 +361,12 @@ export default function AdminOverview() {
           <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
               <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#E2B874' }}></div>
-              <span>f(t) : مستوى الفهم التراكمي للرياضيات (تكامل الأداء)</span>
+              <span>f(t) : Niveau d'assimilation mathématique global (Intégrale de performance)</span>
             </div>
             {showDerivative && (
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <div style={{ width: '12px', height: '12px', borderRadius: '3px', border: '1.5px dashed var(--violet)' }}></div>
-                <span>f'(t) : معدل تسارع الفهم (المشتقة الزمنية للتغير)</span>
+                <span>f'(t) : Vitesse d'apprentissage (Dérivée temporelle du niveau)</span>
               </div>
             )}
           </div>
@@ -375,9 +375,9 @@ export default function AdminOverview() {
         {/* Right Column: Action Hub */}
         <div className="col-span-4 glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>مركز التحكم النشط</h3>
+            <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>Centre de décision</h3>
             <span style={{ background: 'var(--danger-soft)', color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 850, padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
-              {actionItems.length} معلقة
+              {actionItems.length} alertes
             </span>
           </div>
 
@@ -385,8 +385,8 @@ export default function AdminOverview() {
             {actionItems.length === 0 ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-subtle)', padding: '2rem 0' }}>
                 <CheckCircle size={36} color="var(--emerald)" style={{ marginBottom: '0.75rem', opacity: 0.8 }} />
-                <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>جميع المهام منجزة!</span>
-                <span style={{ fontSize: '0.75rem' }}>لا توجد تنبيهات تتطلب تدخلاً بشرياً حالياً.</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>Toutes les tâches sont résolues !</span>
+                <span style={{ fontSize: '0.75rem' }}>Aucune action humaine n'est requise.</span>
               </div>
             ) : (
               actionItems.map((item) => (
@@ -405,7 +405,7 @@ export default function AdminOverview() {
                   {/* Severity Badge */}
                   <span style={{ 
                     position: 'absolute', 
-                    left: '1rem', 
+                    right: '1rem', 
                     top: '1rem', 
                     width: '6px', 
                     height: '6px', 
@@ -419,7 +419,7 @@ export default function AdminOverview() {
                         <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-main)' }}>{item.title}</span>
                       </div>
                       <div style={{ fontSize: '0.8rem', color: '#E2B874', fontWeight: 700, marginBottom: '0.3rem' }}>
-                        الطالب: {item.student}
+                        Élève : {item.student}
                       </div>
                       <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.75rem 0', lineHeight: 1.4 }}>
                         {item.details}
@@ -435,30 +435,30 @@ export default function AdminOverview() {
                             }}
                             style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px' }}
                           >
-                            <Camera size={12} /> حل النزاع
+                            <Camera size={12} /> Résoudre conflit
                           </button>
                         )}
                         {item.type === 'parent' && (
                           <button 
                             className="btn"
                             onClick={() => {
-                              alert(`الاتصال بولي أمر التلميذة: ${item.student}`);
+                              alert(`Appel téléphonique au tuteur de : ${item.student}`);
                               handleResolve(item.id);
                             }}
                             style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', background: 'linear-gradient(135deg, var(--emerald) 0%, #047857 100%)' }}
                           >
-                            <Phone size={12} /> اتصال الآن
+                            <Phone size={12} /> Appeler
                           </button>
                         )}
                         {item.type === 'code' && (
                           <button 
                             className="btn"
                             onClick={() => {
-                              navigate('/admin/settings'); // Or activation code management page
+                              navigate('/admin/settings');
                             }}
                             style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px' }}
                           >
-                            تأكيد الإيصال
+                            Valider reçu
                           </button>
                         )}
                         <button 
@@ -466,13 +466,13 @@ export default function AdminOverview() {
                           onClick={() => handleResolve(item.id)}
                           style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', border: 'none', background: 'var(--bg-hover)' }}
                         >
-                          تجاهل
+                          Ignorer
                         </button>
                       </div>
                     </div>
                   </div>
                   
-                  <span style={{ position: 'absolute', left: '1rem', bottom: '0.8rem', fontSize: '0.7rem', color: 'var(--text-subtle)' }}>
+                  <span style={{ position: 'absolute', right: '1rem', bottom: '0.8rem', fontSize: '0.7rem', color: 'var(--text-subtle)' }}>
                     {item.time}
                   </span>
                 </div>
@@ -484,33 +484,33 @@ export default function AdminOverview() {
       </div>
 
       {/* ── REAL DATABASE STATS ROW ── */}
-      <h3 style={{ margin: '2rem 0 1rem 0', fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>إحصاءات النظام الحالية (قاعدة البيانات)</h3>
+      <h3 style={{ margin: '2rem 0 1rem 0', fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>Statistiques de la base de données (Supabase)</h3>
       <div className="dashboard-grid">
         <div className="col-span-3 glass-panel stat-card" style={{ padding: '1.25rem' }}>
           <div className="stat-icon primary"><Users size={24} /></div>
           <div>
-            <p className="stat-label">إجمالي الحسابات</p>
+            <p className="stat-label">Total Élèves</p>
             <div className="stat-value">{users.length}</div>
           </div>
         </div>
         <div className="col-span-3 glass-panel stat-card" style={{ padding: '1.25rem' }}>
           <div className="stat-icon accent"><CircleDollarSign size={24} /></div>
           <div>
-            <p className="stat-label">الإيراد الشهري الفعلي</p>
+            <p className="stat-label">Revenu Mensuel (MRR)</p>
             <div className="stat-value">{totalRevenue} Dh</div>
           </div>
         </div>
         <div className="col-span-3 glass-panel stat-card" style={{ padding: '1.25rem' }}>
           <div className="stat-icon warning"><TrendingUp size={24} /></div>
           <div>
-            <p className="stat-label">الطلاب المشتركون</p>
+            <p className="stat-label">Abonnés Premium</p>
             <div className="stat-value">{totalPremium}</div>
           </div>
         </div>
         <div className="col-span-3 glass-panel stat-card" style={{ padding: '1.25rem' }}>
           <div className="stat-icon danger"><BookOpen size={24} /></div>
           <div>
-            <p className="stat-label">الامتحانات المرفوعة</p>
+            <p className="stat-label">Concours Actifs</p>
             <div className="stat-value">{exams.length}</div>
           </div>
         </div>
@@ -519,4 +519,3 @@ export default function AdminOverview() {
     </div>
   );
 }
-
