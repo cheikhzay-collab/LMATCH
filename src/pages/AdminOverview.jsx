@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, BookOpen, CircleDollarSign, TrendingUp, Camera, 
-  Sparkles, AlertTriangle, Activity, CheckCircle, RefreshCw, X, ArrowUpRight, Phone, Award, FileText
+  Sparkles, AlertTriangle, Activity, CheckCircle, RefreshCw, X, ArrowUpRight, Phone, Award, FileText,
+  Video, Clapperboard, Play, Calendar
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { generateRemotionScript, renderTikTokVideo, downloadJSON } from '../services/videoService';
 
 export default function AdminOverview() {
   const { users, exams, activationCodes, refreshAdminData } = useAuth();
@@ -129,6 +131,70 @@ export default function AdminOverview() {
 
   const handleResolve = (id) => {
     setActionItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  // TikTok Reels Hub state
+  const [selectedVideoExam, setSelectedVideoExam] = useState(null);
+  const [selectedVideoQuestion, setSelectedVideoQuestion] = useState(null);
+  const [previewScript, setPreviewScript] = useState(null);
+  const [isRenderingVideo, setIsRenderingVideo] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [videoHistory, setVideoHistory] = useState([
+    { id: 'vid-1', title: 'Analyse (Suites)', status: 'publié', time: 'Aujourd\'hui 10:15', url: '#' },
+    { id: 'vid-2', title: 'Géométrie (Espace)', status: 'planifié', time: 'Demain 18:00', url: '#' }
+  ]);
+
+  const handleSelectExamForVideo = (examId) => {
+    const exam = exams.find(e => e.id === examId);
+    setSelectedVideoExam(exam);
+    if (exam && exam.questions && exam.questions.length > 0) {
+      setSelectedVideoQuestion(exam.questions[0]);
+    } else {
+      setSelectedVideoQuestion(null);
+    }
+    setPreviewScript(null);
+  };
+
+  const handleGenerateScript = () => {
+    if (!selectedVideoQuestion || !selectedVideoExam) return;
+    const script = generateRemotionScript(selectedVideoQuestion, selectedVideoExam.name);
+    setPreviewScript(script);
+  };
+
+  const handleDownloadScript = () => {
+    if (!previewScript) return;
+    downloadJSON(`tiktok_script_question_${selectedVideoQuestion.id || 'q'}.json`, previewScript);
+  };
+
+  const handleScheduleVideo = async () => {
+    if (!selectedVideoQuestion || !selectedVideoExam) return;
+    setIsRenderingVideo(true);
+    try {
+      const renderResult = await renderTikTokVideo(selectedVideoQuestion, selectedVideoExam.name);
+      
+      const newVideo = {
+        id: renderResult.videoId,
+        title: `${selectedVideoExam.school} (${selectedVideoQuestion.topic || 'QCM'})`,
+        status: scheduledDate ? 'planifié' : 'publié',
+        time: scheduledDate ? `${scheduledDate} ${scheduledTime || '12:00'}` : 'À l\'instant',
+        url: renderResult.videoUrl
+      };
+
+      setVideoHistory(prev => [newVideo, ...prev]);
+      alert(scheduledDate 
+        ? `🎉 Le vidéo-cours a été généré et planifié pour publication le ${scheduledDate} à ${scheduledTime || '12:00'} !`
+        : `🚀 Le vidéo-cours a été généré avec succès ! Le fichier MP4 est prêt pour publication.`
+      );
+      setPreviewScript(null);
+      setScheduledDate('');
+      setScheduledTime('');
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de la génération de la vidéo.");
+    } finally {
+      setIsRenderingVideo(false);
+    }
   };
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -569,6 +635,180 @@ export default function AdminOverview() {
             )}
           </div>
         </div>
+
+      </div>
+
+      {/* ── TIKTOK REELS HUB (Automated Video Pipeline) ── */}
+      <h3 style={{ margin: '2.5rem 0 1.25rem 0', fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <Clapperboard size={22} className="text-violet" />
+        <span>TikTok Video-Cours Hub (2026 Remotion Pipeline)</span>
+      </h3>
+      <div className="dashboard-grid" style={{ gap: '1.5rem', marginBottom: '2.5rem' }}>
+        
+        {/* Step 1: Question Picker & Action panel */}
+        <div className="col-span-8 glass-panel" style={{ padding: '1.5rem 2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>1. Configurer la génération de vidéo</h4>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Sélectionner l'Examen</label>
+              <select 
+                className="input-control" 
+                style={{ width: '100%', fontSize: '0.8rem', padding: '0.45rem' }}
+                value={selectedVideoExam?.id || ''}
+                onChange={e => handleSelectExamForVideo(e.target.value)}
+              >
+                <option value="">-- Sélectionner --</option>
+                {exams.map(e => (
+                  <option key={e.id} value={e.id}>{e.name} ({e.school})</option>
+                ))}
+              </select>
+            </div>
+            
+            <div>
+              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Sélectionner la Question</label>
+              <select 
+                className="input-control" 
+                style={{ width: '100%', fontSize: '0.8rem', padding: '0.45rem' }}
+                disabled={!selectedVideoExam || !selectedVideoExam.questions?.length}
+                value={selectedVideoQuestion?.id || ''}
+                onChange={e => {
+                  const q = selectedVideoExam.questions.find(item => item.id === e.target.value);
+                  setSelectedVideoQuestion(q);
+                  setPreviewScript(null);
+                }}
+              >
+                {!selectedVideoExam && <option value="">Choisir un examen d'abord</option>}
+                {selectedVideoExam && selectedVideoExam.questions?.map((q, idx) => (
+                  <option key={q.id || idx} value={q.id}>Q{idx + 1} : {q.topic || 'Général'} - {q.question?.substring(0, 40)}...</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {selectedVideoQuestion && (
+            <div style={{ background: 'rgba(0,0,0,0.15)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--violet)', background: 'var(--violet-soft)', fontWeight: 800, padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                  Aperçu de la Question
+                </span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)' }}>Réponse attendue : {selectedVideoQuestion.correct_answer}</span>
+              </div>
+              <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', lineHeight: 1.4 }}>{selectedVideoQuestion.question}</p>
+            </div>
+          )}
+
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+            <button 
+              className="btn-outline"
+              disabled={!selectedVideoQuestion}
+              onClick={handleGenerateScript}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+            >
+              <Sparkles size={14} /> Générer Script JSON
+            </button>
+            <button 
+              className="btn"
+              disabled={!selectedVideoQuestion || isRenderingVideo}
+              onClick={handleScheduleVideo}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.5rem 1rem' }}
+            >
+              <Play size={14} /> {isRenderingVideo ? 'Rendage en cours...' : 'Rendre la vidéo (Remotion)'}
+            </button>
+          </div>
+        </div>
+
+        {/* Step 2: Queue / Video History list */}
+        <div className="col-span-4 glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <Calendar size={16} /> Planification & Historique
+          </h4>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Date de publication</label>
+              <input 
+                type="date" 
+                className="input-control" 
+                style={{ fontSize: '0.75rem', padding: '0.35rem 0.5rem' }} 
+                value={scheduledDate}
+                onChange={e => setScheduledDate(e.target.value)}
+              />
+            </div>
+            <div>
+              <label style={{ display: 'block', fontSize: '0.62rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.2rem' }}>Heure</label>
+              <input 
+                type="time" 
+                className="input-control" 
+                style={{ fontSize: '0.75rem', padding: '0.35rem 0.5rem' }} 
+                value={scheduledTime}
+                onChange={e => setScheduledTime(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '180px', marginTop: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem' }}>
+            {videoHistory.map(vid => (
+              <div key={vid.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.45rem 0.65rem', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)', fontSize: '0.74rem' }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{vid.title}</div>
+                  <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: 2 }}>{vid.time}</div>
+                </div>
+                <span style={{ 
+                  fontSize: '0.62rem', 
+                  fontWeight: 800, 
+                  padding: '0.1rem 0.4rem', 
+                  borderRadius: '10px',
+                  background: vid.status === 'publié' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                  color: vid.status === 'publié' ? 'var(--emerald)' : 'var(--warning)',
+                  textTransform: 'uppercase'
+                }}>
+                  {vid.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Preview: Script timeline output */}
+        {previewScript && (
+          <div className="col-span-12 glass-panel animate-slide-up" style={{ padding: '1.5rem 2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>📄 Remotion Asset Script (JSON Timeline)</h4>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button 
+                  className="btn-outline" 
+                  onClick={handleDownloadScript}
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px' }}
+                >
+                  Télécharger JSON
+                </button>
+                <button 
+                  className="btn-outline" 
+                  onClick={() => setPreviewScript(null)}
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', border: 'none', background: 'var(--bg-hover)' }}
+                >
+                  Masquer
+                </button>
+              </div>
+            </div>
+            
+            <pre style={{
+              margin: 0,
+              padding: '1rem',
+              background: 'rgba(0,0,0,0.3)',
+              borderRadius: '10px',
+              border: '1px solid var(--border)',
+              fontSize: '0.72rem',
+              fontFamily: 'Fira Code, monospace',
+              whiteSpace: 'pre-wrap',
+              maxHeight: '300px',
+              overflowY: 'auto'
+            }}>
+              {JSON.stringify(previewScript, null, 2)}
+            </pre>
+          </div>
+        )}
 
       </div>
 
