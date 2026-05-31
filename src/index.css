@@ -2058,7 +2058,17 @@ body.light-theme .astuce-tabs {
     gap: 0.5rem !important;
   }
 
+  .flashcard-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow-x: hidden !important;
+  }
+
   .flashcard-3d {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
     height: calc(100vh - 100px);
     height: calc(100dvh - 90px);
     max-height: 650px;
@@ -2068,11 +2078,15 @@ body.light-theme .astuce-tabs {
   }
 
   .flashcard-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
     height: 100%;
     max-height: 100%;
     display: flex;
     flex-direction: column !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch;
   }
 
