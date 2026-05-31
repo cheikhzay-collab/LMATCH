@@ -1,0 +1,20 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css');
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #09090B;
+  color: #F8FAFC;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ensure math formulas are white and crisp on dark backgrounds */
+.katex {
+  color: #F8FAFC !important;
+}
+
+.katex-display {
+  margin: 0.4em 0 !important;
+}

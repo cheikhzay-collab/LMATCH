@@ -7,7 +7,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export default function BottomNav() {
-  const { user, logout, theme, toggleTheme } = useAuth();
+  const { user, logout, theme, toggleTheme, getStudentStats } = useAuth();
   const navigate  = useNavigate();
   const location  = useLocation();
   const indicatorRef = useRef(null);
@@ -15,6 +15,8 @@ export default function BottomNav() {
   const [showSheet, setShowSheet] = useState(false);
 
   const isStudent = user?.role === 'student';
+  const stats = isStudent && getStudentStats ? getStudentStats() : null;
+  const dueToday = stats ? stats.dueToday : 0;
 
   const studentItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Accueil'  },
@@ -58,19 +60,27 @@ export default function BottomNav() {
         <div className="mob-nav-indicator" ref={indicatorRef} />
 
         <div className="mob-nav-items" ref={navRef}>
-          {items.map(({ to, icon: Icon, label }) => (
-            <NavLink
-              key={to}
-              to={to}
-              className={({ isActive }) => `mob-nav-item${isActive ? ' active' : ''}`}
-              end={to === '/dashboard' || to === '/admin/dashboard'}
-            >
-              <div className="mob-nav-icon-wrap">
-                <Icon size={22} strokeWidth={1.8} />
-              </div>
-              <span className="mob-nav-label">{label}</span>
-            </NavLink>
-          ))}
+          {items.map(({ to, icon: Icon, label }) => {
+            const showBadge = label === 'Réviser' && isStudent && dueToday > 0;
+            return (
+              <NavLink
+                key={to}
+                to={to}
+                className={({ isActive }) => `mob-nav-item${isActive ? ' active' : ''}`}
+                end={to === '/dashboard' || to === '/admin/dashboard'}
+              >
+                <div className="mob-nav-icon-wrap" style={{ position: 'relative' }}>
+                  <Icon size={22} strokeWidth={1.8} />
+                  {showBadge && (
+                    <span className="mob-nav-badge">
+                      {dueToday}
+                    </span>
+                  )}
+                </div>
+                <span className="mob-nav-label">{label}</span>
+              </NavLink>
+            );
+          })}
 
           {/* Avatar button → opens profile sheet */}
           <button

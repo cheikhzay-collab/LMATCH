@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -508,25 +508,43 @@ function SchoolCard({ school, examCount, brand, isAdmin, onEdit, onDelete, onCli
 }
 
 /* ─── Main Page ─────────────────────────────────────────────────── */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function SchoolsPage() {
   const { exams, schools, addSchool, removeSchool, renameSchool, schoolBranding, updateSchoolBranding, user } = useAuth();
   const navigate    = useNavigate();
   const isAdmin     = user?.role === 'admin';
+  const isMobile    = useIsMobile();
 
   const [search,       setSearch]       = useState('');
   const [editTarget,   setEditTarget]   = useState(null);   // school name being edited
   const [deleteTarget, setDeleteTarget] = useState(null);   // school name being deleted
   const [addName,      setAddName]      = useState('');
   const [showAddForm,  setShowAddForm]  = useState(false);
+  const [selectedTag,  setSelectedTag]  = useState('Tous');
 
   const allSchoolNames = Array.from(new Set([
     ...schools,
     ...exams.map(e => e.school).filter(Boolean),
   ]));
 
-  const filtered = allSchoolNames.filter(s =>
-    s.toLowerCase().includes(search.toLowerCase())
-  );
+  const uniqueTags = ['Tous', ...Array.from(new Set(allSchoolNames.map(name => getBrand(name, schoolBranding).tag).filter(Boolean)))];
+
+  const filtered = allSchoolNames.filter(name => {
+    const matchesSearch = name.toLowerCase().includes(search.toLowerCase());
+    if (selectedTag === 'Tous') return matchesSearch;
+    const brand = getBrand(name, schoolBranding);
+    return matchesSearch && brand.tag === selectedTag;
+  });
 
   const getExamCount = s => exams.filter(e => e.school === s && e.isArchived !== true).length;
 
@@ -558,7 +576,7 @@ export default function SchoolsPage() {
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '3rem' }}>
       {/* Header */}
-      <header style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'1.5rem', flexWrap:'wrap', gap:'0.875rem' }}>
+      <header style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom: isMobile ? '1rem' : '1.5rem', flexWrap:'wrap', gap:'0.875rem' }}>
         <div>
           <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', marginBottom:'0.4rem' }}>
             <div style={{ width:40, height:40, borderRadius:'12px', background:'linear-gradient(135deg,var(--violet),var(--emerald))', display:'flex', alignItems:'center', justifyContent: 'center', boxShadow: 'var(--btn-primary-shadow)' }}>
@@ -566,11 +584,13 @@ export default function SchoolsPage() {
             </div>
             <h1 style={{ fontSize:'1.75rem', fontWeight:800, letterSpacing:'-0.02em', margin:0 }}>Grandes Écoles</h1>
           </div>
-          <p style={{ color:'var(--text-muted)', fontSize:'0.9rem', margin:0 }}>
-            {isAdmin
-              ? 'Gérez les établissements, personnalisez leurs logos, icônes et règles de notation.'
-              : 'Choisissez votre école pour accéder aux annales et QCM officiels.'}
-          </p>
+          {!isMobile && (
+            <p style={{ color:'var(--text-muted)', fontSize:'0.9rem', margin:0 }}>
+              {isAdmin
+                ? 'Gérez les établissements, personnalisez leurs logos, icônes et règles de notation.'
+                : 'Choisissez votre école pour accéder aux annales et QCM officiels.'}
+            </p>
+          )}
         </div>
 
         {/* Admin: Add school button */}
@@ -603,23 +623,68 @@ export default function SchoolsPage() {
         </div>
       )}
 
-      {/* Search & Stats */}
-      <div style={{ display:'flex', gap:'0.875rem', alignItems:'center', marginBottom:'1.5rem', flexWrap:'wrap' }}>
-        <div style={{ position:'relative', flex:'1 1 200px', minWidth:'180px' }}>
-          <Search size={16} style={{ position:'absolute', left:'0.875rem', top:'50%', transform:'translateY(-50%)', color:'var(--text-subtle)', pointerEvents:'none' }} />
-          <input 
-            className="input-control" 
-            placeholder="Rechercher une école..." 
-            value={search} 
-            onChange={e => setSearch(e.target.value)} 
-            style={{ paddingLeft:'2.5rem', width:'100%', borderRadius: '10px' }} 
-            onFocus={e => { e.target.style.borderColor = 'var(--violet)'; e.target.style.boxShadow = 'var(--shadow-glow-violet)'; }}
-            onBlur={e => { e.target.style.borderColor = 'var(--border)'; e.target.style.boxShadow = 'none'; }}
-          />
+      {/* Sticky Search & Category Bar */}
+      <div style={{
+        position: isMobile ? 'sticky' : 'static',
+        top: isMobile ? '0' : 'auto',
+        zIndex: isMobile ? 100 : 'auto',
+        background: isMobile ? 'var(--bg-base)' : 'transparent',
+        padding: isMobile ? '0.75rem 0' : '0',
+        margin: isMobile ? '-0.75rem 0 1rem 0' : '0 0 1.5rem 0',
+        borderBottom: isMobile ? '1px solid var(--border)' : 'none',
+      }}>
+        <div style={{ display: 'flex', gap: '0.875rem', alignItems: 'center', flexWrap: 'wrap', marginBottom: '0.75rem' }}>
+          <div style={{ position:'relative', flex:'1 1 200px', minWidth:'180px' }}>
+            <Search size={16} style={{ position:'absolute', left:'0.875rem', top:'50%', transform:'translateY(-50%)', color:'var(--text-subtle)', pointerEvents:'none' }} />
+            <input 
+              className="input-control" 
+              placeholder="Rechercher une école..." 
+              value={search} 
+              onChange={e => setSearch(e.target.value)} 
+              style={{ paddingLeft:'2.5rem', width:'100%', borderRadius: '10px' }} 
+            />
+          </div>
+          {!isMobile && (
+            <div style={{ display:'flex', gap:'1.25rem', fontSize:'0.83rem', color:'var(--text-muted)' }}>
+              <span><strong className="text-main" style={{ color: 'var(--text-main)' }}>{allSchoolNames.length}</strong> établissements</span>
+              <span><strong className="text-emerald" style={{ color: 'var(--emerald)' }}>{exams.filter(e => e.isArchived !== true).length}</strong> examens</span>
+            </div>
+          )}
         </div>
-        <div style={{ display:'flex', gap:'1.25rem', fontSize:'0.83rem', color:'var(--text-muted)' }}>
-          <span><strong className="text-main" style={{ color: 'var(--text-main)' }}>{allSchoolNames.length}</strong> établissements</span>
-          <span><strong className="text-emerald" style={{ color: 'var(--emerald)' }}>{exams.filter(e => e.isArchived !== true).length}</strong> examens</span>
+
+        {/* Categories Tab Row */}
+        <div style={{
+          display: 'flex',
+          gap: '0.5rem',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+          WebkitOverflowScrolling: 'touch',
+          margin: isMobile ? '0 -1rem' : '0',
+          paddingLeft: isMobile ? '1rem' : '0',
+          paddingRight: isMobile ? '1rem' : '0',
+          paddingBottom: '0.25rem'
+        }}>
+          {uniqueTags.map(tag => (
+            <button
+              key={tag}
+              onClick={() => setSelectedTag(tag)}
+              style={{
+                whiteSpace: 'nowrap',
+                padding: '0.45rem 1rem',
+                borderRadius: '99px',
+                border: '1.5px solid var(--border)',
+                background: selectedTag === tag ? 'var(--violet-soft)' : 'var(--bg-card)',
+                color: selectedTag === tag ? 'var(--violet)' : 'var(--text-muted)',
+                borderColor: selectedTag === tag ? 'var(--violet)' : 'var(--border)',
+                fontWeight: 700,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+            >
+              {tag}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -627,10 +692,10 @@ export default function SchoolsPage() {
       {filtered.length === 0 ? (
         <div style={{ textAlign:'center', padding:'4rem', color:'var(--text-muted)' }}>
           <GraduationCap size={48} style={{ opacity:0.25, margin:'0 auto 1rem' }} />
-          <p>Aucune école trouvée pour «{search}»</p>
+          <p>Aucune école trouvée</p>
         </div>
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap:'1.5rem' }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap: isMobile ? '1rem' : '1.5rem' }}>
           {filtered.map(school => (
             <SchoolCard
               key={school}

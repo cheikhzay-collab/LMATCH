@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -6,9 +6,21 @@ import {
   ChevronRight, Sparkles, X, ShieldCheck, HelpCircle 
 } from 'lucide-react';
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function SubscriptionPage() {
   const { user, plans, activateSubscription, activationCodes, redeemActivationCode } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [voucherCode, setVoucherCode] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -75,7 +87,7 @@ export default function SubscriptionPage() {
     <div className="animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto', paddingBottom: '3rem' }}>
       
       {/* ── Header ── */}
-      <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+      <header style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: isMobile ? '1.5rem' : '2.5rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem' }}>
             <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, var(--violet), var(--emerald))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -93,11 +105,11 @@ export default function SubscriptionPage() {
           <div className="glass-panel" style={{
             background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.15), rgba(15, 23, 42, 0.4))',
             border: '1.5px solid rgba(124, 58, 237, 0.4)',
-            padding: '2rem',
+            padding: isMobile ? '1.25rem' : '2rem',
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'stretch' : 'center',
             justifyContent: 'space-between',
-            flexWrap: 'wrap',
             gap: '1.5rem',
             boxShadow: '0 15px 30px rgba(124, 58, 237, 0.1)'
           }}>
@@ -106,7 +118,8 @@ export default function SubscriptionPage() {
                 width: 56, height: 56, borderRadius: '16px', 
                 background: 'linear-gradient(135deg, var(--violet), #818cf8)', 
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 8px 20px rgba(124, 58, 237, 0.3)'
+                boxShadow: '0 8px 20px rgba(124, 58, 237, 0.3)',
+                flexShrink: 0
               }}>
                 <Crown size={28} color="#fff" />
               </div>
@@ -127,7 +140,7 @@ export default function SubscriptionPage() {
               <button 
                 onClick={() => navigate('/schools')} 
                 className="btn"
-                style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)', fontWeight: 700 }}
+                style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)', fontWeight: 700, width: isMobile ? '100%' : 'auto' }}
               >
                 Accéder aux examens
               </button>
@@ -137,11 +150,11 @@ export default function SubscriptionPage() {
           <div className="glass-panel" style={{
             background: 'var(--bg-card)',
             border: '1px solid var(--border)',
-            padding: '2rem',
+            padding: isMobile ? '1.25rem' : '2rem',
             display: 'flex',
-            alignItems: 'center',
+            flexDirection: isMobile ? 'column' : 'row',
+            alignItems: isMobile ? 'stretch' : 'center',
             justifyContent: 'space-between',
-            flexWrap: 'wrap',
             gap: '1.5rem',
             boxShadow: 'var(--shadow-card)'
           }}>
@@ -150,7 +163,8 @@ export default function SubscriptionPage() {
                 width: 56, height: 56, borderRadius: '16px', 
                 background: 'rgba(255,255,255,0.05)', 
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '1px solid var(--border)'
+                border: '1px solid var(--border)',
+                flexShrink: 0
               }}>
                 <Zap size={28} color="var(--text-muted)" />
               </div>
@@ -161,7 +175,7 @@ export default function SubscriptionPage() {
                 </p>
               </div>
             </div>
-            <a href="#offers" className="btn-outline" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700 }}>
+            <a href="#offers" className="btn-outline" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, justifyContent: 'center', width: isMobile ? '100%' : 'auto' }}>
               Voir les offres <ChevronRight size={16} />
             </a>
           </div>
@@ -184,7 +198,7 @@ export default function SubscriptionPage() {
 
       <div className="dashboard-grid" style={{ marginBottom: '3rem' }}>
         {/* ── Left panel: Code Activation Form ── */}
-        <div className="col-span-6 glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: '2rem' }}>
+        <div className="col-span-6 glass-panel" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: isMobile ? '1.25rem' : '2rem', gap: '1.5rem' }}>
           <div>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: 700 }}>
               <Key size={20} color="var(--violet)" /> Saisir un Code d'Activation
@@ -193,7 +207,7 @@ export default function SubscriptionPage() {
               Vous avez acheté une carte d'abonnement ou reçu un code auprès d'un tuteur ou d'une librairie partenaire ? Saisissez-le ici pour activer instantanément vos droits Premium.
             </p>
             
-            <form onSubmit={handleRedeem} style={{ display: 'flex', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            <form onSubmit={handleRedeem} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '0.75rem', marginBottom: '1.5rem' }}>
               <input 
                 type="text"
                 placeholder="Ex: LCONQ-PREM-TEST-30D"
@@ -215,7 +229,7 @@ export default function SubscriptionPage() {
               <button 
                 type="submit" 
                 className="btn"
-                style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)', fontWeight: 700, whiteSpace: 'nowrap' }}
+                style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)', fontWeight: 700, whiteSpace: 'nowrap', minHeight: isMobile ? '48px' : 'auto' }}
               >
                 Activer le code
               </button>
@@ -224,23 +238,23 @@ export default function SubscriptionPage() {
           
           <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem' }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.5rem' }}>
-              💡 Codes de test disponibles pour démonstration :
+              💡 Codes de test disponibles :
             </span>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ color: 'var(--violet)', fontWeight: 700 }}>LCONQ-PREM-TEST-30D</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Premium L'Conq (30 j)</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>30 jours</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.5rem' }}>
                 <span style={{ color: 'var(--violet)', fontWeight: 700 }}>LCONQ-GLOB-TEST-365</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>Pack Premium Global (365 j)</span>
+                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>365 jours</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* ── Right panel: Offline payment instructions ── */}
-        <div className="col-span-6 glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+        <div className="col-span-6 glass-panel" style={{ padding: isMobile ? '1.25rem' : '2rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '1.5rem' }}>
           <div>
             <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontWeight: 700 }}>
               <CreditCard size={20} color="var(--emerald)" /> Virement Bancaire ou Cash
@@ -256,7 +270,7 @@ export default function SubscriptionPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>RIB :</span>
-                <strong style={{ color: 'var(--text-main)', fontFamily: 'monospace' }}>230 780 4567890123 0001 89</strong>
+                <strong style={{ color: 'var(--text-main)', fontFamily: 'monospace', fontSize: isMobile ? '0.78rem' : '0.85rem' }}>230 780 4567890123 0001 89</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Bénéficiaire :</span>
@@ -291,6 +305,7 @@ export default function SubscriptionPage() {
             background: 'var(--bg-card)',
             border: '1px solid var(--border)',
             boxShadow: 'var(--shadow-card)',
+            padding: isMobile ? '1.25rem' : '2rem'
           }}>
             <div>
               <h3 style={{ fontWeight: 700, marginBottom: '0.25rem' }}>Freemium</h3>
@@ -315,7 +330,7 @@ export default function SubscriptionPage() {
             <button 
               disabled 
               className="btn-outline" 
-              style={{ width: '100%', opacity: 0.5, cursor: 'default', justifyContent: 'center' }}
+              style={{ width: '100%', opacity: 0.5, cursor: 'default', justifyContent: 'center', minHeight: isMobile ? '50px' : 'auto', borderRadius: isMobile ? '16px' : 'var(--radius-lg)' }}
             >
               Plan Actuel par Défaut
             </button>
@@ -349,8 +364,9 @@ export default function SubscriptionPage() {
                   display: 'flex',
                   flexDirection: 'column',
                   justifyContent: 'space-between',
-                  transform: isRecommended ? 'scale(1.02)' : 'none',
-                  zIndex: isRecommended ? 5 : 1
+                  transform: (isRecommended && !isMobile) ? 'scale(1.02)' : 'none',
+                  zIndex: isRecommended ? 5 : 1,
+                  padding: isMobile ? '1.25rem' : '2rem'
                 }}
               >
                 {isRecommended && (
@@ -410,8 +426,12 @@ export default function SubscriptionPage() {
                       color: 'var(--emerald)', 
                       border: '1px solid rgba(16, 185, 129, 0.3)',
                       cursor: 'default',
-                      fontWeight: 700,
-                      justifyContent: 'center'
+                      fontWeight: 900,
+                      justifyContent: 'center',
+                      padding: isMobile ? '0.9rem' : '0.75rem 1.75rem',
+                      borderRadius: isMobile ? '16px' : 'var(--radius-lg)',
+                      fontSize: isMobile ? '0.95rem' : '0.95rem',
+                      minHeight: isMobile ? '50px' : 'auto'
                     }}
                   >
                     ✓ Offre Active
@@ -426,7 +446,11 @@ export default function SubscriptionPage() {
                       background: isRecommended ? 'linear-gradient(135deg, var(--violet), #818cf8)' : undefined, 
                       marginTop: 'auto',
                       gap: '0.5rem',
-                      fontWeight: 700
+                      fontWeight: 900,
+                      padding: isMobile ? '0.9rem' : '0.75rem 1.75rem',
+                      borderRadius: isMobile ? '16px' : 'var(--radius-lg)',
+                      fontSize: isMobile ? '0.95rem' : '0.95rem',
+                      minHeight: isMobile ? '50px' : 'auto'
                     }}
                   >
                     <Zap size={15} fill={isRecommended ? "currentColor" : "none"} /> 
@@ -451,9 +475,10 @@ export default function SubscriptionPage() {
         }}>
           <div className="glass-panel" style={{
             maxWidth: '480px', width: '100%',
-            padding: '2rem', position: 'relative',
+            padding: isMobile ? '1.25rem' : '2rem', position: 'relative',
             background: 'var(--bg-card)', border: '1px solid var(--border)',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)'
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)',
+            maxHeight: '92vh', overflowY: 'auto'
           }}>
             {/* Close Button */}
             <button 
@@ -535,7 +560,7 @@ export default function SubscriptionPage() {
                   type="button" 
                   onClick={() => setSelectedPlan(null)} 
                   className="btn-outline" 
-                  style={{ flex: 1, justifyContent: 'center' }}
+                  style={{ flex: 1, justifyContent: 'center', minHeight: isMobile ? '48px' : 'auto', borderRadius: isMobile ? '12px' : 'var(--radius-md)' }}
                   disabled={isProcessing}
                 >
                   Annuler
@@ -543,10 +568,10 @@ export default function SubscriptionPage() {
                 <button 
                   type="submit" 
                   className="btn" 
-                  style={{ flex: 2, justifyContent: 'center', background: 'linear-gradient(135deg, var(--violet), #818cf8)', fontWeight: 700 }}
+                  style={{ flex: 2, justifyContent: 'center', background: 'linear-gradient(135deg, var(--violet), #818cf8)', fontWeight: 900, minHeight: isMobile ? '48px' : 'auto', borderRadius: isMobile ? '12px' : 'var(--radius-md)' }}
                   disabled={isProcessing}
                 >
-                  {isProcessing ? "Paiement en cours..." : `Payer ${selectedPlan.price} DH`}
+                  {isProcessing ? "Paiement..." : `Payer ${selectedPlan.price} DH`}
                 </button>
               </div>
             </form>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
@@ -39,12 +39,24 @@ function getBrand(name, schoolBranding) {
   return { ...base, ...custom };
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function SchoolExamsPage() {
   const { schoolName } = useParams();
   const school = decodeURIComponent(schoolName);
   const { exams, user, schoolBranding, isExamLocked } = useAuth();
   const navigate = useNavigate();
   const [scanExam, setScanExam] = useState(null);
+  const isMobile = useIsMobile();
 
   const brand = getBrand(school, schoolBranding);
   const schoolExams = exams.filter(e => e.school === school && e.isActive !== false && e.isArchived !== true);
@@ -213,10 +225,10 @@ export default function SchoolExamsPage() {
                   borderLeft: `4px solid ${brand.accent}`,
                   background: 'var(--bg-card)',
                   borderRadius: '12px',
-                  padding: '1.25rem 1.5rem',
+                  padding: isMobile ? '1rem' : '1.25rem 1.5rem',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '1.25rem',
+                  gap: isMobile ? '0.75rem' : '1.25rem',
                   flexWrap: 'wrap',
                   border: '1px solid var(--border)',
                   borderLeftWidth: '4px',

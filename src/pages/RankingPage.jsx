@@ -3,8 +3,20 @@ import { useAuth } from '../context/AuthContext';
 import { getLeaderboard } from '../services/userService';
 import { Trophy, Flame, Crown, Medal, Award, Search, School, Zap, ChevronUp, ChevronDown } from 'lucide-react';
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function RankingPage() {
   const { user, getStudentStats, leaderboard: dbLeaderboard, refreshLeaderboard } = useAuth();
+  const isMobile = useIsMobile();
   const stats = getStudentStats();
   
   const [filterSchool, setFilterSchool] = useState('All');
@@ -596,6 +608,63 @@ export default function RankingPage() {
         )}
 
       </div>
+
+      {/* Sticky User Card on Mobile */}
+      {isMobile && (
+        <div style={{
+          position: 'fixed',
+          bottom: 'calc(58px + env(safe-area-inset-bottom))',
+          left: 0,
+          right: 0,
+          zIndex: 199,
+          background: 'rgba(15, 23, 42, 0.94)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          borderTop: '1.5px solid var(--violet)',
+          padding: '0.75rem 1.25rem',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          boxShadow: '0 -8px 24px rgba(0, 0, 0, 0.35)',
+          animation: 'sheetSlideUp 0.3s cubic-bezier(0.22, 1, 0.36, 1)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{
+              background: 'var(--violet)',
+              color: '#fff',
+              borderRadius: '50%',
+              width: 34,
+              height: 34,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontWeight: 900,
+              fontSize: '0.88rem',
+              boxShadow: '0 2px 6px rgba(113, 109, 242, 0.3)'
+            }}>
+              #{currentUserRank}
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--violet)' }}>
+                {user?.name?.split(' ')[0]} <span style={{ color: 'var(--text-main)', fontWeight: 500 }}>(Vous)</span>
+              </div>
+              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                {currentUserXP} XP • {currentUserStreak}j 🔥
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+            <span style={{
+              fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em',
+              background: 'rgba(16, 185, 129, 0.1)', color: 'var(--emerald)',
+              padding: '0.2rem 0.5rem', borderRadius: '4px',
+              border: '1px solid rgba(16, 185, 129, 0.2)'
+            }}>
+              Top 5%
+            </span>
+          </div>
+        </div>
+      )}
 
     </div>
   );

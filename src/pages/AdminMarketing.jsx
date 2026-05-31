@@ -1,9 +1,13 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import {
   Megaphone, Sparkles, Download, Copy, CheckCircle2,
   AlertCircle, RefreshCw, ChevronRight, Wand2, Palette,
-  BookOpen, Camera, Trophy, GraduationCap, Brain, Target, Zap
+  BookOpen, Camera, Trophy, GraduationCap, Brain, Target, Zap,
+  Upload, Video, Clapperboard, Play, Calendar, Pause, RotateCcw, Volume2, Clock
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { generateRemotionScript, renderTikTokVideo, downloadJSON } from '../services/videoService';
+import { renderWithMath } from '../utils/mathRenderer';
 
 // ─── Platform Features ────────────────────────────────────────────────────────
 const FEATURES = [
@@ -507,6 +511,12 @@ HASHTAGS: [12 relevant hashtags for Moroccan Bac students]`;
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 export default function AdminMarketing() {
+  const { exams } = useAuth();
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState('poster');
+
+  // Poster Studio state
   const [selectedFeature, setSelectedFeature] = useState(null);
   const [selectedFormat,  setSelectedFormat]  = useState(FORMATS[0]);
   const [selectedLang,    setSelectedLang]    = useState(LANGUAGES[0]);
@@ -514,6 +524,151 @@ export default function AdminMarketing() {
   const [selectedModel,   setSelectedModel]   = useState(() =>
     localStorage.getItem('togetherApiKey') ? 'together' : 'canvas'
   );
+
+  // TikTok Reels Hub state
+  const [selectedVideoExam, setSelectedVideoExam] = useState(null);
+  const [selectedVideoQuestion, setSelectedVideoQuestion] = useState(null);
+  const [previewScript, setPreviewScript] = useState(null);
+  const [isRenderingVideo, setIsRenderingVideo] = useState(false);
+  const [scheduledDate, setScheduledDate] = useState('');
+  const [scheduledTime, setScheduledTime] = useState('');
+  const [videoHistory, setVideoHistory] = useState([
+    { id: 'vid-1', title: 'Analyse (Suites)', status: 'publié', time: 'Aujourd\'hui 10:15', url: '#' },
+    { id: 'vid-2', title: 'Géométrie (Espace)', status: 'planifié', time: 'Demain 18:00', url: '#' }
+  ]);
+
+  // Live video preview simulator state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackTime, setPlaybackTime] = useState(0);
+
+  useEffect(() => {
+    let interval = null;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        setPlaybackTime(prev => {
+          if (prev >= 30) {
+            setIsPlaying(false);
+            return 30;
+          }
+          return Math.min(30, prev + 0.1);
+        });
+      }, 100);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
+  useEffect(() => {
+    setIsPlaying(false);
+    setPlaybackTime(0);
+  }, [selectedVideoQuestion]);
+
+  const [companionOnline, setCompanionOnline] = useState(false);
+  const [isLocalRendering, setIsLocalRendering] = useState(false);
+
+  useEffect(() => {
+    const checkCompanion = async () => {
+      try {
+        const res = await fetch('http://localhost:5002/ping');
+        const data = await res.json();
+        if (data?.status === 'online') {
+          setCompanionOnline(true);
+        } else {
+          setCompanionOnline(false);
+        }
+      } catch {
+        setCompanionOnline(false);
+      }
+    };
+    checkCompanion();
+    const interval = setInterval(checkCompanion, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleLocalRender = async () => {
+    if (!selectedVideoQuestion || !selectedVideoExam) return;
+    setIsLocalRendering(true);
+    try {
+      const script = generateRemotionScript(selectedVideoQuestion, selectedVideoExam.name);
+      const res = await fetch('http://localhost:5002/render', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(script)
+      });
+      if (!res.ok) {
+        throw new Error(`Rendu local échoué (code HTTP ${res.status})`);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `lconq-tiktok-${selectedVideoQuestion.id || 'q'}.mp4`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      alert("🎉 Le rendu local s'est terminé avec succès ! Votre fichier MP4 a été téléchargé.");
+    } catch (err) {
+      console.error(err);
+      alert("Échec du rendu local. Assurez-vous d'avoir démarré le compagnon (start-all.bat ou node start-companion.js) et exécuté 'npm install' dans le dossier remotion-video-studio.");
+    } finally {
+      setIsLocalRendering(false);
+    }
+  };
+
+
+  const handleSelectExamForVideo = (examId) => {
+    const exam = exams.find(e => e.id === examId);
+    setSelectedVideoExam(exam);
+    if (exam && exam.questions && exam.questions.length > 0) {
+      setSelectedVideoQuestion(exam.questions[0]);
+    } else {
+      setSelectedVideoQuestion(null);
+    }
+    setPreviewScript(null);
+  };
+
+  const handleGenerateScript = () => {
+    if (!selectedVideoQuestion || !selectedVideoExam) return;
+    const script = generateRemotionScript(selectedVideoQuestion, selectedVideoExam.name);
+    setPreviewScript(script);
+  };
+
+  const handleDownloadScript = () => {
+    if (!previewScript) return;
+    downloadJSON(`tiktok_script_question_${selectedVideoQuestion.id || 'q'}.json`, previewScript);
+  };
+
+  const handleScheduleVideo = async () => {
+    if (!selectedVideoQuestion || !selectedVideoExam) return;
+    setIsRenderingVideo(true);
+    try {
+      const renderResult = await renderTikTokVideo(selectedVideoQuestion, selectedVideoExam.name);
+      
+      const newVideo = {
+        id: renderResult.videoId,
+        title: `${selectedVideoExam.school} (${selectedVideoQuestion.topic || 'QCM'})`,
+        status: scheduledDate ? 'planifié' : 'publié',
+        time: scheduledDate ? `${scheduledDate} ${scheduledTime || '12:00'}` : 'À l\'instant',
+        url: renderResult.videoUrl
+      };
+
+      setVideoHistory(prev => [newVideo, ...prev]);
+      alert(scheduledDate 
+        ? `🎉 Le vidéo-cours a été généré et planifié pour publication le ${scheduledDate} à ${scheduledTime || '12:00'} !`
+        : `🚀 Le vidéo-cours a été généré avec succès ! Le fichier MP4 est prêt pour publication.`
+      );
+      setPreviewScript(null);
+      setScheduledDate('');
+      setScheduledTime('');
+    } catch (err) {
+      console.error(err);
+      alert("Erreur lors de la génération de la vidéo.");
+    } finally {
+      setIsRenderingVideo(false);
+    }
+  };
 
   const [phase,           setPhase]           = useState(1);
   const [uploadedBg,      setUploadedBg]      = useState(null);
@@ -833,7 +988,67 @@ Write ONLY the prompt (4-5 sentences). No preamble.`
         </div>
       </header>
 
-      {/* ── PHASE 3: Result ── */}
+      {/* Tab Switcher */}
+      <div style={{
+        display: 'flex',
+        gap: '0.5rem',
+        background: 'var(--bg-glass)',
+        border: '1px solid var(--border)',
+        padding: '0.3rem',
+        borderRadius: '14px',
+        marginBottom: '2rem',
+        width: 'fit-content',
+        backdropFilter: 'blur(12px)',
+        position: 'relative',
+        zIndex: 10
+      }}>
+        <button
+          onClick={() => setActiveTab('poster')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.6rem 1.2rem',
+            borderRadius: '10px',
+            border: 'none',
+            fontSize: '0.88rem',
+            fontWeight: 800,
+            cursor: 'pointer',
+            background: activeTab === 'poster' ? 'linear-gradient(135deg, #EC4899, #8B5CF6)' : 'transparent',
+            color: activeTab === 'poster' ? '#fff' : 'var(--text-muted)',
+            transition: 'all 0.3s ease',
+            boxShadow: activeTab === 'poster' ? '0 4px 15px rgba(139, 92, 246, 0.25)' : 'none'
+          }}
+        >
+          <Palette size={16} />
+          <span>Studio Poster (Images)</span>
+        </button>
+        <button
+          onClick={() => setActiveTab('video')}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            padding: '0.6rem 1.2rem',
+            borderRadius: '10px',
+            border: 'none',
+            fontSize: '0.88rem',
+            fontWeight: 800,
+            cursor: 'pointer',
+            background: activeTab === 'video' ? 'linear-gradient(135deg, #8B5CF6, #10B981)' : 'transparent',
+            color: activeTab === 'video' ? '#fff' : 'var(--text-muted)',
+            transition: 'all 0.3s ease',
+            boxShadow: activeTab === 'video' ? '0 4px 15px rgba(16, 185, 129, 0.25)' : 'none'
+          }}
+        >
+          <Clapperboard size={16} />
+          <span>Studio TikTok Vidéo (Vidéos)</span>
+        </button>
+      </div>
+
+      {activeTab === 'poster' && (
+        <>
+          {/* ── PHASE 3: Result ── */}
       {phase === 3 && generatedImage && (
         <div className="animate-fade-in">
           <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
@@ -1138,6 +1353,913 @@ Write ONLY the prompt (4-5 sentences). No preamble.`
               )}
             </div>
           </div>
+        </div>
+      )}
+      </>)}
+
+      {/* ── STUDIO TIKTOK VIDEO (Vidéos) ── */}
+      {activeTab === 'video' && (
+        <div className="animate-fade-in" style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
+          
+          {/* Left Column: Video Configuration (QCM Selection & Actions) */}
+          <div style={{ flex: '1 1 500px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            
+            {/* 1. Configuration Panel */}
+            <div className="glass-panel" style={{ padding: '1.5rem 2rem', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)' }}>
+                <Video size={18} className="text-emerald" />
+                <span>1. Configurer le vidéo-cours</span>
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Sélectionner l'Examen</label>
+                  <select 
+                    className="input-control" 
+                    style={{ width: '100%', fontSize: '0.8rem', padding: '0.55rem', borderRadius: '10px' }}
+                    value={selectedVideoExam?.id || ''}
+                    onChange={e => handleSelectExamForVideo(e.target.value)}
+                  >
+                    <option value="">-- Sélectionner --</option>
+                    {exams.map(e => (
+                      <option key={e.id} value={e.id}>{e.name} ({e.school})</option>
+                    ))}
+                  </select>
+                </div>
+                
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Sélectionner la Question</label>
+                  <select 
+                    className="input-control" 
+                    style={{ width: '100%', fontSize: '0.8rem', padding: '0.55rem', borderRadius: '10px' }}
+                    disabled={!selectedVideoExam || !selectedVideoExam.questions?.length}
+                    value={selectedVideoQuestion?.id || ''}
+                    onChange={e => {
+                      const q = selectedVideoExam.questions.find(item => item.id === e.target.value);
+                      setSelectedVideoQuestion(q);
+                      setPreviewScript(null);
+                    }}
+                  >
+                    {!selectedVideoExam && <option value="">Choisir un examen d'abord</option>}
+                    {selectedVideoExam && selectedVideoExam.questions?.map((q, idx) => (
+                      <option key={q.id || idx} value={q.id}>Q{idx + 1} : {q.topic || 'Général'} - {q.question?.substring(0, 40)}...</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {selectedVideoQuestion && (
+                <div style={{ background: 'rgba(0,0,0,0.15)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.68rem', color: 'var(--emerald)', background: 'var(--emerald-soft)', fontWeight: 800, padding: '0.2rem 0.5rem', borderRadius: '4px' }}>
+                      Question Active
+                    </span>
+                    <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--primary)' }}>Réponse attendue : {selectedVideoQuestion.correct_answer}</span>
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-main)', lineHeight: 1.4 }}>{renderWithMath(selectedVideoQuestion.question)}</p>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                <button 
+                  className="btn-outline"
+                  disabled={!selectedVideoQuestion}
+                  onClick={handleGenerateScript}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.55rem 1.1rem', borderRadius: '10px' }}
+                >
+                  <Sparkles size={14} /> Générer Script JSON
+                </button>
+                
+                {companionOnline ? (
+                  <button 
+                    className="btn animate-pulse"
+                    disabled={!selectedVideoQuestion || isLocalRendering}
+                    onClick={handleLocalRender}
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.4rem', 
+                      fontSize: '0.8rem', 
+                      padding: '0.55rem 1.1rem', 
+                      borderRadius: '10px', 
+                      background: 'linear-gradient(135deg, #10B981, #059669)',
+                      boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)',
+                      color: '#fff',
+                      fontWeight: 800
+                    }}
+                  >
+                    <Wand2 size={14} /> {isLocalRendering ? 'Génération MP4...' : 'Rendre MP4 Local (1-Clic)'}
+                  </button>
+                ) : (
+                  <button 
+                    className="btn-outline"
+                    disabled={true}
+                    title="Démarrez le compagnon (node start-companion.js) pour activer"
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.4rem', 
+                      fontSize: '0.8rem', 
+                      padding: '0.55rem 1.1rem', 
+                      borderRadius: '10px',
+                      opacity: 0.5,
+                      cursor: 'not-allowed'
+                    }}
+                  >
+                    <Wand2 size={14} /> Rendu Local (Compagnon Inactif)
+                  </button>
+                )}
+
+                <button 
+                  className="btn"
+                  disabled={!selectedVideoQuestion || isRenderingVideo}
+                  onClick={handleScheduleVideo}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', padding: '0.55rem 1.1rem', borderRadius: '10px', background: 'linear-gradient(135deg, var(--violet), var(--border))', color: 'var(--text-muted)' }}
+                >
+                  <Play size={14} /> Planifier (Cloud Mock)
+                </button>
+              </div>
+            </div>
+
+            {/* 2. Planification & Historique */}
+            <div className="glass-panel" style={{ padding: '1.5rem 2rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-main)' }}>
+                <Calendar size={18} className="text-violet" />
+                <span>2. Planification & Publication</span>
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Date de publication</label>
+                  <input 
+                    type="date" 
+                    className="input-control" 
+                    style={{ fontSize: '0.8rem', padding: '0.5rem', borderRadius: '8px' }} 
+                    value={scheduledDate}
+                    onChange={e => setScheduledDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>Heure</label>
+                  <input 
+                    type="time" 
+                    className="input-control" 
+                    style={{ fontSize: '0.8rem', padding: '0.5rem', borderRadius: '8px' }} 
+                    value={scheduledTime}
+                    onChange={e => setScheduledTime(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginTop: '1rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                <h4 style={{ margin: '0 0 0.75rem 0', fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)' }}>Historique du Pipeline de Rendu</h4>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: '180px', overflowY: 'auto' }}>
+                  {videoHistory.map(vid => (
+                    <div key={vid.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.6rem 0.8rem', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid var(--border)', fontSize: '0.78rem' }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{vid.title}</div>
+                        <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 2, display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                          <Clock size={10} />
+                          {vid.time}
+                        </div>
+                      </div>
+                      <span style={{ 
+                        fontSize: '0.68rem', 
+                        fontWeight: 800, 
+                        padding: '0.2rem 0.5rem', 
+                        borderRadius: '6px',
+                        background: vid.status === 'publié' ? 'rgba(16,185,129,0.1)' : 'rgba(245,158,11,0.1)',
+                        color: vid.status === 'publié' ? 'var(--emerald)' : 'var(--warning)',
+                        textTransform: 'uppercase'
+                      }}>
+                        {vid.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column: Interactive Video Preview (TikTok Simulator) */}
+          <div style={{ flex: '0 0 350px', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div className="glass-panel" style={{ padding: '1.25rem', position: 'relative' }}>
+              <style>{`
+                .tiktok-preview-phone .katex {
+                  color: #F8FAFC !important;
+                }
+                .tiktok-preview-phone .katex-display {
+                  margin: 0.3em 0 !important;
+                }
+                @keyframes spinDisk {
+                  from { transform: rotate(0deg); }
+                  to { transform: rotate(360deg); }
+                }
+                @keyframes heartbeat {
+                  0%, 100% { transform: scale(1); }
+                  50% { transform: scale(1.1); }
+                }
+                @keyframes textPulse {
+                  0%, 100% { opacity: 0.9; }
+                  50% { opacity: 0.45; }
+                }
+                @keyframes slideUpOption {
+                  from { transform: translateY(15px); opacity: 0; }
+                  to { transform: translateY(0); opacity: 1; }
+                }
+                @keyframes borderNeonGlow {
+                  0%, 100% { border-color: rgba(139, 92, 246, 0.4); box-shadow: 0 0 15px rgba(139, 92, 246, 0.2); }
+                  50% { border-color: rgba(139, 92, 246, 0.85); box-shadow: 0 0 25px rgba(139, 92, 246, 0.55); }
+                }
+                @keyframes borderCorrectNeon {
+                  0%, 100% { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 15px rgba(16, 185, 129, 0.25); }
+                  50% { border-color: rgba(16, 185, 129, 1); box-shadow: 0 0 30px rgba(16, 185, 129, 0.6); }
+                }
+                @keyframes borderAstuceNeon {
+                  0%, 100% { border-color: rgba(245, 158, 11, 0.4); box-shadow: 0 0 15px rgba(245, 158, 11, 0.2); }
+                  50% { border-color: rgba(245, 158, 11, 0.9); box-shadow: 0 0 25px rgba(245, 158, 11, 0.5); }
+                }
+                @keyframes stickerFloat {
+                  0%, 100% { transform: translateY(0) rotate(-1deg); }
+                  50% { transform: translateY(-4px) rotate(1deg); }
+                }
+                .tiktok-phone-container {
+                  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                }
+                .option-row-card {
+                  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                }
+                .option-row-card:hover {
+                  background: rgba(255, 255, 255, 0.07) !important;
+                  border-color: rgba(255, 255, 255, 0.15) !important;
+                }
+              `}</style>
+              
+              <h4 style={{ margin: '0 0 0.85rem 0', fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444', display: 'inline-block', animation: 'heartbeat 1.5s infinite' }} />
+                <span>Simulateur TikTok Player (9:16)</span>
+              </h4>
+              
+              {/* Vertical Phone Screen Mockup */}
+              <div 
+                className="tiktok-preview-phone tiktok-phone-container"
+                style={{ 
+                  width: '100%', 
+                  aspectRatio: '9/16', 
+                  borderRadius: '32px', 
+                  background: '#09090B', /* Deep Obsidian background for TikTok look */
+                  border: '5px solid #1E293B', 
+                  overflow: 'hidden', 
+                  position: 'relative',
+                  boxShadow: '0 25px 65px rgba(0,0,0,0.7)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  color: '#F8FAFC',
+                  userSelect: 'none'
+                }}
+              >
+                {/* TikTok Header Overlay: Suivre | Pour toi */}
+                <div style={{ 
+                  position: 'absolute', 
+                  top: 14, 
+                  left: 0, 
+                  right: 0, 
+                  display: 'flex', 
+                  justifyContent: 'center', 
+                  alignItems: 'center', 
+                  gap: '1.25rem', 
+                  zIndex: 10, 
+                  fontSize: '0.82rem', 
+                  color: 'rgba(255,255,255,0.6)', 
+                  fontWeight: 800,
+                  textShadow: '0 2px 4px rgba(0,0,0,0.8)'
+                }}>
+                  <span style={{ cursor: 'pointer', color: 'rgba(255,255,255,0.5)' }}>Suivre</span>
+                  <span style={{ cursor: 'pointer', color: '#fff', borderBottom: '2.5px solid #fff', paddingBottom: 3, fontWeight: 900 }}>Pour toi</span>
+                </div>
+ 
+                {/* TikTok Search Icon (top right visual mockup) */}
+                <div style={{ position: 'absolute', top: 14, right: 18, zIndex: 10, color: 'rgba(255,255,255,0.9)', fontSize: '0.9rem', textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+                  🔍
+                </div>
+ 
+                {/* Moroccan School and Subject Floating Badges (top left) */}
+                <div style={{ position: 'absolute', top: 48, left: 16, zIndex: 10, display: 'flex', gap: 6 }}>
+                  <span style={{ 
+                    fontSize: '0.62rem', 
+                    background: 'linear-gradient(135deg, #8B5CF6, #EC4899)', 
+                    color: '#fff', 
+                    fontWeight: 900, 
+                    padding: '0.22rem 0.65rem', 
+                    borderRadius: '8px', 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.05em',
+                    boxShadow: '0 4px 12px rgba(139,92,246,0.4)',
+                    animation: 'stickerFloat 4s ease-in-out infinite'
+                  }}>
+                    🏫 {selectedVideoExam?.school || "L'CONQ"}
+                  </span>
+                  <span style={{ 
+                    fontSize: '0.62rem', 
+                    background: 'rgba(31, 41, 55, 0.85)', 
+                    color: '#F9FAFB', 
+                    fontWeight: 800, 
+                    padding: '0.22rem 0.6rem', 
+                    borderRadius: '8px', 
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    backdropFilter: 'blur(4px)',
+                    animation: 'stickerFloat 4.5s ease-in-out infinite'
+                  }}>
+                    📐 {selectedVideoQuestion?.topic || "Maths"}
+                  </span>
+                </div>
+ 
+                {/* TikTok Safe Progress Bar indicator (top of content) */}
+                <div style={{ position: 'absolute', top: 3, left: 0, right: 0, height: 3, background: 'rgba(255,255,255,0.15)', zIndex: 11 }}>
+                  <div style={{ 
+                    height: '100%', 
+                    width: `${(playbackTime / 30) * 100}%`, 
+                    background: 'linear-gradient(90deg, #EC4899, #8B5CF6, #10B981)', 
+                    transition: 'width 0.1s linear' 
+                  }} />
+                </div>
+ 
+                {/* TikTok UI Description Overlay (bottom left) */}
+                {selectedVideoQuestion && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    bottom: 18, 
+                    left: 16, 
+                    right: 68, /* Safe zone to avoid overlaying vinyl disk */
+                    zIndex: 10, 
+                    textAlign: 'left', 
+                    pointerEvents: 'none',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '4px'
+                  }}>
+                    <p style={{ fontWeight: 900, fontSize: '0.85rem', margin: 0, color: '#fff', textShadow: '0 2px 4px rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      @lconq_concours <span style={{ width: 12, height: 12, borderRadius: '50%', background: '#3B82F6', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.45rem', fontWeight: 900 }}>✓</span>
+                    </p>
+                    <p style={{ 
+                      fontSize: '0.72rem', 
+                      margin: 0, 
+                      opacity: 0.95, 
+                      lineHeight: 1.4, 
+                      color: '#E2E8F0', 
+                      textShadow: '0 2px 4px rgba(0,0,0,0.95)',
+                      fontWeight: 600
+                    }}>
+                      أجي تختبر راسك ف هاد السؤال! ⏱️🔥 دقيقة تكفيك؟ فكر فالحل ودوز شوف النتيجة! #{selectedVideoQuestion.topic?.toLowerCase() || 'concours'} #bac2026 #fsrs #maroc #enasa #medecine
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: 0.85, fontSize: '0.68rem', marginTop: 3, color: '#F8FAFC', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+                      <span>🎵</span>
+                      <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', width: 120 }}>Son original - L'Conq Studio Pro</span>
+                    </div>
+                  </div>
+                )}
+ 
+                {/* TikTok Sidebar Action Buttons (likes, comments, share, save, rotating vinyl) */}
+                {selectedVideoQuestion && (
+                  <div style={{ 
+                    position: 'absolute', 
+                    right: 12, 
+                    bottom: 18, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    gap: '0.9rem', 
+                    alignItems: 'center', 
+                    zIndex: 10 
+                  }}>
+                    {/* User profile picture */}
+                    <div style={{ position: 'relative', marginBottom: 4 }}>
+                      <div style={{ 
+                        width: 36, 
+                        height: 36, 
+                        borderRadius: '50%', 
+                        border: '1.5px solid #fff', 
+                        background: 'linear-gradient(135deg, #8B5CF6, #EC4899)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        fontSize: '1.05rem',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.4)'
+                      }}>
+                        🧠
+                      </div>
+                      <div style={{ 
+                        position: 'absolute', 
+                        bottom: -4, 
+                        left: '50%', 
+                        transform: 'translateX(-50%)', 
+                        width: 15, 
+                        height: 15, 
+                        borderRadius: '50%', 
+                        background: '#EF4444', 
+                        color: '#fff', 
+                        fontSize: '0.75rem', 
+                        fontWeight: 900, 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        border: '1.5px solid #fff',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                      }}>
+                        +
+                      </div>
+                    </div>
+ 
+                    {/* Likes count */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+                      <span style={{ fontSize: '1.35rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.85))' }}>❤️</span>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 900, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>18.4K</span>
+                    </div>
+ 
+                    {/* Comments count */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+                      <span style={{ fontSize: '1.35rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.85))' }}>💬</span>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 900, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>412</span>
+                    </div>
+ 
+                    {/* Bookmark count */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+                      <span style={{ fontSize: '1.35rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.85))' }}>⭐</span>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 900, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>11.5K</span>
+                    </div>
+ 
+                    {/* Share count */}
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer' }}>
+                      <span style={{ fontSize: '1.35rem', filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.85))' }}>🔗</span>
+                      <span style={{ fontSize: '0.62rem', fontWeight: 900, color: '#fff', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>863</span>
+                    </div>
+ 
+                    {/* Rotating Vinyl Disk */}
+                    <div style={{ 
+                      width: 28, 
+                      height: 28, 
+                      borderRadius: '50%', 
+                      background: 'radial-gradient(circle, #4B5563 30%, #09090B 70%)', 
+                      border: '2px solid rgba(255,255,255,0.8)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      animation: isPlaying ? 'spinDisk 3s linear infinite' : 'none',
+                      marginTop: 4,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.5)'
+                    }}>
+                      <div style={{ width: 11, height: 11, borderRadius: '50%', background: 'linear-gradient(135deg, #EC4899, #8B5CF6)' }} />
+                    </div>
+                  </div>
+                )}
+ 
+                {/* Dark Vignette Background overlay for realistic video contrast */}
+                <div style={{
+                  position: 'absolute',
+                  inset: 0,
+                  background: 'linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.2) 35%, rgba(0,0,0,0.2) 65%, rgba(0,0,0,0.7) 100%)',
+                  pointerEvents: 'none',
+                  zIndex: 2
+                }} />
+ 
+                {/* Simulated Content Area (Vertically centered with TikTok safety paddings) */}
+                {selectedVideoQuestion ? (
+                  <div style={{ 
+                    flex: 1, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    padding: '4.5rem 3.4rem 7.8rem 1.3rem', /* Safe padding zone to prevent overlays from covering text */
+                    justifyContent: 'center', 
+                    position: 'relative',
+                    zIndex: 5
+                  }}>
+                    
+                    {/* Dynamic Ambient Background glow matching the simulator states */}
+                    <div style={{
+                      position: 'absolute',
+                      inset: 0,
+                      background: playbackTime >= 23 
+                        ? 'radial-gradient(circle at center, rgba(245, 158, 11, 0.12) 0%, transparent 75%)'
+                        : playbackTime >= 16 
+                        ? 'radial-gradient(circle at center, rgba(16, 185, 129, 0.12) 0%, transparent 75%)'
+                        : 'radial-gradient(circle at center, rgba(139, 92, 246, 0.08) 0%, transparent 75%)',
+                      pointerEvents: 'none',
+                      transition: 'background 0.5s ease'
+                    }} />
+ 
+                    {/* ──────────────── TIMELINE SEGMENT 1: QUESTION REVEAL (0-5s) ──────────────── */}
+                    {playbackTime < 6 && (
+                      <div className="animate-fade-in" style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'center' }}>
+                          <span style={{ 
+                            fontSize: '0.75rem', 
+                            color: '#fff', 
+                            background: 'linear-gradient(135deg, #EC4899, #8B5CF6)', 
+                            padding: '0.35rem 0.95rem', 
+                            borderRadius: '10px', 
+                            fontWeight: 900, 
+                            textTransform: 'uppercase', 
+                            letterSpacing: '0.08em',
+                            boxShadow: '0 4px 20px rgba(139, 92, 246, 0.5)',
+                            border: '1px solid rgba(255,255,255,0.2)'
+                          }}>
+                            ⚡ DEFI CHRONO 🇲🇦
+                          </span>
+                        </div>
+                        <div style={{
+                          background: 'rgba(15, 23, 42, 0.65)',
+                          border: '1.5px solid rgba(255, 255, 255, 0.12)',
+                          borderRadius: '24px',
+                          padding: '1.4rem',
+                          boxShadow: '0 12px 40px rgba(0,0,0,0.5)',
+                          backdropFilter: 'blur(20px)',
+                          animation: 'borderNeonGlow 3s ease-in-out infinite'
+                        }}>
+                          <h3 style={{ 
+                            fontSize: '1.15rem', 
+                            fontWeight: 800, 
+                            lineHeight: 1.52, 
+                            color: '#FFFFFF',
+                            margin: 0,
+                            letterSpacing: '-0.015em',
+                            textShadow: '0 2px 8px rgba(0,0,0,0.4)'
+                          }}>
+                            {renderWithMath(selectedVideoQuestion.question)}
+                          </h3>
+                        </div>
+                        <p style={{ 
+                          fontSize: '0.78rem', 
+                          color: '#A78BFA', 
+                          fontWeight: 800, 
+                          margin: 0, 
+                          letterSpacing: '0.02em',
+                          textShadow: '0 1px 3px rgba(0,0,0,0.8)',
+                          animation: 'textPulse 1.5s infinite' 
+                        }}>
+                          جاوب فقلبك قبل ما يسالي الوقت! ⏱️🧠
+                        </p>
+                      </div>
+                    )}
+ 
+                    {/* ──────────────── TIMELINE SEGMENT 2: OPTIONS & COUNTDOWN (6-15s) ──────────────── */}
+                    {playbackTime >= 6 && playbackTime < 16 && (
+                      <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
+                        <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                          <span style={{ fontSize: '0.68rem', color: '#FCD34D', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
+                            ⏱️ الاختيارات المتوفرة
+                          </span>
+                          <h4 style={{ 
+                            fontSize: '0.85rem', 
+                            fontWeight: 800, 
+                            margin: 0, 
+                            color: 'rgba(255,255,255,0.85)', 
+                            lineHeight: 1.4,
+                            textShadow: '0 1px 4px rgba(0,0,0,0.9)'
+                          }}>
+                            {renderWithMath((selectedVideoQuestion.question || '').substring(0, 75) + '...')}
+                          </h4>
+                        </div>
+                        
+                        {/* Countdown ring */}
+                        <div style={{ display: 'flex', justifyContent: 'center', margin: '0.1rem 0' }}>
+                          <div style={{
+                            width: 52,
+                            height: 52,
+                            borderRadius: '50%',
+                            border: '3px solid #8B5CF6',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '1.4rem',
+                            fontWeight: 900,
+                            color: '#8B5CF6',
+                            boxShadow: '0 0 20px rgba(139,92,246,0.4)',
+                            background: '#09090B',
+                            animation: 'heartbeat 1s infinite'
+                          }}>
+                            <span style={{ margin: 'auto' }}>{Math.max(0, 15 - Math.floor(playbackTime))}</span>
+                          </div>
+                        </div>
+ 
+                        {/* Staggered options reveal */}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                          {(selectedVideoQuestion.options || []).map((opt, idx) => {
+                            const isStr = typeof opt === 'string';
+                            const optId = isStr ? ['A', 'B', 'C', 'D', 'E'][idx] : opt.id;
+                            const optText = isStr ? opt.replace(/^[A-E]\)\s*/, '') : (opt.text || '');
+                            
+                            // Show options based on playback time (reveal one by one)
+                            const revealTime = 6 + idx * 1.5;
+                            const isRevealed = playbackTime >= revealTime;
+                            
+                            // Beautiful coloring for Option ID Pills
+                            const optColors = {
+                              'A': { bg: 'rgba(139, 92, 246, 0.15)', text: '#A78BFA', border: '#8B5CF6' },
+                              'B': { bg: 'rgba(236, 72, 153, 0.15)', text: '#F472B6', border: '#EC4899' },
+                              'C': { bg: 'rgba(16, 185, 129, 0.15)', text: '#34D399', border: '#10B981' },
+                              'D': { bg: 'rgba(59, 130, 246, 0.15)', text: '#60A5FA', border: '#3B82F6' },
+                            };
+                            const theme = optColors[optId] || { bg: 'rgba(255,255,255,0.08)', text: '#fff', border: 'rgba(255,255,255,0.2)' };
+ 
+                            return (
+                              <div 
+                                key={optId} 
+                                className="option-row-card"
+                                style={{
+                                  padding: '0.65rem 0.85rem',
+                                  background: 'rgba(15, 23, 42, 0.6)',
+                                  border: '1.5px solid rgba(255,255,255,0.08)',
+                                  borderRadius: '14px',
+                                  fontSize: '0.78rem',
+                                  opacity: isRevealed ? 1 : 0.05,
+                                  transform: isRevealed ? 'translateY(0)' : 'translateY(8px)',
+                                  transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '10px',
+                                  fontWeight: 700,
+                                  boxShadow: isRevealed ? '0 4px 12px rgba(0,0,0,0.2)' : 'none',
+                                  animation: isRevealed ? 'slideUpOption 0.4s ease-out' : 'none'
+                                }}
+                              >
+                                <span style={{ 
+                                  width: 24, 
+                                  height: 24, 
+                                  borderRadius: '50%', 
+                                  background: theme.bg,
+                                  border: `1.5px solid ${theme.border}`,
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 900,
+                                  color: theme.text,
+                                  flexShrink: 0
+                                }}>
+                                  {optId}
+                                </span> 
+                                <div style={{ flex: 1, overflowX: 'auto', color: '#F1F5F9' }}>
+                                  {renderWithMath(optText)}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+ 
+                    {/* ──────────────── TIMELINE SEGMENT 3: CORRECT ANSWER PING (16-22s) ──────────────── */}
+                    {playbackTime >= 16 && playbackTime < 23 && (
+                      <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <span style={{ 
+                            fontSize: '0.75rem', 
+                            color: '#fff', 
+                            background: 'linear-gradient(135deg, #10B981, #059669)', 
+                            padding: '0.35rem 0.95rem', 
+                            borderRadius: '10px', 
+                            fontWeight: 900, 
+                            textTransform: 'uppercase', 
+                            letterSpacing: '0.08em',
+                            boxShadow: '0 4px 20px rgba(16, 185, 129, 0.4)',
+                            border: '1px solid rgba(255,255,255,0.2)'
+                          }}>
+                            ✅ الجواب الصحيح
+                          </span>
+                        </div>
+ 
+                        {/* Pulsing Correct Answer Card */}
+                        <div style={{ 
+                          padding: '1.8rem',
+                          background: 'rgba(16, 185, 129, 0.08)',
+                          border: '2.5px solid #10B981',
+                          borderRadius: '24px',
+                          textAlign: 'center',
+                          boxShadow: '0 0 35px rgba(16,185,129,0.3)',
+                          animation: 'borderCorrectNeon 2s infinite',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.65rem',
+                          backdropFilter: 'blur(10px)'
+                        }}>
+                          <span style={{ fontSize: '0.72rem', fontWeight: 900, color: '#34D399', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Réponse Gagnante</span>
+                          <div style={{ 
+                            width: 62, 
+                            height: 62, 
+                            borderRadius: '50%', 
+                            background: 'linear-gradient(135deg, #10B981, #059669)', 
+                            color: '#fff', 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            justifyContent: 'center', 
+                            fontSize: '2.4rem', 
+                            fontWeight: 950,
+                            boxShadow: '0 6px 20px rgba(16,185,129,0.5)',
+                            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+                          }}>
+                            {selectedVideoQuestion.correct_answer}
+                          </div>
+                          <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.85rem', color: '#F1F5F9', fontWeight: 800 }}>
+                            جبتيها صحيحة؟ 🎉🇲🇦
+                          </p>
+                        </div>
+                        <p style={{ textAlign: 'center', fontSize: '0.74rem', color: '#94A3B8', fontWeight: 600, animation: 'textPulse 2s infinite' }}>
+                          هاك كيفاش تحسبها ف 10 ثواني... 💡
+                        </p>
+                      </div>
+                    )}
+ 
+                    {/* ──────────────── TIMELINE SEGMENT 4: SOLUTION & ASTUCE (23-30s) ──────────────── */}
+                    {playbackTime >= 23 && (
+                      <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '0.95rem' }}>
+                        <div style={{ textAlign: 'center' }}>
+                          <span style={{ 
+                            fontSize: '0.75rem', 
+                            color: '#1e1b4b', 
+                            background: 'linear-gradient(135deg, #FBBF24, #F59E0B)', 
+                            padding: '0.35rem 0.95rem', 
+                            borderRadius: '10px', 
+                            fontWeight: 900, 
+                            textTransform: 'uppercase', 
+                            letterSpacing: '0.08em',
+                            boxShadow: '0 4px 20px rgba(245, 158, 11, 0.4)',
+                            border: '1px solid rgba(255,255,255,0.3)'
+                          }}>
+                            💡 ASTUCE MAGIQUE
+                          </span>
+                        </div>
+ 
+                        {/* Gold-bordered neon Trick Box */}
+                        <div style={{ 
+                          padding: '1.25rem',
+                          background: 'rgba(245, 158, 11, 0.05)',
+                          border: '2px dashed #F59E0B',
+                          borderRadius: '20px',
+                          backdropFilter: 'blur(10px)',
+                          boxShadow: '0 8px 30px rgba(245,158,11,0.15)',
+                          animation: 'borderAstuceNeon 2.5s infinite'
+                        }}>
+                          <p style={{ margin: '0 0 0.5rem 0', fontSize: '0.75rem', color: '#FBBF24', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <span>⚡</span> فكرة ذكية :
+                          </p>
+                          <div style={{ margin: 0, fontSize: '0.8rem', color: '#FFFFFF', lineHeight: 1.55, fontWeight: 800 }}>
+                            {renderWithMath(selectedVideoQuestion.trick || selectedVideoQuestion.astuce || "عوض بالقيم مباشرة باش تسالي دغيا.")}
+                          </div>
+                        </div>
+ 
+                        {/* Explanatory notes */}
+                        <div style={{ 
+                          padding: '0.85rem', 
+                          background: 'rgba(255,255,255,0.04)', 
+                          borderRadius: '14px', 
+                          border: '1px solid rgba(255,255,255,0.08)' 
+                        }}>
+                          <p style={{ margin: '0 0 0.3rem 0', fontSize: '0.68rem', color: '#94A3B8', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.03em' }}>
+                            التفسير الرياضي :
+                          </p>
+                          <div style={{ margin: 0, fontSize: '0.74rem', color: '#E2E8F0', lineHeight: 1.48, fontWeight: 600 }}>
+                            {renderWithMath(selectedVideoQuestion.astuce || "تطبيق مباشر للمبرهنة.")}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-subtle)', padding: '2rem', textAlign: 'center', gap: '0.65rem' }}>
+                    <Clapperboard size={42} style={{ opacity: 0.3, color: '#8B5CF6', animation: 'heartbeat 3s infinite' }} />
+                    <p style={{ fontSize: '0.85rem', fontWeight: 800, margin: 0, color: '#F1F5F9' }}>بانتظار اختيار السؤال 🇲🇦</p>
+                    <p style={{ fontSize: '0.72rem', opacity: 0.75, margin: 0, lineHeight: 1.45 }}>اختر امتحان وسؤال من القائمة اليسرى لتشغيل محاكاة الفيديو التيكتوك الاحترافية.</p>
+                  </div>
+                )}
+              </div>
+ 
+              {/* Playback Controls Panel */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1.25rem' }}>
+                {/* Timeline Progress Slider */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <input 
+                    type="range" 
+                    min="0" 
+                    max="30" 
+                    step="0.1" 
+                    disabled={!selectedVideoQuestion}
+                    value={playbackTime} 
+                    onChange={e => {
+                      setPlaybackTime(parseFloat(e.target.value));
+                      setIsPlaying(false);
+                    }}
+                    style={{ flex: 1, accentColor: '#8B5CF6', height: '4px', cursor: 'pointer' }}
+                  />
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, width: 34, textAlign: 'right', color: 'var(--text-main)' }}>{playbackTime.toFixed(1)}s</span>
+                </div>
+                
+                {/* Control Buttons */}
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button 
+                    disabled={!selectedVideoQuestion}
+                    onClick={() => setIsPlaying(!isPlaying)}
+                    className="btn" 
+                    style={{ 
+                      flex: 1, 
+                      background: isPlaying ? 'var(--warning)' : 'linear-gradient(135deg, #8B5CF6, #10B981)', 
+                      padding: '0.6rem', 
+                      fontSize: '0.82rem', 
+                      borderRadius: '10px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      gap: '0.4rem',
+                      fontWeight: 800,
+                      boxShadow: '0 4px 15px rgba(139,92,246,0.2)'
+                    }}
+                  >
+                    {isPlaying ? <><Pause size={14} /> Pause</> : <><Play size={14} /> Play Simulator</>}
+                  </button>
+                  <button 
+                    disabled={!selectedVideoQuestion}
+                    onClick={() => {
+                      setPlaybackTime(0);
+                      setIsPlaying(false);
+                    }}
+                    className="btn-outline" 
+                    style={{ padding: '0.6rem 0.9rem', fontSize: '0.82rem', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >
+                    <RotateCcw size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Direct Local Render Info Box */}
+            <div className="glass-panel" style={{ 
+              padding: '1rem', 
+              background: 'rgba(59, 130, 246, 0.06)', 
+              border: '1px solid rgba(59, 130, 246, 0.18)', 
+              borderRadius: '16px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '0.5rem',
+              marginTop: '1rem'
+            }}>
+              <h5 style={{ margin: 0, fontSize: '0.8rem', fontWeight: 800, color: '#3B82F6', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span style={{ fontSize: '1rem' }}>💡</span>
+                <span>توليد الفيديو محلياً (Local Render)</span>
+              </h5>
+              <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.45 }}>
+                لتفادي الضغط على السيرفر، يمكنك تحميل سيناريو السؤال وتوليده كفيديو MP4 مباشرة على جهازك مجاناً عبر خطوات بسيطة:
+              </p>
+              <ol style={{ margin: '0 0 0 1rem', padding: 0, fontSize: '0.7rem', color: 'var(--text-subtle)', lineHeight: 1.45, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <li>انقر على <strong>"Générer Script JSON"</strong> ثم <strong>"Télécharger JSON"</strong>.</li>
+                <li>ضع الملف المحمل داخل المجلد <code>remotion-video-studio</code> باسم <code>question.json</code>.</li>
+                <li>افتح Terminal في المجلد وشغّل: <code style={{ color: 'var(--violet)', fontWeight: 700 }}>npm run render:props</code></li>
+              </ol>
+              <a href="file:///d:/BUREAU%202027/Gima/remotion-video-studio/README.md" target="_blank" style={{ fontSize: '0.7rem', color: '#3B82F6', fontWeight: 700, textDecoration: 'underline', marginTop: '2px' }}>
+                📖 فتح دليل الاستخدام الكامل (README.md)
+              </a>
+            </div>
+          </div>
+
+
+          {/* Remotion Script JSON Timeline Preview Panel */}
+          {previewScript && (
+            <div className="col-span-12 glass-panel animate-slide-up" style={{ padding: '1.5rem 2rem', display: 'flex', flexDirection: 'column', gap: '1rem', width: '100%' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>📄 Remotion Asset Script (JSON Timeline)</h4>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button 
+                    className="btn-outline" 
+                    onClick={handleDownloadScript}
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px' }}
+                  >
+                    Télécharger JSON
+                  </button>
+                  <button 
+                    className="btn-outline" 
+                    onClick={() => setPreviewScript(null)}
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', border: 'none', background: 'var(--bg-hover)' }}
+                  >
+                    Masquer
+                  </button>
+                </div>
+              </div>
+              
+              <pre style={{
+                margin: 0,
+                padding: '1rem',
+                background: 'rgba(0,0,0,0.3)',
+                borderRadius: '10px',
+                border: '1px solid var(--border)',
+                fontSize: '0.72rem',
+                fontFamily: 'Fira Code, monospace',
+                whiteSpace: 'pre-wrap',
+                maxHeight: '300px',
+                overflowY: 'auto'
+              }}>
+                {JSON.stringify(previewScript, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       )}
     </div>
