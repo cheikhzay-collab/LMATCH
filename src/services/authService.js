@@ -64,42 +64,29 @@ export const registerStudent = async (name, email, password) => {
 export const loginWithEmail = async (email, password) => {
   if (!supabase) throw new Error('Supabase is not configured.');
 
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
-    if (error) throw error;
-    if (!data.user) throw new Error('Login failed.');
+  if (error) throw error;
+  if (!data.user) throw new Error('Login failed.');
 
-    const profile = await getUserDoc(data.user.id);
+  const profile = await getUserDoc(data.user.id);
 
-    return {
-      uid: data.user.id,
-      id: data.user.id,
-      name: profile?.name || data.user.user_metadata?.name || 'Directeur',
-      email: data.user.email,
-      role: profile?.role || 'student',
-      tier: profile?.tier || 'freemium',
-      xp: profile?.xp || 0,
-      streak: profile?.streak || 0,
-      rank: profile?.rank || null,
-      totalStudents: profile?.totalStudents || 1200,
-      subscription: profile?.subscription || null,
-    };
-  } catch (err) {
-    // ADMIN_LOCAL fallback: only if the error is NOT credentials-related
-    // (i.e., the admin account doesn't exist in Supabase yet)
-    const isCredentialError = err.message?.includes('Invalid login credentials') ||
-      err.message?.includes('Email not confirmed') ||
-      err.message?.includes('invalid_credentials');
-
-    if (email === 'admin@lconq.ma' && !isCredentialError) {
-      throw new Error('ADMIN_LOCAL');
-    }
-    throw err;
-  }
+  return {
+    uid: data.user.id,
+    id: data.user.id,
+    name: profile?.name || data.user.user_metadata?.name || data.user.user_metadata?.full_name || 'Utilisateur',
+    email: data.user.email,
+    role: profile?.role || 'student',
+    tier: profile?.tier || 'freemium',
+    xp: profile?.xp || 0,
+    streak: profile?.streak || 0,
+    rank: profile?.rank || null,
+    totalStudents: profile?.totalStudents || 1200,
+    subscription: profile?.subscription || null,
+  };
 };
 
 /**

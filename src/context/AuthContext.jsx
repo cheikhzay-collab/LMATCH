@@ -376,17 +376,9 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     // ── Supabase Auth login ───────────────────────────────────────────────────
     if (SUPABASE_ENABLED) {
-      try {
-        const sbUser = await loginWithEmail(email, password);
-        setUser(sbUser);
-        return;
-      } catch (err) {
-        if (err.message === 'ADMIN_LOCAL') {
-          setUser({ name: 'Directeur', email: email, role: 'admin', uid: 'admin', id: 'admin' });
-          return;
-        }
-        throw err;
-      }
+      const sbUser = await loginWithEmail(email, password);
+      setUser(sbUser);
+      return;
     }
 
     // ── Fallback when Supabase is disabled ────────────────────────────────────

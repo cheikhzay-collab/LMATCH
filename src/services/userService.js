@@ -297,11 +297,25 @@ export const getRecentActivity = async (uid, days = 90) => {
 };
 
 /**
+ * Delete a user by UID (Admin only).
+ */
+export const deleteUser = async (uid) => {
+  if (!supabase) return false;
+  const { error } = await supabase.rpc('delete_user', { uid });
+  if (error) {
+    console.error('[Supabase] Failed to delete user:', error);
+    return false;
+  }
+  return true;
+};
+
+/**
  * Fetch all registered users from database (Admin only).
  * Uses the get_all_profiles() SECURITY DEFINER RPC to bypass RLS.
  * @returns {Promise<Array>}
  */
 export const getAllUsers = async () => {
+
   if (!supabase) return [];
 
   // Try RPC first (bypasses RLS — for admin dashboard)

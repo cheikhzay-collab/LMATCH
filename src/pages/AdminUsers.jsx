@@ -1,9 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Crown, User, Search, Users, Activity, TrendingUp, ChevronRight, RefreshCw 
-} from 'lucide-react';
+import { deleteUser } from '../services/userService';
+import { Trash } from 'lucide-react';
+
+// inside component
+const handleDelete = async (uid, e) => {
+  e.stopPropagation();
+  if (!window.confirm('هل تريد حذف هذا المستخدم بشكل دائم؟')) return;
+  const success = await deleteUser(uid);
+  if (success) {
+    await refreshAdminData();
+  }
+};
+
 
 export default function AdminUsers() {
   const { users, updateUserTier, refreshAdminData } = useAuth();

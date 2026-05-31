@@ -1,164 +1,204 @@
--- SQL Schema for L'Conq Supabase Migration
--- Copy and run this script in your Supabase SQL Editor (Dashboard > SQL Editor > New query)
+-- SQL Schema for L'Conq Supabase — v2 (Secure)
+-- Last updated: 2026-05-31
+-- Run this in Supabase SQL Editor (Dashboard > SQL Editor > New query)
+-- ⚠️  This is idempotent — safe to re-run.
 
--- 1. Profiles Table (linked to auth.users)
-create table if not exists public.profiles (
-  id uuid references auth.users on delete cascade primary key,
+-- ─── 1. Profiles Table ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.profiles (
+  id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   name text,
   email text,
-  role text default 'student',
-  tier text default 'freemium',
-  xp integer default 0,
-  streak integer default 0,
+  role text DEFAULT 'student',
+  tier text DEFAULT 'freemium',
+  xp integer DEFAULT 0,
+  streak integer DEFAULT 0,
   rank integer,
-  total_students integer default 1200,
-  joined timestamp with time zone default timezone('utc'::text, now()),
+  total_students integer DEFAULT 1200,
+  joined timestamp with time zone DEFAULT timezone('utc'::text, now()),
   subscription jsonb,
-  created_at timestamp with time zone default timezone('utc'::text, now()),
-  updated_at timestamp with time zone default timezone('utc'::text, now())
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
 
--- Enable Row Level Security (RLS)
-alter table public.profiles enable row level security;
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
--- Helper function to check if a user is an admin
--- Defined as SECURITY DEFINER to bypass RLS policies when querying the profiles table
-create or replace function public.is_admin()
-returns boolean
-security definer set search_path = public
-language plpgsql as $$
-begin
-  return exists (
-    select 1 from public.profiles
-    where profiles.id = auth.uid() and profiles.role = 'admin'
+-- Helper: check if current user is admin (SECURITY DEFINER to avoid RLS recursion)
+CREATE OR REPLACE FUNCTION public.is_admin()
+RETURNS boolean
+SECURITY DEFINER SET search_path = public
+LANGUAGE plpgsql AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.profiles
+    WHERE profiles.id = auth.uid() AND profiles.role = 'admin'
   );
-end;
+END;
 $$;
 
--- Policies for Profiles
-create policy "Users can view their own profile." on public.profiles
-  for select using (auth.uid() = id);
+-- Profiles policies (secure, no deprecated auth.role())
+DROP POLICY IF EXISTS "Users can view their own profile." ON public.profiles;
+DROP POLICY IF EXISTS "Users can update their own profile." ON public.profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile." ON public.profiles;
+DROP POLICY IF EXISTS "Authenticated users can view all profiles." ON public.profiles;
 
-create policy "Users can update their own profile." on public.profiles
-  for update using (auth.uid() = id);
+CREATE POLICY "Users can view their own profile"
+  ON public.profiles FOR SELECT
+  TO authenticated
+  USING ((SELECT auth.uid()) = id);
 
-create policy "Users can insert their own profile." on public.profiles
-  for insert with check (auth.uid() = id);
+CREATE POLICY "Users can update their own profile"
+  ON public.profiles FOR UPDATE
+  TO authenticated
+  USING ((SELECT auth.uid()) = id)
+  WITH CHECK ((SELECT auth.uid()) = id);
 
-create policy "Admins can do everything on profiles." on public.profiles
-  for all using (public.is_admin());
+CREATE POLICY "Users can insert their own profile"
+  ON public.profiles FOR INSERT
+  TO authenticated
+  WITH CHECK ((SELECT auth.uid()) = id);
 
--- Function and trigger to automatically create a profile when a user signs up
-create or replace function public.handle_new_user()
-returns trigger
-security definer set search_path = public
-language plpgsql as $$
-begin
-  insert into public.profiles (id, name, email, role, tier, xp, streak, total_students, joined)
-  values (
+CREATE POLICY "Admins can do everything on profiles."
+  ON public.profiles FOR ALL
+  USING (public.is_admin());
+
+-- Auto-create profile on new user signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger
+SECURITY DEFINER SET search_path = public
+LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO public.profiles (id, name, email, role, tier, xp, streak, total_students, joined)
+  VALUES (
     new.id,
-    coalesce(new.raw_user_meta_data->>'name', 'Élève'),
+    COALESCE(new.raw_user_meta_data->>'name', new.raw_user_meta_data->>'full_name', 'Élève'),
     new.email,
     'student',
     'freemium',
-    0,
-    0,
-    1200,
+    0, 0, 1200,
     now()
-  );
-  return new;
-end;
+  )
+  ON CONFLICT (id) DO NOTHING;
+  RETURN new;
+END;
 $$;
 
-create or replace trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
 
--- 2. Config Table (for schools config, plans config, etc.)
-create table if not exists public.config (
-  key text primary key,
-  value jsonb not null,
-  updated_at timestamp with time zone default timezone('utc'::text, now())
+-- Protect role/tier from self-elevation
+CREATE OR REPLACE FUNCTION public.check_profile_update()
+RETURNS trigger
+SECURITY DEFINER SET search_path = public
+LANGUAGE plpgsql AS $$
+BEGIN
+  IF (old.role IS DISTINCT FROM new.role OR old.tier IS DISTINCT FROM new.tier) THEN
+    IF NOT public.is_admin() THEN
+      new.role := old.role;
+      new.tier := old.tier;
+    END IF;
+  END IF;
+  RETURN new;
+END;
+$$;
+
+CREATE OR REPLACE TRIGGER check_profile_update_trigger
+  BEFORE UPDATE ON public.profiles
+  FOR EACH ROW EXECUTE PROCEDURE public.check_profile_update();
+
+-- ─── 2. Config Table ──────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.config (
+  key text PRIMARY KEY,
+  value jsonb NOT NULL,
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
 
-alter table public.config enable row level security;
+ALTER TABLE public.config ENABLE ROW LEVEL SECURITY;
 
-create policy "Anyone can read configs." on public.config
-  for select using (true);
+CREATE POLICY "Anyone can read configs." ON public.config
+  FOR SELECT USING (true);
 
-create policy "Admins can write configs." on public.config
-  for all using (public.is_admin());
+CREATE POLICY "Admins can write configs." ON public.config
+  FOR ALL USING (public.is_admin());
 
--- 3. Exams Table
-create table if not exists public.exams (
-  id text primary key,
-  name text not null,
+-- ─── 3. Exams Table ───────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.exams (
+  id text PRIMARY KEY,
+  name text NOT NULL,
   school text,
   year text,
   tier text,
-  questions jsonb, -- array of questions
+  questions jsonb,
   pdf_url text,
-  is_active boolean default true,
-  is_archived boolean default false,
-  date_added timestamp with time zone default timezone('utc'::text, now()),
-  updated_at timestamp with time zone default timezone('utc'::text, now())
+  is_active boolean DEFAULT true,
+  is_archived boolean DEFAULT false,
+  date_added timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
 
-alter table public.exams enable row level security;
+ALTER TABLE public.exams ENABLE ROW LEVEL SECURITY;
 
-create policy "Anyone can view active and non-archived exams." on public.exams
-  for select using (true);
+CREATE POLICY "Anyone can view active and non-archived exams." ON public.exams
+  FOR SELECT USING (true);
 
-create policy "Admins can manage exams." on public.exams
-  for all using (public.is_admin());
+CREATE POLICY "Admins can manage exams." ON public.exams
+  FOR ALL USING (public.is_admin());
 
--- 4. Activation Codes Table
-create table if not exists public.activation_codes (
-  code text primary key,
+-- ─── 4. Activation Codes Table ────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.activation_codes (
+  code text PRIMARY KEY,
   plan_id text,
-  is_used boolean default false,
+  is_used boolean DEFAULT false,
   used_by text,
   used_at timestamp with time zone,
   batch_name text,
-  created_at timestamp with time zone default timezone('utc'::text, now())
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
 
-alter table public.activation_codes enable row level security;
+ALTER TABLE public.activation_codes ENABLE ROW LEVEL SECURITY;
 
-create policy "Authenticated users can select activation codes." on public.activation_codes
-  for select using (auth.role() = 'authenticated');
+DROP POLICY IF EXISTS "Authenticated users can select activation codes." ON public.activation_codes;
+DROP POLICY IF EXISTS "Authenticated users can update activation codes." ON public.activation_codes;
 
-create policy "Authenticated users can update activation codes." on public.activation_codes
-  for update using (auth.role() = 'authenticated');
+CREATE POLICY "Authenticated users can select activation codes"
+  ON public.activation_codes FOR SELECT
+  TO authenticated
+  USING (true);
 
-create policy "Admins can manage activation codes." on public.activation_codes
-  for all using (public.is_admin());
+CREATE POLICY "Authenticated users can update activation codes"
+  ON public.activation_codes FOR UPDATE
+  TO authenticated
+  USING (true)
+  WITH CHECK (true);
 
--- 5. Progress Table (SRS/FSRS cards)
-create table if not exists public.progress (
-  id bigint generated by default as identity primary key,
-  user_id uuid references auth.users on delete cascade not null,
-  question_id text not null,
+CREATE POLICY "Admins can manage activation codes." ON public.activation_codes
+  FOR ALL USING (public.is_admin());
+
+-- ─── 5. Progress Table (SRS/FSRS cards) ──────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.progress (
+  id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  question_id text NOT NULL,
   difficulty double precision,
   stability double precision,
   repetitions integer,
   ease_factor double precision,
   last_review_date timestamp with time zone,
   next_review_date timestamp with time zone,
-  updated_at timestamp with time zone default timezone('utc'::text, now()),
-  unique(user_id, question_id)
+  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
+  UNIQUE(user_id, question_id)
 );
 
-alter table public.progress enable row level security;
+ALTER TABLE public.progress ENABLE ROW LEVEL SECURITY;
 
-create policy "Users can manage their own progress." on public.progress
-  for all using (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own progress." ON public.progress
+  FOR ALL USING (auth.uid() = user_id);
 
--- 6. Mock History Table
-create table if not exists public.mock_history (
-  id bigint generated by default as identity primary key,
-  user_id uuid references auth.users on delete cascade not null,
-  exam_id text not null,
+-- ─── 6. Mock History Table ────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.mock_history (
+  id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  exam_id text NOT NULL,
   exam_name text,
   school text,
   score integer,
@@ -168,46 +208,65 @@ create table if not exists public.mock_history (
   wrong_count integer,
   empty_count integer,
   mode text,
-  date timestamp with time zone default timezone('utc'::text, now())
+  date timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
 
-alter table public.mock_history enable row level security;
+ALTER TABLE public.mock_history ENABLE ROW LEVEL SECURITY;
 
-create policy "Users can manage their own mock history." on public.mock_history
-  for all using (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own mock history." ON public.mock_history
+  FOR ALL USING (auth.uid() = user_id);
 
--- 7. Activity Table
-create table if not exists public.activity (
-  id bigint generated by default as identity primary key,
-  user_id uuid references auth.users on delete cascade not null,
-  date date not null default current_date,
-  count integer default 1,
-  unique(user_id, date)
+-- ─── 7. Activity Table ────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS public.activity (
+  id bigint GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+  user_id uuid REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  date date NOT NULL DEFAULT CURRENT_DATE,
+  count integer DEFAULT 1,
+  UNIQUE(user_id, date)
 );
 
-alter table public.activity enable row level security;
+ALTER TABLE public.activity ENABLE ROW LEVEL SECURITY;
 
-create policy "Users can manage their own activity." on public.activity
-  for all using (auth.uid() = user_id);
+CREATE POLICY "Users can manage their own activity." ON public.activity
+  FOR ALL USING (auth.uid() = user_id);
 
--- 8. Profile Update Protection Trigger
--- Prevents non-admin users from changing their own role or tier
--- Uses is_admin() SECURITY DEFINER function to avoid infinite recursion
-create or replace function public.check_profile_update()
-returns trigger
-security definer set search_path = public
-language plpgsql as $$
-begin
-  if (old.role is distinct from new.role or old.tier is distinct from new.tier) then
-    if not public.is_admin() then
-      new.role := old.role;
-      new.tier := old.tier;
-    end if;
-  end if;
-  return new;
-end;
+-- ─── 8. Admin RPCs ────────────────────────────────────────────────────────────
+
+-- Get all user profiles (admin only — enforced at DB level)
+CREATE OR REPLACE FUNCTION public.get_all_profiles()
+RETURNS SETOF profiles
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Access denied: admin only';
+  END IF;
+  RETURN QUERY SELECT * FROM public.profiles ORDER BY joined DESC;
+END;
 $$;
 
-create or replace trigger check_profile_update_trigger
-  before update on public.profiles
-  for each row execute procedure public.check_profile_update();
+REVOKE EXECUTE ON FUNCTION public.get_all_profiles() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_all_profiles() TO authenticated;
+
+-- Delete a user (admin only)
+CREATE OR REPLACE FUNCTION public.delete_user(uid uuid)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+  IF NOT public.is_admin() THEN
+    RAISE EXCEPTION 'Access denied: admin only';
+  END IF;
+  IF uid = auth.uid() THEN
+    RAISE EXCEPTION 'Cannot delete your own account';
+  END IF;
+  DELETE FROM auth.users WHERE id = uid;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.delete_user(uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.delete_user(uuid) TO authenticated;
