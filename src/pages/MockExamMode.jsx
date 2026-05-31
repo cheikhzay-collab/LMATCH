@@ -11,14 +11,14 @@ function renderOptionText(text) {
   return renderWithMath(text);
 }
 
-/* ─── Circular Timer ────────────────────────────────────────────── */
+/* ─── Circular Timer (Zen Edition) ────────────────────────────────── */
 function CircularTimer({ timeLeft, totalTime }) {
-  const r = 44;
+  const r = 40;
   const circ = 2 * Math.PI * r;
   const pct = Math.max(0, Math.min(1, timeLeft / totalTime));
   const offset = circ * (1 - pct);
   const critical = timeLeft <= 300;
-  const color = critical ? 'var(--danger)' : timeLeft <= 1200 ? 'var(--warning)' : 'var(--emerald)';
+  const color = critical ? 'var(--danger)' : timeLeft <= 1200 ? 'var(--warning)' : 'var(--violet)';
   const h = Math.floor(timeLeft / 3600);
   const m = Math.floor((timeLeft % 3600) / 60);
   const s = timeLeft % 60;
@@ -26,196 +26,45 @@ function CircularTimer({ timeLeft, totalTime }) {
     ? `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`
     : `${m}:${s.toString().padStart(2,'0')}`;
 
-  // Stress Monitor Parameters
-  const heartbeatSpeed = critical ? 0.5 : timeLeft <= 1200 ? 1.2 : 2.5;
-
-  const getProctorMessage = () => {
-    if (timeLeft === 0) return "🔴 Temps écoulé ! L'examen est terminé.";
-    if (critical) return "⚠️ TEMPS CRITIQUE ! Finalisez vos réponses et assurez-vous d'avoir tout complété.";
-    if (timeLeft <= 600) return "⏳ Moins de 10 minutes restantes ! Gardez votre calme et ciblez les questions rapides.";
-    if (timeLeft <= 1800) return "⚡ Plus que 30 minutes. Le rythme est bon, continuez ainsi !";
-    if (timeLeft <= 3600) return "🎯 Une heure écoulée. Restez concentré et gérez judicieusement votre temps.";
-    return "💡 L'examen vient de commencer. Lisez attentivement et ne bloquez pas sur une seule question.";
-  };
-
   return (
     <div style={{ 
       display: 'flex', 
       flexDirection: 'column', 
       alignItems: 'center', 
-      gap: '1.25rem',
-      padding: '0.25rem 0'
+      gap: '0.75rem',
+      padding: '0.5rem 0'
     }}>
-      <style>{`
-        @keyframes candle-flicker {
-          0% { transform: scale(1) rotate(-1.5deg); opacity: 0.9; }
-          100% { transform: scale(1.06) rotate(1.5deg); opacity: 1; }
-        }
-        @keyframes timer-pulse {
-          0% { transform: scale(1); filter: drop-shadow(0 0 2px var(--danger)); }
-          50% { transform: scale(1.08); filter: drop-shadow(0 0 10px var(--danger)); }
-          100% { transform: scale(1); filter: drop-shadow(0 0 2px var(--danger)); }
-        }
-        @keyframes ekg-flow {
-          0% { stroke-dashoffset: 100; }
-          100% { stroke-dashoffset: 0; }
-        }
-        @keyframes pulse-critical {
-          0% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); }
-          50% { box-shadow: 0 0 20px rgba(239, 68, 68, 0.5); border-color: var(--danger); }
-          100% { box-shadow: 0 0 4px rgba(239, 68, 68, 0.2); border-color: rgba(239, 68, 68, 0.3); }
-        }
-        @keyframes ticker-scroll {
-          0% { transform: translateX(100%); }
-          100% { transform: translateX(-100%); }
-        }
-      `}</style>
-
-      {/* Main Circular Ring */}
-      <div style={{ position: 'relative', width: 110, height: 110 }}>
-        <svg width={110} height={110} viewBox="0 0 110 110" style={{ position: 'absolute', inset: 0 }}>
+      <div style={{ position: 'relative', width: 90, height: 90 }}>
+        <svg width={90} height={90} viewBox="0 0 90 90" style={{ position: 'absolute', inset: 0 }}>
           {/* Track */}
-          <circle cx="55" cy="55" r={r} fill="none" stroke="var(--bg-hover)" strokeWidth="7" />
+          <circle cx="45" cy="45" r={r} fill="none" stroke="var(--bg-hover)" strokeWidth="5" />
           {/* Fill */}
           <circle
-            cx="55" cy="55" r={r} fill="none"
+            cx="45" cy="45" r={r} fill="none"
             stroke={color}
-            strokeWidth="7"
+            strokeWidth="5"
             strokeLinecap="round"
             strokeDasharray={circ}
             strokeDashoffset={offset}
-            transform="rotate(-90 55 55)"
-            style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s ease', filter: `drop-shadow(0 0 5px ${color}55)` }}
+            transform="rotate(-90 45 45)"
+            style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s ease' }}
           />
           {/* Time label */}
           <text
-            x="55" y="58"
+            x="45" y="48"
             textAnchor="middle" dominantBaseline="middle"
-            fill={color}
-            fontSize={critical ? "16" : "14"}
-            fontWeight="900"
+            fill="var(--text-main)"
+            fontSize="14"
+            fontWeight="800"
             fontFamily="'Plus Jakarta Sans', sans-serif"
-            style={{ animation: critical ? 'timer-pulse 0.8s ease-in-out infinite' : 'none' }}
           >
             {label}
           </text>
         </svg>
       </div>
-
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
-        
-        {/* EKG stress heartbeat monitor */}
-        <div style={{ 
-          background: 'var(--bg-hover)', 
-          borderRadius: '10px', 
-          padding: '0.5rem 0.75rem', 
-          border: '1px solid var(--border)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.4rem',
-          animation: critical ? 'pulse-critical 1.5s ease-in-out infinite' : 'none',
-          transition: 'all 0.3s ease'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.68rem', color: 'var(--text-subtle)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              Niveau de Stress
-            </span>
-            <span style={{ 
-              fontSize: '0.68rem', 
-              color, 
-              fontWeight: 800,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.25rem'
-            }}>
-              <span style={{ 
-                width: 6, height: 6, borderRadius: '50%', background: color, display: 'inline-block',
-                animation: critical ? 'timer-pulse 0.6s infinite' : 'none'
-              }} />
-              {critical ? 'CRITIQUE' : timeLeft <= 1200 ? 'ÉLEVÉ' : 'CALME'}
-            </span>
-          </div>
-
-          <svg width="100%" height="24" viewBox="0 0 100 24" style={{ display: 'block', overflow: 'hidden' }}>
-            <path 
-              d="M 0 12 L 20 12 L 25 2 L 30 22 L 35 9 L 40 14 L 45 12 L 100 12" 
-              fill="none" 
-              stroke={color} 
-              strokeWidth="2" 
-              strokeDasharray="20 80" 
-              strokeDashoffset="100" 
-              style={{ animation: `ekg-flow ${heartbeatSpeed}s linear infinite` }} 
-            />
-          </svg>
-        </div>
-
-        {/* Dynamic Melting Proctor Candle & Motivational Ticker */}
-        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr', gap: '0.75rem', alignItems: 'center' }}>
-          {/* Animated Wax Candle */}
-          <div style={{ background: 'var(--bg-hover)', borderRadius: '8px', padding: '0.35rem', border: '1px solid var(--border)', height: 52, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="30" height="48" viewBox="0 0 30 48" style={{ overflow: 'visible' }}>
-              <defs>
-                <linearGradient id="flameGrad" x1="0" y1="1" x2="0" y2="0">
-                  <stop offset="0%" stopColor="#EF4444" />
-                  <stop offset="60%" stopColor="#F59E0B" />
-                  <stop offset="100%" stopColor="#FBBF24" />
-                </linearGradient>
-              </defs>
-              {/* Wax candle body (shrinks downwards) */}
-              <rect x="11" y={18 + (1 - pct) * 16} width="8" height={22 - (1 - pct) * 16} fill="var(--text-subtle)" opacity="0.3" rx="1.5" />
-              <rect x="12" y={18 + (1 - pct) * 16} width="6" height={22 - (1 - pct) * 16} fill="var(--text-muted)" opacity="0.5" rx="1" />
-              
-              {/* Wick */}
-              <line x1="15" y1={14 + (1 - pct) * 16} x2="15" y2={18 + (1 - pct) * 16} stroke="var(--text-main)" strokeWidth="1.5" />
-              
-              {/* Flicker Flame */}
-              {timeLeft > 0 && (
-                <path 
-                  d="M15,4 C17.5,9 15,14 15,14 C15,14 12.5,9 15,4 Z" 
-                  fill="url(#flameGrad)" 
-                  style={{ 
-                    transformOrigin: `15px ${14 + (1 - pct) * 16}px`, 
-                    animation: 'candle-flicker 0.12s ease-in-out infinite alternate',
-                    filter: 'drop-shadow(0 0 3px #F59E0B)'
-                  }} 
-                />
-              )}
-            </svg>
-          </div>
-
-          {/* Scrolling Proctor Ticker */}
-          <div style={{ 
-            background: 'var(--bg-hover)', 
-            borderRadius: '8px', 
-            padding: '0.5rem 0.75rem', 
-            border: '1px solid var(--border)',
-            height: 52,
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            position: 'relative'
-          }}>
-            <p style={{ margin: 0, fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-subtle)' }}>
-              Proctor Conseils
-            </p>
-            <div style={{ overflow: 'hidden', position: 'relative', width: '100%', height: '18px', marginTop: '1px' }}>
-              <div style={{
-                position: 'absolute',
-                whiteSpace: 'nowrap',
-                fontSize: '0.74rem',
-                fontWeight: 700,
-                color: 'var(--text-main)',
-                animation: 'ticker-scroll 12s linear infinite',
-                paddingLeft: '100%'
-              }}>
-                {getProctorMessage()}
-              </div>
-            </div>
-          </div>
-        </div>
-
-      </div>
+      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+        Temps restant
+      </span>
     </div>
   );
 }
@@ -373,6 +222,7 @@ export default function MockExamMode() {
   const [combo, setCombo]               = useState(0);
   const [selectedImageZoom, setSelectedImageZoom] = useState(null);
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
+  const [showMobileContext, setShowMobileContext] = useState(false);
 
   const hasSavedResult = React.useRef(false);
 
@@ -589,7 +439,7 @@ export default function MockExamMode() {
 
           {/* Context Panel (Left Half if exists) */}
           {currentQuestion.context && (
-            <div className="glass-card animate-fade-in" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', borderLeft: '4px solid var(--primary)' }}>
+            <div className="glass-card animate-fade-in desktop-context-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', borderLeft: '4px solid var(--primary)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: 'var(--text-subtle)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.08em', flexShrink: 0 }}>
                 <div style={{ background: 'var(--primary)', color: 'white', padding: '0.3rem', borderRadius: '0.4rem', display: 'flex' }}>
                   <Lightbulb size={14} />
@@ -603,7 +453,7 @@ export default function MockExamMode() {
           )}
 
           {/* Question Card (Middle/Right or Full Width) */}
-          <div className="glass-card animate-fade-in" key={currentIndex} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+          <div className="glass-card animate-fade-in question-card-main" key={currentIndex} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
             {/* Topic & Question Header row */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem', flexShrink: 0 }}>
               <span style={{ 
@@ -619,11 +469,31 @@ export default function MockExamMode() {
               }}>
                 Question {currentIndex + 1} sur {questions.length}
               </span>
-              {currentQuestion.topic && (
-                <span className="topic-badge" style={{ margin: 0, padding: '0.25rem 0.6rem', fontSize: '0.7rem', borderRadius: '6px', fontWeight: 700 }}>
-                  {currentQuestion.topic}
-                </span>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {currentQuestion.context && (
+                  <button
+                    onClick={() => setShowMobileContext(true)}
+                    className="mobile-only-toggle"
+                    style={{
+                      border: '1px solid var(--violet)',
+                      background: 'var(--violet-soft)',
+                      color: 'var(--violet)',
+                      fontSize: '0.68rem',
+                      fontWeight: 700,
+                      padding: '0.25rem 0.5rem',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Voir l'énoncé
+                  </button>
+                )}
+                {currentQuestion.topic && (
+                  <span className="topic-badge" style={{ margin: 0, padding: '0.25rem 0.6rem', fontSize: '0.7rem', borderRadius: '6px', fontWeight: 700 }}>
+                    {currentQuestion.topic}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Scrollable Question and Options Area */}
@@ -996,6 +866,66 @@ export default function MockExamMode() {
           </div>
         </div>
       </div>
+
+      {/* ── Mobile Context Drawer/Modal ── */}
+      {showMobileContext && currentQuestion.context && (
+        <>
+          <div 
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(0,0,0,0.65)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+              zIndex: 1010,
+              animation: 'fade-in-overlay 0.2s ease-out'
+            }}
+            onClick={() => setShowMobileContext(false)}
+          />
+          <div style={{
+            position: 'fixed',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            background: 'var(--bg-base)',
+            borderTopLeftRadius: '24px',
+            borderTopRightRadius: '24px',
+            borderTop: '1px solid var(--border)',
+            padding: '1.25rem 1.25rem calc(1.25rem + env(safe-area-inset-bottom, 0px))',
+            zIndex: 1011,
+            boxShadow: '0 -8px 30px rgba(0,0,0,0.5)',
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+            animation: 'slide-up 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+          }}>
+            <div 
+              style={{
+                width: '40px',
+                height: '4px',
+                background: 'var(--border)',
+                borderRadius: '99px',
+                margin: '0 auto 1.25rem',
+                cursor: 'pointer'
+              }} 
+              onClick={() => setShowMobileContext(false)} 
+            />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexShrink: 0 }}>
+              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>Énoncé / Contexte</h3>
+              <button 
+                className="btn-ghost" 
+                onClick={() => setShowMobileContext(false)}
+                style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', fontWeight: 700, borderRadius: '6px', background: 'var(--bg-glass)', border: '1px solid var(--border)' }}
+              >
+                Fermer
+              </button>
+            </div>
+            <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.94rem', lineHeight: '1.6', color: 'var(--text-main)', paddingRight: '4px' }}>
+              {renderWithMath(currentQuestion.context)}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Image Lightbox Zoom Overlay ── */}
       {selectedImageZoom && (

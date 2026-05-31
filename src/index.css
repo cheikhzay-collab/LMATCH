@@ -1707,24 +1707,20 @@ body.light-theme .astuce-tabs {
     display: none !important;
   }
 
-  /* Context Panel in mobile */
-  .mock-exam-grid > div:first-child {
-    max-height: 25vh !important;
-    height: auto !important;
-    overflow-y: auto !important;
-    flex-shrink: 0 !important;
-    padding: 1rem !important;
+  /* Context Panel in mobile (hidden, opened via toggle button) */
+  .desktop-context-panel {
+    display: none !important;
   }
 
   /* Question Card in mobile */
-  .mock-exam-grid > div:nth-child(2) {
+  .question-card-main {
     flex: 1 !important;
     height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
     overflow: hidden !important;
     max-height: none !important;
-    padding: 1rem !important;
+    padding: 0.75rem !important; /* tight padding to ensure everything fits on mobile screen */
   }
 
   .mobile-only-stats-bar {
