@@ -1017,6 +1017,47 @@ body.light-theme .astuce-tabs {
   max-width: 1050px;
 }
 
+.flashcard-badge-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.25rem;
+}
+
+.flashcard-actions-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+}
+
+.flashcard-banner {
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+.flashcard-banner.correct {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: var(--emerald);
+  color: var(--emerald);
+  box-shadow: var(--shadow-glow-emerald);
+}
+.flashcard-banner.skipped {
+  background: rgba(113, 109, 242, 0.08);
+  border-color: var(--violet);
+  color: var(--violet);
+}
+.flashcard-banner.wrong {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
 /* .flashcard-3d.is-flipped handled fully via inline transform in Flashcard.jsx */
 
 .flashcard-3d.swipe-right {
@@ -1214,6 +1255,8 @@ body.light-theme .astuce-tabs {
   vertical-align: middle;
   overflow-x: auto;
   overflow-y: hidden;
+  padding-bottom: 0.15em;
+  margin-bottom: -0.15em;
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
@@ -2127,10 +2170,25 @@ body.light-theme .astuce-tabs {
   }
   
   .flashcard-content-pane {
-    padding: 1rem 0.875rem 1.5rem !important;
+    padding: 1.25rem 1rem 1.5rem !important;
     justify-content: flex-start !important;
   }
   
+  .flashcard-badge-row {
+    margin-bottom: 0.75rem !important;
+  }
+
+  .flashcard-actions-row {
+    margin-top: 0.75rem !important;
+  }
+
+  .flashcard-banner {
+    margin-bottom: 0.75rem !important;
+    padding: 0.6rem 0.85rem !important;
+    font-size: 0.82rem !important;
+    border-radius: 10px !important;
+  }
+
   .flashcard-context-title {
     margin-bottom: 0.75rem;
   }
@@ -2142,8 +2200,6 @@ body.light-theme .astuce-tabs {
     overflow-wrap: break-word !important;
   }
   
-
-  
   .flashcard-question-box {
     font-size: 1.05rem;
     line-height: 1.5;
@@ -2151,43 +2207,46 @@ body.light-theme .astuce-tabs {
   }
 
   .options-grid {
-    gap: 0.35rem !important;
+    gap: 0.5rem !important;
     margin-bottom: 0.75rem !important;
   }
 
   .option-btn {
-    padding: 0.5rem 0.75rem !important;
-    min-height: 38px !important;
-    font-size: 0.85rem !important;
+    padding: 0.6rem 0.875rem !important;
+    min-height: 42px !important;
+    font-size: 0.88rem !important;
     gap: 0.5rem !important;
+    border-radius: 12px !important;
   }
 
   .option-letter {
-    width: 24px !important;
-    height: 24px !important;
-    margin-right: 0.25rem !important;
-    border-radius: 4px !important;
-    font-size: 0.75rem !important;
-  }
-
-  .astuce-match-box {
-    padding: 0.75rem 0.85rem !important;
-    gap: 0.5rem !important;
-    margin-bottom: 0.75rem !important;
-  }
-
-  .astuce-match-title {
+    width: 26px !important;
+    height: 26px !important;
+    margin-right: 0.15rem !important;
+    border-radius: 6px !important;
     font-size: 0.78rem !important;
   }
 
+  .astuce-match-box {
+    padding: 0.875rem 1rem !important;
+    gap: 0.6rem !important;
+    margin-bottom: 1rem !important;
+    border-radius: 14px !important;
+  }
+
+  .astuce-match-title {
+    font-size: 0.8rem !important;
+  }
+
   .astuce-tab {
-    padding: 0.18rem 0.5rem !important;
-    font-size: 0.68rem !important;
+    padding: 0.2rem 0.6rem !important;
+    font-size: 0.7rem !important;
   }
 
   .astuce-match-content {
-    padding: 0.45rem 0.6rem !important;
-    font-size: 0.82rem !important;
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.85rem !important;
+    line-height: 1.6 !important;
   }
 }
 

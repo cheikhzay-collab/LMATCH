@@ -266,7 +266,7 @@ export default function Flashcard({ card, onNext }) {
 
             {/* Right Pane (Question & Options) */}
             <div className="flashcard-content-pane">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div className="flashcard-badge-row">
                 <div className="topic-badge" style={{ margin: 0, padding: '0.35rem 0.75rem', fontSize: '0.7rem', background: 'var(--violet-soft)', color: 'var(--violet)', fontWeight: 800 }}>
                   <BrainCircuit size={14} style={{ marginRight: '0.5rem' }} />
                   {card.topic || 'Analyse'}
@@ -327,35 +327,7 @@ export default function Flashcard({ card, onNext }) {
             {/* Right Pane (Evaluation & Explanation) */}
             <div className="flashcard-content-pane">
               {/* Correctness validation banner */}
-              <div style={{ 
-                marginBottom: '1rem',
-                padding: '0.75rem 1rem',
-                borderRadius: '12px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.6rem',
-                fontSize: '0.9rem',
-                fontWeight: 700,
-                background: isCorrect 
-                 ? 'rgba(16, 185, 129, 0.08)' 
-                 : selectedOption === 'skipped'
-                   ? 'rgba(124, 58, 237, 0.08)'
-                   : 'rgba(239, 68, 68, 0.08)',
-               border: '1px solid',
-               borderColor: isCorrect 
-                 ? 'var(--emerald)' 
-                 : selectedOption === 'skipped'
-                   ? 'var(--violet)'
-                   : 'var(--danger)',
-               color: isCorrect 
-                 ? 'var(--emerald)' 
-                 : selectedOption === 'skipped'
-                   ? 'var(--violet)'
-                   : 'var(--danger)',
-               boxShadow: isCorrect 
-                 ? 'var(--shadow-glow-emerald)' 
-                 : 'none'
-              }}>
+              <div className={`flashcard-banner ${isCorrect ? 'correct' : selectedOption === 'skipped' ? 'skipped' : 'wrong'}`}>
                 {isCorrect ? (
                   <>
                     <CheckCircle2 size={18} />
@@ -452,7 +424,7 @@ export default function Flashcard({ card, onNext }) {
               </div>
 
               {/* SRS Rating Actions */}
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
+              <div className="flashcard-actions-row">
                 {selectedOption === 'skipped' || !isCorrect ? (
                   <button className="btn" style={{ width: '100%', padding: '0.75rem', fontSize: '0.9rem' }} onClick={() => handleEvaluation(0)}>
                     J'ai compris ✓
