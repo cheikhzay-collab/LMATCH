@@ -227,9 +227,10 @@ export default function SchoolExamsPage() {
                   borderRadius: '12px',
                   padding: isMobile ? '1rem' : '1.25rem 1.5rem',
                   display: 'flex',
-                  alignItems: 'center',
-                  gap: isMobile ? '0.75rem' : '1.25rem',
-                  flexWrap: 'wrap',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: isMobile ? 'stretch' : 'center',
+                  justifyContent: 'space-between',
+                  gap: isMobile ? '1rem' : '1.25rem',
                   border: '1px solid var(--border)',
                   borderLeftWidth: '4px',
                   borderLeftColor: brand.accent,
@@ -237,47 +238,58 @@ export default function SchoolExamsPage() {
                   boxShadow: 'var(--shadow-card)',
                 }}
               >
-                {/* Number badge */}
-                <div style={{
-                  width:44, height:44, borderRadius:'12px', flexShrink:0,
-                  background: brand.accentSoft,
-                  border:`1px solid ${brand.accent}33`,
-                  display:'flex', alignItems:'center', justifyContent:'center',
-                  fontSize:'1.1rem', fontWeight:900, color: brand.accent,
+                {/* Left side: Badge & Info */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 0 }}>
+                  {/* Number badge */}
+                  <div style={{
+                    width: 42, height: 42, borderRadius: '12px', flexShrink: 0,
+                    background: brand.accentSoft,
+                    border: `1px solid ${brand.accent}33`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '1rem', fontWeight: 900, color: brand.accent,
+                  }}>
+                    {String(idx + 1).padStart(2, '0')}
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.3rem', flexWrap: 'wrap' }}>
+                      <h3 style={{ fontWeight: 700, fontSize: '0.97rem', margin: 0, color: 'var(--text-main)', lineHeight: 1.35 }}>
+                        {exam.name}
+                      </h3>
+                      {exam.tier === 'premium' && (
+                        <span className="badge badge-pro" style={{ flexShrink: 0 }}><Zap size={9} /> PRO</span>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.76rem', color: 'var(--text-muted)', flexWrap: 'wrap' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                        <Clock size={11} /> {exam.year}
+                      </span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                        <BookOpen size={11} /> {qCount} QCM
+                      </span>
+                      {!isMobile && (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.2rem' }}>
+                          <BrainCircuit size={11} /> Algorithme SRS
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right side: Action buttons */}
+                <div style={{ 
+                  display: 'flex', 
+                  gap: '0.5rem', 
+                  flexWrap: 'wrap',
+                  justifyContent: isMobile ? 'stretch' : 'flex-end',
+                  width: isMobile ? '100%' : 'auto'
                 }}>
-                  {String(idx + 1).padStart(2, '0')}
-                </div>
-
-                {/* Info */}
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.3rem', flexWrap: 'wrap' }}>
-                    <h3 style={{ fontWeight:700, fontSize:'0.97rem', margin: 0, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', color: 'var(--text-main)' }}>
-                      {exam.name}
-                    </h3>
-                    {exam.tier === 'premium' && (
-                      <span className="badge badge-pro"><Zap size={9} /> PRO</span>
-                    )}
-                  </div>
-                  <div style={{ display:'flex', gap:'1rem', fontSize:'0.8rem', color:'var(--text-muted)', flexWrap: 'wrap' }}>
-                    <span style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}>
-                      <Clock size={12} /> {exam.year}
-                    </span>
-                    <span style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}>
-                      <BookOpen size={12} /> {qCount} question{qCount > 1 ? 's' : ''}
-                    </span>
-                    <span style={{ display:'flex', alignItems:'center', gap:'0.3rem' }}>
-                      <BrainCircuit size={12} /> Algorithme SRS
-                    </span>
-                  </div>
-                </div>
-
-                {/* Action buttons */}
-                <div style={{ display:'flex', gap:'0.5rem', flexShrink:0, flexWrap: 'wrap' }}>
                   {isLocked ? (
                     <button 
                       className="btn-outline"
                       onClick={() => navigate('/subscription')}
-                      style={{ display:'flex', alignItems:'center', gap:'0.4rem', borderColor: 'rgba(239, 68, 68, 0.3)', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.03)' }}
+                      style={{ display:'flex', alignItems:'center', gap:'0.4rem', borderColor: 'rgba(239, 68, 68, 0.3)', color: 'var(--danger)', background: 'rgba(239, 68, 68, 0.03)', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}
                     >
                       <Lock size={14} /> Débloquer
                     </button>
@@ -287,6 +299,7 @@ export default function SchoolExamsPage() {
                         className="btn"
                         onClick={() => navigate(`/study?exam=${exam.id}`)}
                         title="Mode révision SRS"
+                        style={{ flex: isMobile ? 1 : 'none' }}
                       >
                         <BrainCircuit size={15} /> SRS
                       </button>
@@ -294,6 +307,7 @@ export default function SchoolExamsPage() {
                         className="btn-outline"
                         onClick={() => navigate(`/exam?exam=${exam.id}`)}
                         title="Concours blanc chronométré"
+                        style={{ flex: isMobile ? 1 : 'none' }}
                       >
                         <Play size={15} /> Blanc
                       </button>
@@ -301,7 +315,7 @@ export default function SchoolExamsPage() {
                         className="btn-outline"
                         onClick={() => handleDownloadPDF(exam)}
                         title="Télécharger la feuille de réponses PDF"
-                        style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}
+                        style={{ display:'flex', alignItems:'center', gap:'0.4rem', flex: isMobile ? 1 : 'none', justifyContent: 'center' }}
                       >
                         <FileDown size={15} /> PDF
                       </button>
@@ -309,7 +323,7 @@ export default function SchoolExamsPage() {
                         className="btn-outline"
                         onClick={() => setScanExam(exam)}
                         title="Scanner ma feuille remplie"
-                        style={{ display:'flex', alignItems:'center', gap:'0.4rem', color:'var(--violet)', borderColor:'var(--violet)' }}
+                        style={{ display:'flex', alignItems:'center', gap:'0.4rem', color:'var(--violet)', borderColor:'var(--violet)', flex: isMobile ? 1 : 'none', justifyContent: 'center' }}
                       >
                         <ScanLine size={15} /> Scanner
                       </button>
@@ -320,7 +334,7 @@ export default function SchoolExamsPage() {
                           download={`${exam.name}.pdf`}
                           className="btn-outline"
                           title="Télécharger le sujet original PDF"
-                          style={{ display:'flex', alignItems:'center', gap:'0.4rem', color:'var(--emerald)', borderColor:'var(--emerald)' }}
+                          style={{ display:'flex', alignItems:'center', gap:'0.4rem', color:'var(--emerald)', borderColor:'var(--emerald)', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}
                         >
                           <FileDown size={15} /> Sujet
                         </a>
