@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
 import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription } from '../services/userService';
 import { getAllExams, getActiveExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam } from '../services/examService';
-import { getSchoolsConfig, saveSchoolsConfig } from '../services/schoolService';
+import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, getCode } from '../services/planService';
 
 
@@ -125,6 +125,32 @@ export function AuthProvider({ children }) {
     return saved ? JSON.parse(saved) : null;
   });
   const [loading, setLoading] = useState(SUPABASE_ENABLED);
+
+  const [profName, setProfName] = useState(() => localStorage.getItem('profName') || '');
+  const [profPhone, setProfPhone] = useState(() => localStorage.getItem('profPhone') || '');
+  const [profSite, setProfSite] = useState(() => localStorage.getItem('profSite') || 'www.lconq.ma');
+
+  const updateBrandingConfig = async (branding) => {
+    const name = (branding.profName || '').trim();
+    const phone = (branding.profPhone || '').trim();
+    const site = (branding.profSite || '').trim() || 'www.lconq.ma';
+
+    setProfName(name);
+    setProfPhone(phone);
+    setProfSite(site);
+
+    localStorage.setItem('profName', name);
+    localStorage.setItem('profPhone', phone);
+    localStorage.setItem('profSite', site);
+
+    if (SUPABASE_ENABLED) {
+      try {
+        await saveBrandingConfig({ profName: name, profPhone: phone, profSite: site });
+      } catch (e) {
+        console.error('[Supabase] Failed to save branding config:', e);
+      }
+    }
+  };
 
   // ── Supabase Auth listener ───────────────────────────────────────────────
   // Stays in sync with Supabase Auth state changes (login, logout, token refresh).
@@ -1110,6 +1136,20 @@ export function AuthProvider({ children }) {
           await saveSchoolsConfig(schools, schoolBranding);
         }
 
+        // Fetch General Branding
+        const brandConfig = await getBrandingConfig();
+        if (brandConfig) {
+          setProfName(brandConfig.profName || '');
+          setProfPhone(brandConfig.profPhone || '');
+          setProfSite(brandConfig.profSite || 'www.lconq.ma');
+          localStorage.setItem('profName', brandConfig.profName || '');
+          localStorage.setItem('profPhone', brandConfig.profPhone || '');
+          localStorage.setItem('profSite', brandConfig.profSite || 'www.lconq.ma');
+        } else {
+          // Seed if not exists in DB
+          await saveBrandingConfig({ profName, profPhone, profSite });
+        }
+
         // Fetch Plans
         const fbPlans = await getPlans();
         if (fbPlans && fbPlans.length > 0) {
@@ -1276,6 +1316,7 @@ export function AuthProvider({ children }) {
       supabaseEnabled: SUPABASE_ENABLED,
       refreshAdminData,
       loading,
+      profName, profPhone, profSite, updateBrandingConfig,
     }}>
       {children}
     </AuthContext.Provider>

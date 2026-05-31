@@ -3,7 +3,15 @@ import { useAuth } from '../context/AuthContext';
 import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, Zap, RefreshCw, Layers, MousePointerClick, Crown, Download, Copy, Sliders } from 'lucide-react';
 
 export default function AdminSettings() {
-  const { schools, addSchool, removeSchool, plans, addPlan, removePlan, updatePlan, activationCodes, generateActivationCodes } = useAuth();
+  const { 
+    schools, addSchool, removeSchool, 
+    plans, addPlan, removePlan, updatePlan, 
+    activationCodes, generateActivationCodes,
+    profName: initialProfName,
+    profPhone: initialProfPhone,
+    profSite: initialProfSite,
+    updateBrandingConfig
+  } = useAuth();
   const [newSchool, setNewSchool] = useState('');
   const [activeTab, setActiveTab] = useState('general');
 
@@ -84,15 +92,23 @@ export default function AdminSettings() {
   };
 
   // Branding / Identity
-  const [profName, setProfName] = useState(() => localStorage.getItem('profName') || '');
-  const [profPhone, setProfPhone] = useState(() => localStorage.getItem('profPhone') || '');
-  const [profSite, setProfSite] = useState(() => localStorage.getItem('profSite') || 'www.lconq.ma');
+  const [profName, setProfName] = useState(initialProfName || '');
+  const [profPhone, setProfPhone] = useState(initialProfPhone || '');
+  const [profSite, setProfSite] = useState(initialProfSite || 'www.lconq.ma');
   const [brandSaved, setBrandSaved] = useState(false);
 
-  const saveBranding = () => {
-    localStorage.setItem('profName', profName.trim());
-    localStorage.setItem('profPhone', profPhone.trim());
-    localStorage.setItem('profSite', profSite.trim() || 'www.lconq.ma');
+  React.useEffect(() => {
+    if (initialProfName !== undefined) setProfName(initialProfName);
+    if (initialProfPhone !== undefined) setProfPhone(initialProfPhone);
+    if (initialProfSite !== undefined) setProfSite(initialProfSite);
+  }, [initialProfName, initialProfPhone, initialProfSite]);
+
+  const saveBranding = async () => {
+    await updateBrandingConfig({
+      profName: profName.trim(),
+      profPhone: profPhone.trim(),
+      profSite: profSite.trim() || 'www.lconq.ma'
+    });
     setBrandSaved(true);
     setTimeout(() => setBrandSaved(false), 2500);
   };

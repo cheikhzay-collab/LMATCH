@@ -58,3 +58,39 @@ export const saveSchoolsConfig = async (schools, branding) => {
     throw error;
   }
 };
+
+/**
+ * Fetch general platform branding (profName, profPhone, profSite) from Supabase.
+ */
+export const getBrandingConfig = async () => {
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
+    .from('config')
+    .select('value')
+    .eq('key', 'branding')
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.value;
+};
+
+/**
+ * Save general platform branding (profName, profPhone, profSite) to Supabase.
+ */
+export const saveBrandingConfig = async (branding) => {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('config')
+    .upsert({
+      key: 'branding',
+      value: branding,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('[Supabase] Failed to save branding config:', error);
+    throw error;
+  }
+};
+

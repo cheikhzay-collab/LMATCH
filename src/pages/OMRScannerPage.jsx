@@ -125,7 +125,7 @@ function ResultRow({ row }) {
 
 /* ── Main Global Scanner Page ────────────────────────────────────── */
 export default function OMRScannerPage() {
-  const { user, updateCardProgress, saveMockExamResult, schoolBranding, exams, isExamLocked } = useAuth();
+  const { user, updateCardProgress, saveMockExamResult, schoolBranding, exams, isExamLocked, profName, profPhone, profSite } = useAuth();
   const navigate = useNavigate();
 
   const [activeExam,   setActiveExam]   = useState(null);
@@ -144,9 +144,9 @@ export default function OMRScannerPage() {
   const handlePrintReport = () => {
     if (!activeExam || !score || !corrected.length) return;
     const settings = {
-      profName: localStorage.getItem('profName') || '',
-      profPhone: localStorage.getItem('profPhone') || '',
-      profSite: localStorage.getItem('profSite') || 'www.lconq.ma'
+      profName: profName || '',
+      profPhone: profPhone || '',
+      profSite: profSite || 'www.lconq.ma'
     };
     const html = generateStudentReportHTML(activeExam, score, corrected, settings);
     openPrintWindow(html);

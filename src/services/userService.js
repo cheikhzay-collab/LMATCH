@@ -339,3 +339,33 @@ export const getAllUsers = async () => {
   }
   return data.map(mapDBToProfile);
 };
+
+/**
+ * Fetch the public leaderboard of top 100 students from Supabase.
+ * @returns {Promise<Array>}
+ */
+export const getLeaderboard = async () => {
+  if (!supabase) return [];
+
+  try {
+    const { data, error } = await supabase.rpc('get_leaderboard');
+    if (!error && data) {
+      return data;
+    }
+  } catch (err) {
+    console.warn('[Supabase] RPC get_leaderboard failed, falling back to direct profiles query:', err.message);
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select('name, xp, streak, tier')
+    .order('xp', { ascending: false })
+    .limit(100);
+
+  if (error) {
+    console.error('[Supabase] Failed to fetch leaderboard:', error);
+    return [];
+  }
+  return data;
+};
+

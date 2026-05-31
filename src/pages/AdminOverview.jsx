@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, BookOpen, CircleDollarSign, TrendingUp, Camera, 
   Sparkles, AlertTriangle, Activity, CheckCircle, RefreshCw, X, ArrowUpRight, Phone, Award, FileText,
-  Video, Clapperboard, Play, Calendar
+  Video, Clapperboard, Play, Calendar, Pause, RotateCcw, Volume2
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -144,6 +144,31 @@ export default function AdminOverview() {
     { id: 'vid-1', title: 'Analyse (Suites)', status: 'publié', time: 'Aujourd\'hui 10:15', url: '#' },
     { id: 'vid-2', title: 'Géométrie (Espace)', status: 'planifié', time: 'Demain 18:00', url: '#' }
   ]);
+
+  // Live video preview simulator state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackTime, setPlaybackTime] = useState(0);
+
+  useEffect(() => {
+    let interval = null;
+    if (isPlaying) {
+      interval = setInterval(() => {
+        setPlaybackTime(prev => {
+          if (prev >= 30) {
+            setIsPlaying(false);
+            return 30;
+          }
+          return Math.min(30, prev + 0.1);
+        });
+      }, 100);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying]);
+
+  useEffect(() => {
+    setIsPlaying(false);
+    setPlaybackTime(0);
+  }, [selectedVideoQuestion]);
 
   const handleSelectExamForVideo = (examId) => {
     const exam = exams.find(e => e.id === examId);
@@ -339,7 +364,7 @@ export default function AdminOverview() {
               <div style={{ padding: '0.4rem', borderRadius: '10px', background: 'var(--violet-soft)', color: 'var(--violet)' }}><Users size={18} /></div>
             </div>
             <div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>{users.length * 15 + 140} <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>élèves</span></div>
+              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>{users.length} <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>élèves</span></div>
               <div style={{ fontSize: '0.78rem', color: 'var(--emerald)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
                 <Sparkles size={12} /> Projection +250 à l'approche des concours
               </div>

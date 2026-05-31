@@ -98,7 +98,7 @@ function StatCard({ icon: Icon, label, value, colorClass }) {
 }
 
 export default function StudentDashboard() {
-  const { user, exams, progress, getStudentStats, mockExamHistory, isExamLocked } = useAuth();
+  const { user, exams, progress, getStudentStats, mockExamHistory, isExamLocked, profName, profPhone, profSite } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const stats = getStudentStats();
@@ -219,9 +219,9 @@ export default function StudentDashboard() {
       showPageNumbers: true,
       startPage: 1,
       questionsPerPage: 3,
-      profName: localStorage.getItem('profName') || '',
-      profPhone: localStorage.getItem('profPhone') || '',
-      profSite: localStorage.getItem('profSite') || 'www.lconq.ma'
+      profName: profName || '',
+      profPhone: profPhone || '',
+      profSite: profSite || 'www.lconq.ma'
     };
     
     const title = "Fascicule de Révision Personnalisé";
@@ -276,9 +276,9 @@ export default function StudentDashboard() {
     };
     
     const settings = {
-      profName: localStorage.getItem('profName') || '',
-      profPhone: localStorage.getItem('profPhone') || '',
-      profSite: localStorage.getItem('profSite') || 'www.lconq.ma'
+      profName: profName || '',
+      profPhone: profPhone || '',
+      profSite: profSite || 'www.lconq.ma'
     };
     
     const html = generateStudentReportHTML(exam, scoreObj, corrected, settings);

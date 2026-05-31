@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { getLeaderboard } from '../services/userService';
 import { Trophy, Flame, Crown, Medal, Award, Search, School, Zap, ChevronUp, ChevronDown } from 'lucide-react';
 
 export default function RankingPage() {
@@ -19,30 +20,101 @@ export default function RankingPage() {
     return parts[0].slice(0, 2).toUpperCase();
   };
 
-  // 1. Core Top 3 Champions (Podium)
-  const topThree = [
-    { rank: 1, name: 'Amine Slaoui', school: 'ENSA', xp: 9550, streak: 34, change: 'up' },
-    { rank: 2, name: 'Chaimae Boutaleb', school: 'Médecine / Pharmacie', xp: 9120, streak: 22, change: 'same' },
-    { rank: 3, name: 'Reda El Amrani', school: 'Général (Prépa)', xp: 8850, streak: 18, change: 'down' }
+  const [realLeaderboard, setRealLeaderboard] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLeaderboardData = async () => {
+      try {
+        const data = await getLeaderboard();
+        if (data && data.length > 0) {
+          setRealLeaderboard(data);
+        }
+      } catch (err) {
+        console.error('[Ranking] Failed to load real leaderboard:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchLeaderboardData();
+  }, []);
+
+  // 1. Define standard mock lists as fallbacks or seeds
+  const mockTopThree = [
+    { name: 'Amine Slaoui', school: 'ENSA', xp: 9550, streak: 34, change: 'up', tier: 'premium' },
+    { name: 'Chaimae Boutaleb', school: 'Médecine / Pharmacie', xp: 9120, streak: 22, change: 'same', tier: 'premium' },
+    { name: 'Reda El Amrani', school: 'Général (Prépa)', xp: 8850, streak: 18, change: 'down', tier: 'premium' }
   ];
 
-  // 2. High ranking mockup lists (Ranks 4 - 9)
-  const generalList = [
-    { rank: 4, name: 'Sara Bennani', school: 'Médecine / Pharmacie', xp: 8450, streak: 12, change: 'up' },
-    { rank: 5, name: 'Anas Meziane', school: 'ENSAM', xp: 7900, streak: 9, change: 'up' },
-    { rank: 6, name: 'Yasmine Filali', school: 'ENCG', xp: 7420, streak: 15, change: 'down' },
-    { rank: 7, name: 'Mehdi Jouahri', school: 'INPT', xp: 6980, streak: 8, change: 'same' },
-    { rank: 8, name: 'Salma Tazi', school: 'INSEA', xp: 6510, streak: 6, change: 'up' },
-    { rank: 9, name: 'Walid Berrada', school: 'ENSA', xp: 6100, streak: 11, change: 'down' }
+  const mockGeneralList = [
+    { name: 'Sara Bennani', school: 'Médecine / Pharmacie', xp: 8450, streak: 12, change: 'up', tier: 'premium' },
+    { name: 'Anas Meziane', school: 'ENSAM', xp: 7900, streak: 9, change: 'up', tier: 'premium' },
+    { name: 'Yasmine Filali', school: 'ENCG', xp: 7420, streak: 15, change: 'down', tier: 'freemium' },
+    { name: 'Mehdi Jouahri', school: 'INPT', xp: 6980, streak: 8, change: 'same', tier: 'premium' },
+    { name: 'Salma Tazi', school: 'INSEA', xp: 6510, streak: 6, change: 'up', tier: 'freemium' },
+    { name: 'Walid Berrada', school: 'ENSA', xp: 6100, streak: 11, change: 'down', tier: 'freemium' }
   ];
 
-  // Integrate current user dynamically if not in the top lists
-  const currentUserRank = stats.rank || 12;
+  // 2. Fetch or construct the list of profiles
+  // We combine the real leaderboard fetched from DB with our seed mock lists to ensure
+  // a populated leaderboard while fully integrating real database users.
+  const mergedUsersMap = new Map();
+
+  // Add mock users first
+  [...mockTopThree, ...mockGeneralList].forEach(u => {
+    mergedUsersMap.set(u.name.toLowerCase(), u);
+  });
+
+  // Overwrite or add real users from database
+  realLeaderboard.forEach((u, idx) => {
+    if (!u.name) return;
+    const school = u.tier === 'premium' ? 'Médecine / Pharmacie' : ['ENSA', 'ENSAM', 'Général (Prépa)', 'ENCG'][idx % 4];
+    mergedUsersMap.set(u.name.toLowerCase(), {
+      name: u.name,
+      xp: u.xp || 0,
+      streak: u.streak || 0,
+      tier: u.tier || 'freemium',
+      school,
+      change: 'same'
+    });
+  });
+
+  // Integrate current logged in user to make sure they are in the dataset with real stats
+  if (user && user.name) {
+    const userSchool = user.tier === 'premium' ? 'Médecine / Pharmacie' : 'Général (Prépa)';
+    mergedUsersMap.set(user.name.toLowerCase(), {
+      name: user.name,
+      xp: user.xp || 0,
+      streak: stats.streak || 0,
+      tier: user.tier || 'freemium',
+      school: userSchool,
+      change: 'up',
+      isCurrentUser: true
+    });
+  }
+
+  // Convert map back to sorted array by XP
+  const sortedLeaderboard = Array.from(mergedUsersMap.values())
+    .sort((a, b) => b.xp - a.xp);
+
+  // Assign ranks
+  const rankedLeaderboard = sortedLeaderboard.map((item, idx) => ({
+    ...item,
+    rank: idx + 1
+  }));
+
+  // Separate top 3 and general list
+  const topThree = rankedLeaderboard.slice(0, 3);
+  const generalList = rankedLeaderboard.slice(3, 9); // ranks 4 to 9
+
+  // Calculate current user's rank
+  const currentUserRowIndex = rankedLeaderboard.findIndex(item => item.name === user?.name);
+  const currentUserRank = currentUserRowIndex !== -1 ? currentUserRowIndex + 1 : (stats.rank || 12);
   const currentUserXP = user?.xp || 0;
   const currentUserStreak = stats.streak || 0;
-  
-  // Create a simulated list of surrounding users for the current student
-  const isCurrentUserInTopNine = generalList.some(s => s.name === user?.name) || topThree.some(s => s.name === user?.name);
+
+  // Create a simulated list of surrounding users for the current student if they are not in the top 9
+  const isCurrentUserInTopNine = currentUserRank <= 9;
 
   let leaderboard = [...generalList];
 
@@ -58,7 +130,7 @@ export default function RankingPage() {
       change: 'up'
     };
 
-    const neighborAbove = {
+    const neighborAbove = rankedLeaderboard[currentUserRank - 2] || {
       rank: currentUserRank - 1,
       name: 'Driss Alami',
       school: 'ENSA',
@@ -67,7 +139,7 @@ export default function RankingPage() {
       change: 'up'
     };
 
-    const neighborBelow = {
+    const neighborBelow = rankedLeaderboard[currentUserRank] || {
       rank: currentUserRank + 1,
       name: 'Kawtar Naciri',
       school: 'ENCG',
@@ -84,12 +156,12 @@ export default function RankingPage() {
       userRow,
       neighborBelow,
       { isSpacer: true, key: 'spacer-2' },
-      { rank: stats.totalStudents || 1200, name: 'Zouhair Fahmi', school: 'Général (Prépa)', xp: 120, streak: 0, change: 'same' }
+      rankedLeaderboard[rankedLeaderboard.length - 1] || { rank: stats.totalStudents || 1200, name: 'Zouhair Fahmi', school: 'Général (Prépa)', xp: 120, streak: 0, change: 'same' }
     ];
   } else {
     // If current user is in the list, tag them
     leaderboard = leaderboard.map(item => 
-      item.name === user?.name ? { ...item, isCurrentUser: true, xp: currentUserXP, streak: currentUserStreak } : item
+      item.name === user?.name ? { ...item, isCurrentUser: true } : item
     );
   }
 

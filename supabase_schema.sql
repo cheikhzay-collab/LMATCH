@@ -270,3 +270,28 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.delete_user(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.delete_user(uuid) TO authenticated;
+
+-- Get public leaderboard (name, xp, streak, tier) of top 100 students
+CREATE OR REPLACE FUNCTION public.get_leaderboard()
+RETURNS TABLE (
+  name text,
+  xp integer,
+  streak integer,
+  tier text
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+BEGIN
+  RETURN QUERY
+  SELECT profiles.name, profiles.xp, profiles.streak, profiles.tier
+  FROM public.profiles
+  ORDER BY profiles.xp DESC
+  LIMIT 100;
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.get_leaderboard() FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.get_leaderboard() TO authenticated;
+

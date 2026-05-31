@@ -23,7 +23,7 @@ const estimatePages = (qCount, qPerPage, hasCover) =>
   (hasCover ? 1 : 0) + Math.max(1, Math.ceil(qCount / Math.max(1, qPerPage)));
 
 export default function AdminEbooks() {
-  const { exams } = useAuth();
+  const { exams, profName, profPhone, profSite } = useAuth();
   const [allSettings, setAllSettings] = useState(loadSettings);
   const [expanded, setExpanded] = useState(null);  // which topic is expanded
   const [generated, setGenerated] = useState({});   // { topic: timestamp }
@@ -60,13 +60,13 @@ export default function AdminEbooks() {
   const handleGenerate = useCallback((topic, questions) => {
     const s = getSettings(topic);
     // Inject branding from AdminSettings (localStorage)
-    s.profName  = localStorage.getItem('profName')  || '';
-    s.profPhone = localStorage.getItem('profPhone') || '';
-    s.profSite  = localStorage.getItem('profSite')  || 'www.lconq.ma';
+    s.profName  = profName  || '';
+    s.profPhone = profPhone || '';
+    s.profSite  = profSite  || 'www.lconq.ma';
     const html = generateEbookHTML(topic, questions, s);
     openPrintWindow(html, `ebook-${topic}`);
     setGenerated(prev => ({ ...prev, [topic]: Date.now() }));
-  }, [allSettings]);
+  }, [allSettings, profName, profPhone, profSite]);
 
   const fmtDate = (ts) => ts
     ? new Date(ts).toLocaleString('fr-MA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
