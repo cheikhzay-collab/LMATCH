@@ -34,3 +34,5 @@ scratch
 # Agent files and directories
 .agents/
 skills-lock.json
+
+.vercel
