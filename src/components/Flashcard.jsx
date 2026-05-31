@@ -415,7 +415,7 @@ export default function Flashcard({ card, onNext }) {
                     <div className="astuce-zap-icon">
                       <Zap size={14} fill="currentColor" />
                     </div>
-                    <span>L'Astuce du Match</span>
+                    <span>L'Astuce</span>
                     <span style={{ opacity: 0.7 }}>⚡</span>
                   </div>
 
