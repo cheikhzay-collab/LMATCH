@@ -10,7 +10,8 @@ export default function AdminSettings() {
     profName: initialProfName,
     profPhone: initialProfPhone,
     profSite: initialProfSite,
-    updateBrandingConfig
+    updateBrandingConfig,
+    updateFlashcardSettingsConfig
   } = useAuth();
   const [newSchool, setNewSchool] = useState('');
   const [activeTab, setActiveTab] = useState('general');
@@ -83,10 +84,12 @@ export default function AdminSettings() {
   const [cardSwipe,  setCardSwipe]  = useState(() => localStorage.getItem('card_swipe_gesture') !== 'false');
   const [cardSaved,  setCardSaved]  = useState(false);
 
-  const saveCardSettings = () => {
-    localStorage.setItem('card_flip_animation', String(cardFlip));
-    localStorage.setItem('card_reveal_mode',    cardReveal);
-    localStorage.setItem('card_swipe_gesture',  String(cardSwipe));
+  const saveCardSettings = async () => {
+    await updateFlashcardSettingsConfig({
+      cardRevealMode: cardReveal,
+      cardFlipEnabled: cardFlip,
+      cardSwipeEnabled: cardSwipe
+    });
     setCardSaved(true);
     setTimeout(() => setCardSaved(false), 2500);
   };

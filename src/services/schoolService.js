@@ -94,3 +94,37 @@ export const saveBrandingConfig = async (branding) => {
   }
 };
 
+/**
+ * Fetch flashcard settings (reveal mode, flip animation, swipe gesture) from Supabase.
+ */
+export const getFlashcardSettingsConfig = async () => {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('config')
+    .select('value')
+    .eq('key', 'flashcard_settings')
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.value;
+};
+
+/**
+ * Save flashcard settings to Supabase.
+ */
+export const saveFlashcardSettingsConfig = async (settings) => {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('config')
+    .upsert({
+      key: 'flashcard_settings',
+      value: settings,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('[Supabase] Failed to save flashcard settings config:', error);
+    throw error;
+  }
+};
+

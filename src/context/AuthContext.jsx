@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
 import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard } from '../services/userService';
 import { getAllExams, getActiveExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam } from '../services/examService';
-import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig } from '../services/schoolService';
+import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, getCode } from '../services/planService';
 
 
@@ -150,6 +150,19 @@ export function AuthProvider({ children }) {
         console.error('[Supabase] Failed to save branding config:', e);
       }
     }
+  };
+
+  const updateFlashcardSettingsConfig = async (settings) => {
+    if (SUPABASE_ENABLED) {
+      try {
+        await saveFlashcardSettingsConfig(settings);
+      } catch (e) {
+        console.error('[Supabase] Failed to save flashcard settings config:', e);
+      }
+    }
+    localStorage.setItem('card_reveal_mode', settings.cardRevealMode);
+    localStorage.setItem('card_flip_animation', String(settings.cardFlipEnabled));
+    localStorage.setItem('card_swipe_gesture', String(settings.cardSwipeEnabled));
   };
 
   // ── Supabase Auth listener ───────────────────────────────────────────────
@@ -1176,6 +1189,21 @@ export function AuthProvider({ children }) {
           await saveBrandingConfig({ profName, profPhone, profSite });
         }
 
+        // Fetch Flashcard Settings
+        const flashcardConfig = await getFlashcardSettingsConfig();
+        if (flashcardConfig) {
+          localStorage.setItem('card_reveal_mode', flashcardConfig.cardRevealMode || 'flip');
+          localStorage.setItem('card_flip_animation', String(flashcardConfig.cardFlipEnabled !== false));
+          localStorage.setItem('card_swipe_gesture', String(flashcardConfig.cardSwipeEnabled !== false));
+        } else {
+          // Seed default settings if not exists in DB
+          await saveFlashcardSettingsConfig({
+            cardRevealMode: 'flip',
+            cardFlipEnabled: true,
+            cardSwipeEnabled: true
+          });
+        }
+
         // Fetch Plans
         const fbPlans = await getPlans();
         if (fbPlans && fbPlans.length > 0) {
@@ -1352,7 +1380,7 @@ export function AuthProvider({ children }) {
       supabaseEnabled: SUPABASE_ENABLED,
       refreshAdminData,
       loading,
-      profName, profPhone, profSite, updateBrandingConfig,
+      profName, profPhone, profSite, updateBrandingConfig, updateFlashcardSettingsConfig,
     }}>
       {children}
     </AuthContext.Provider>
