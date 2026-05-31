@@ -2195,15 +2195,17 @@ body.light-theme .astuce-tabs {
   
   .flashcard-context-text {
     font-size: 1.05rem;
-    line-height: 1.5;
-    word-break: break-word !important;
+    line-height: 1.6;
+    word-break: normal !important;
     overflow-wrap: break-word !important;
   }
   
   .flashcard-question-box {
     font-size: 1.05rem;
-    line-height: 1.5;
+    line-height: 1.6;
     margin-bottom: 0.75rem;
+    word-break: normal !important;
+    overflow-wrap: break-word !important;
   }
 
   .options-grid {
