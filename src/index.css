@@ -986,7 +986,7 @@ body.light-theme .astuce-tabs {
   width: 100%;
   display: flex;
   justify-content: center;
-  touch-action: none;
+  touch-action: pan-y;
   user-select: none;
 }
 
@@ -2021,6 +2021,41 @@ body.light-theme .astuce-tabs {
 
 /* Mobile overrides (<= 768px) */
 @media (max-width: 768px) {
+  .study-session-header {
+    margin-bottom: 0.75rem !important;
+    padding: 0.5rem 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .flashcard-3d {
+    height: calc(100vh - 100px);
+    height: calc(100dvh - 90px);
+    max-height: 650px;
+    min-height: 480px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .flashcard-card {
+    height: 100%;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .flashcard-card::-webkit-scrollbar {
+    width: 4px;
+  }
+  .flashcard-card::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .flashcard-card::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.25);
+    border-radius: 99px;
+  }
+
   .flashcard-main-layout.has-context-layout {
     flex-direction: column;
     min-height: auto;
@@ -2031,26 +2066,67 @@ body.light-theme .astuce-tabs {
     width: 100%;
     border-right: none;
     border-bottom: 1px solid var(--border);
-    padding: 1.25rem 1rem;
+    padding: 1rem 0.875rem;
   }
   
   .flashcard-content-pane {
-    padding: 1.25rem 1rem;
+    padding: 1rem 0.875rem !important;
+    justify-content: flex-start !important;
   }
   
   .flashcard-context-title {
-    margin-bottom: 1rem;
+    margin-bottom: 0.75rem;
   }
   
   .flashcard-context-text {
-    font-size: 1.15rem;
-    line-height: 1.6;
+    font-size: 1.1rem;
+    line-height: 1.5;
   }
   
   .flashcard-question-box {
-    font-size: 1.1rem;
-    line-height: 1.6;
-    margin-bottom: 1rem;
+    font-size: 1.05rem;
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+  }
+
+  .options-grid {
+    gap: 0.35rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .option-btn {
+    padding: 0.5rem 0.75rem !important;
+    min-height: 38px !important;
+    font-size: 0.85rem !important;
+    gap: 0.5rem !important;
+  }
+
+  .option-letter {
+    width: 24px !important;
+    height: 24px !important;
+    margin-right: 0.25rem !important;
+    border-radius: 4px !important;
+    font-size: 0.75rem !important;
+  }
+
+  .astuce-match-box {
+    padding: 0.75rem 0.85rem !important;
+    gap: 0.5rem !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .astuce-match-title {
+    font-size: 0.78rem !important;
+  }
+
+  .astuce-tab {
+    padding: 0.18rem 0.5rem !important;
+    font-size: 0.68rem !important;
+  }
+
+  .astuce-match-content {
+    padding: 0.45rem 0.6rem !important;
+    font-size: 0.82rem !important;
   }
 }
 

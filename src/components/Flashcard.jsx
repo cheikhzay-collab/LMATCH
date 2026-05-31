@@ -21,6 +21,8 @@ export default function Flashcard({ card, onNext }) {
   const [dragX, setDragX] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef(0);
+  const touchStartPos = useRef({ x: 0, y: 0 });
+  const isHorizontalSwipe = useRef(null); // null = undecided, true = horizontal swipe, false = vertical scroll
 
   const revealCard = (optionId) => {
     if (selectedOption) return;
@@ -94,11 +96,35 @@ export default function Flashcard({ card, onNext }) {
     if (e.target.closest('button') || e.target.closest('a') || e.target.closest('img')) return;
     setIsDragging(true);
     dragStart.current = e.touches[0].clientX;
+    touchStartPos.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    isHorizontalSwipe.current = null;
   };
 
   const handleTouchMove = (e) => {
     if (!isDragging) return;
-    const diffX = e.touches[0].clientX - dragStart.current;
+    if (isHorizontalSwipe.current === false) return; // If scrolling vertically, do not swipe
+
+    const diffX = e.touches[0].clientX - touchStartPos.current.x;
+    const diffY = e.touches[0].clientY - touchStartPos.current.y;
+
+    if (isHorizontalSwipe.current === null) {
+      const absX = Math.abs(diffX);
+      const absY = Math.abs(diffY);
+      // Wait for a clear move in one direction (threshold: 8px)
+      if (absX > 8 || absY > 8) {
+        if (absX > absY) {
+          isHorizontalSwipe.current = true;
+        } else {
+          isHorizontalSwipe.current = false;
+          setIsDragging(false);
+          setDragX(0);
+          return;
+        }
+      } else {
+        return;
+      }
+    }
+
     setDragX(diffX);
   };
 
@@ -106,10 +132,14 @@ export default function Flashcard({ card, onNext }) {
     if (!isDragging) return;
     setIsDragging(false);
 
-    if (dragX > 140) {
-      handleEvaluation(5);
-    } else if (dragX < -140) {
-      handleEvaluation(0);
+    if (isHorizontalSwipe.current === true) {
+      if (dragX > 140) {
+        handleEvaluation(5);
+      } else if (dragX < -140) {
+        handleEvaluation(0);
+      } else {
+        setDragX(0);
+      }
     } else {
       setDragX(0);
     }
