@@ -203,6 +203,19 @@ function autoWrapLatex(text) {
   return `$${text}$`;
 }
 
+function renderTextWithBold(text) {
+  if (!text.includes('**')) {
+    return text;
+  }
+  const parts = text.split('**');
+  return parts.map((part, idx) => {
+    if (idx % 2 === 1) {
+      return part ? <strong key={idx} style={{ fontWeight: 800 }}>{part}</strong> : null;
+    }
+    return part || null;
+  });
+}
+
 /* ─── 8. Main render function ────────────────────────────────────────────────
  *
  *  Entry point for ALL text rendering in the app.
@@ -243,12 +256,12 @@ export function renderWithMath(text) {
   const tokens = tokenizeMath(toParse);
 
   if (tokens.length === 1 && tokens[0].type === 'text') {
-    return <span>{tokens[0].content}</span>;
+    return <span>{renderTextWithBold(tokens[0].content)}</span>;
   }
 
   return tokens.map((tok, i) => {
     if (tok.type === 'block')  return <SafeBlockMath  key={i} math={tok.content} />;
     if (tok.type === 'inline') return <SafeInlineMath key={i} math={tok.content} />;
-    return <span key={i}>{tok.content}</span>;
+    return <span key={i}>{renderTextWithBold(tok.content)}</span>;
   });
 }
