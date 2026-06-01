@@ -169,25 +169,27 @@ export default function SchoolExamsPage() {
         {/* Stats Grid Under Hero */}
         <div style={{
           background: 'var(--bg-card)',
-          padding: '1.25rem 2rem',
+          padding: isMobile ? '0.75rem 1rem' : '1.25rem 2rem',
           display: 'flex',
-          gap: '2.5rem',
+          flexDirection: isMobile ? 'row' : 'row',
+          justifyContent: isMobile ? 'space-between' : 'flex-start',
+          gap: isMobile ? '0.5rem' : '2.5rem',
           flexWrap: 'wrap',
         }}>
           {[
-            { icon: BookOpen, label: 'Concours disponibles', value: schoolExams.length, color: brand.accent },
-            { icon: Zap,      label: 'Préparation Premium', value: schoolExams.filter(e => e.tier === 'premium').length, color: 'var(--violet)' },
+            { icon: BookOpen, label: 'Concours', value: schoolExams.length, color: brand.accent },
+            { icon: Zap,      label: 'Premium', value: schoolExams.filter(e => e.tier === 'premium').length, color: 'var(--violet)' },
           ].map(({ icon: Icon, label, value, color }) => (
-            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flex: isMobile ? '1' : 'none', minWidth: 0 }}>
               <div style={{
-                width: 38, height: 38, borderRadius: '10px', background: 'var(--bg-glass)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', color,
+                width: 32, height: 32, borderRadius: '8px', background: 'var(--bg-glass)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', color, flexShrink: 0
               }}>
-                <Icon size={18} />
+                <Icon size={15} />
               </div>
-              <div>
-                <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase' }}>{label}</p>
-                <p style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>{value}</p>
+              <div style={{ minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</p>
+                <p style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>{value}</p>
               </div>
             </div>
           ))}
