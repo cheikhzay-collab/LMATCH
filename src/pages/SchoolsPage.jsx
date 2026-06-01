@@ -358,6 +358,9 @@ function SchoolCard({ school, examCount, brand, isAdmin, onEdit, onDelete, onCli
   const [hovered, setHovered] = useState(false);
   const IconComponent = ICON_MAP[brand.iconKey] || GraduationCap;
 
+  // Calculate completion percentage: 100% if >= 5 exams, 80% if 3-4, 50% if 1-2, 0% if 0
+  const progressPct = examCount >= 5 ? 100 : examCount >= 3 ? 80 : examCount >= 1 ? 50 : 0;
+
   return (
     <div style={{ position:'relative' }}>
       <button
@@ -377,13 +380,13 @@ function SchoolCard({ school, examCount, brand, isAdmin, onEdit, onDelete, onCli
           display: 'flex',
           flexDirection: 'column',
           height: '100%',
-          minHeight: '260px'
+          minHeight: '270px'
         }}>
           {/* Top color accent strip */}
           <div style={{ height: '4px', background: brand.gradient, width: '100%' }} />
 
           {/* Card Content container */}
-          <div style={{ padding: '1.75rem', flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ padding: '1.5rem', flex: 1, display: 'flex', flexDirection: 'column', position: 'relative', overflow: 'hidden' }}>
             
             {/* Watermark Logo/Vector in background */}
             <div style={{
@@ -466,8 +469,26 @@ function SchoolCard({ school, examCount, brand, isAdmin, onEdit, onDelete, onCli
               <p style={{ color:'var(--text-muted)', fontSize:'0.82rem', lineHeight:1.55, marginBottom:'1.25rem' }}>{brand.desc}</p>
             </div>
 
+            {/* Progress and Completion Section */}
+            <div style={{ zIndex: 1, marginBottom: '1rem', marginTop: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-subtle)', fontWeight: 800, textTransform: 'uppercase' }}>Contenu disponible</span>
+                <span style={{ fontSize: '0.72rem', color: brand.accent, fontWeight: 800 }}>{progressPct}%</span>
+              </div>
+              <div style={{ height: '5px', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '99px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${progressPct}%`,
+                  background: brand.gradient,
+                  borderRadius: '99px',
+                  boxShadow: hovered ? `0 0 8px ${brand.accent}` : 'none',
+                  transition: 'width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease'
+                }} />
+              </div>
+            </div>
+
             {/* Footer Stats and Action */}
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', zIndex: 1, marginTop: 'auto' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', zIndex: 1 }}>
               <div style={{ display:'flex', alignItems:'center', gap:'0.35rem', background: 'var(--bg-glass)', padding:'0.28rem 0.75rem', borderRadius:'99px', fontSize:'0.76rem', fontWeight:700, border:`1px solid var(--border)` }}>
                 <BookOpen size={11} style={{ color: brand.accent }} />
                 <span style={{ color: 'var(--text-muted)' }}>{examCount > 0 ? `${examCount} examen${examCount > 1 ? 's' : ''}` : 'Bientôt'}</span>
