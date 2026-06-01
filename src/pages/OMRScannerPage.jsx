@@ -40,21 +40,25 @@ function VerifyGrid({ scanned, questions, onChange }) {
       {scanned.map((row, idx) => {
         const qTextRaw = questions[idx]?.question || `Question ${row.q}`;
         return (
-          <div key={row.q} style={{
-            display:'grid', gridTemplateColumns:'36px 1fr auto auto',
-            gap:'0.75rem', alignItems:'center',
-            padding:'0.6rem 1rem',
+          <div key={row.q} className="verify-grid-row" style={{
+            display:'flex', flexDirection:'column',
+            gap:'0.5rem',
+            padding:'0.6rem 0.8rem',
             background: row.confidence < 0.3 ? 'var(--warning-soft)' : 'var(--bg-glass)',
             borderRadius:'0.75rem',
             border: `1px solid ${row.confidence < 0.3 ? 'var(--warning)33' : 'var(--border)'}`,
           }}>
-            <span style={{ fontWeight:800, fontSize:'0.9rem', color:'var(--text-main)' }}>Q{row.q}</span>
-            <span style={{ fontSize:'0.8rem', color:'var(--text-muted)', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', display:'block' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+              <span style={{ fontWeight:800, fontSize:'0.9rem', color:'var(--text-main)' }}>Q{row.q}</span>
+              <ConfidenceDot confidence={row.confidence} />
+            </div>
+            
+            <span style={{ fontSize:'0.8rem', color:'var(--text-muted)', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', display:'block', width: '100%' }}>
               {renderMathSnippet(qTextRaw)}
             </span>
 
             {/* Option selection buttons */}
-            <div style={{ display:'flex', gap:'0.3rem' }}>
+            <div style={{ display:'flex', gap:'0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
               {CHOICES.map(opt => (
                 <button key={opt} onClick={() => onChange(idx, opt)} style={{
                   width:28, height:28, borderRadius:'50%', fontWeight:800, fontSize:'0.8rem',
@@ -68,7 +72,7 @@ function VerifyGrid({ scanned, questions, onChange }) {
                 </button>
               ))}
               <button onClick={() => onChange(idx, null)} style={{
-                  padding:'0 0.6rem', height:28, borderRadius:'6px', fontWeight:700, fontSize:'0.7rem',
+                  padding:'0 0.5rem', height:28, borderRadius:'6px', fontWeight:700, fontSize:'0.7rem',
                   cursor:'pointer', transition:'all 0.15s',
                   background: row.answer === null ? 'var(--danger-soft)' : 'var(--bg-glass)',
                   color:      row.answer === null ? 'var(--danger)' : 'var(--text-muted)',
@@ -77,8 +81,6 @@ function VerifyGrid({ scanned, questions, onChange }) {
                 Vide
               </button>
             </div>
-
-            <ConfidenceDot confidence={row.confidence} />
           </div>
         );
       })}
@@ -97,28 +99,32 @@ function ResultRow({ row }) {
   const c = cfg[status];
   return (
     <div style={{
-      display:'grid', gridTemplateColumns:'40px 1fr auto 95px',
-      alignItems:'center', gap:'0.875rem',
-      padding:'0.6rem 1rem',
+      display:'flex', flexDirection: 'column', gap:'0.4rem',
+      padding:'0.6rem 0.8rem',
       background: c.bg, borderRadius:'0.75rem',
       borderLeft:`4px solid ${c.border}`,
     }}>
-      <span style={{ fontWeight:800, fontSize:'0.9rem' }}>Q{row.q}</span>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontWeight:800, fontSize:'0.9rem' }}>Q{row.q}</span>
+        <span style={{ display:'inline-flex', alignItems:'center', gap:'0.35rem', color:c.color, fontSize:'0.78rem', fontWeight:700 }}>{c.icon} {c.label}</span>
+      </div>
+      
       <span style={{ fontSize:'0.82rem', color:'var(--text-muted)', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', display:'block' }}>
         {renderMathSnippet(row.question)}
       </span>
-      <div style={{ display:'flex', gap:'0.5rem', alignItems:'center', fontSize:'0.85rem' }}>
-        <span style={{ padding:'0.15rem 0.6rem', borderRadius:'6px', background: status === 'correct' ? 'var(--emerald-soft)' : status === 'wrong' ? 'var(--danger-soft)' : 'var(--border)', fontWeight:800, color: status === 'correct' ? 'var(--emerald)' : status === 'wrong' ? 'var(--danger)' : 'var(--text-muted)' }}>
+      
+      <div style={{ display:'flex', gap:'0.5rem', alignItems:'center', fontSize:'0.8rem', marginTop: '0.2rem' }}>
+        <span style={{ color: 'var(--text-muted)' }}>Réponse:</span>
+        <span style={{ padding:'0.15rem 0.5rem', borderRadius:'6px', background: status === 'correct' ? 'var(--emerald-soft)' : status === 'wrong' ? 'var(--danger-soft)' : 'var(--border)', fontWeight:800, color: status === 'correct' ? 'var(--emerald)' : status === 'wrong' ? 'var(--danger)' : 'var(--text-muted)' }}>
           {row.detected || '—'}
         </span>
         {status !== 'correct' && (
           <>
-            <span className="text-subtle">→</span>
-            <span style={{ padding:'0.15rem 0.6rem', borderRadius:'6px', background:'var(--emerald-soft)', fontWeight:800, color:'var(--emerald)' }}>{row.correct}</span>
+            <span style={{ color: 'var(--text-muted)' }}>→</span>
+            <span style={{ padding:'0.15rem 0.5rem', borderRadius:'6px', background:'var(--emerald-soft)', fontWeight:800, color:'var(--emerald)' }}>{row.correct}</span>
           </>
         )}
       </div>
-      <span style={{ display:'inline-flex', alignItems:'center', gap:'0.35rem', color:c.color, fontSize:'0.78rem', fontWeight:700 }}>{c.icon} {c.label}</span>
     </div>
   );
 }
@@ -278,36 +284,36 @@ export default function OMRScannerPage() {
   const phaseLabel = { upload:'Uploader', scanning:'Analyse…', verify:'Vérification', results:'Résultats' };
 
   return (
-    <div className="animate-fade-in" style={{ padding: '0.5rem 0' }}>
-      {/* Page Title */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+    <div className="animate-fade-in" style={{ padding: '0.25rem 0', width: '100%', overflowX: 'hidden' }}>
+      {/* Page Title & Phase Indicators */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem' }}>
-            <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, var(--violet), var(--emerald))', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Camera size={22} color="#fff" />
+            <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'linear-gradient(135deg, var(--violet), var(--emerald))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Camera size={18} color="#fff" />
             </div>
-            <h1 style={{ fontSize: '1.75rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>Scanner Intelligent OMR</h1>
+            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, color: 'var(--text-main)' }}>Scanner Intelligent</h1>
           </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0, lineHeight: 1.4 }}>
             Prenez en photo votre feuille de réponses L'Match. L'IA s'occupe du reste.
           </p>
         </div>
         
         {/* Phase indicators */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--bg-glass)', padding: '0.4rem 1rem', borderRadius: '1.25rem', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'var(--bg-glass)', padding: '0.35rem 0.75rem', borderRadius: '1rem', border: '1px solid var(--border)', alignSelf: 'flex-start', width: '100%', justifyContent: 'space-between', overflowX: 'auto' }}>
           {['upload', 'scanning', 'verify', 'results'].map((p, i) => (
             <React.Fragment key={p}>
-              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: phase === p ? 'var(--violet)' : 'var(--text-muted)' }}>
+              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: phase === p ? 'var(--violet)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                 {phaseLabel[p]}
               </span>
-              {i < 3 && <span style={{ color: 'var(--border)', fontSize: '0.7rem' }}>→</span>}
+              {i < 3 && <span style={{ color: 'var(--border)', fontSize: '0.65rem' }}>→</span>}
             </React.Fragment>
           ))}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: phase === 'results' ? '1fr' : '1fr', gap: '1.5rem' }}>
-        <div className="glass-panel" style={{ padding: '2rem', borderRadius: '1.5rem', border: '1px solid var(--border)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', width: '100%' }}>
+        <div className="glass-panel" style={{ padding: '1rem', borderRadius: '1.25rem', border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }}>
           
           {/* ── UPLOAD PHASE ── */}
           {phase === 'upload' && (
@@ -329,6 +335,30 @@ export default function OMRScannerPage() {
                 </div>
               )}
               
+              {/* Clean scan method switcher tab */}
+              <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-glass)', padding: '0.25rem', borderRadius: '0.75rem', border: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+                <button 
+                  onClick={() => setScanMethod('camera')}
+                  style={{
+                    flex: 1, padding: '0.6rem', borderRadius: '0.6rem', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', transition: 'all 0.2s',
+                    background: scanMethod === 'camera' ? 'var(--violet)' : 'transparent',
+                    color: scanMethod === 'camera' ? '#fff' : 'var(--text-muted)'
+                  }}
+                >
+                  <Camera size={15} /> Utiliser la caméra
+                </button>
+                <button 
+                  onClick={() => setScanMethod('file')}
+                  style={{
+                    flex: 1, padding: '0.6rem', borderRadius: '0.6rem', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', transition: 'all 0.2s',
+                    background: scanMethod === 'file' ? 'var(--violet)' : 'transparent',
+                    color: scanMethod === 'file' ? '#fff' : 'var(--text-muted)'
+                  }}
+                >
+                  <Upload size={15} /> Importer un fichier
+                </button>
+              </div>
+
               {scanMethod === 'camera' ? (
                 <SmartCameraScanner
                   onCapture={handleFile}
@@ -336,52 +366,40 @@ export default function OMRScannerPage() {
                   activeExam={activeExam}
                 />
               ) : (
-                <>
-                  <div
-                    onDrop={handleDrop} onDragOver={e => e.preventDefault()}
-                    onClick={() => fileRef.current?.click()}
-                    style={{ border:'2px dashed var(--border)', borderRadius:'1.5rem', padding:'4rem 2rem', textAlign:'center', cursor:'pointer', transition:'all 0.25s', background:'var(--bg-glass)' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor='var(--violet)'; e.currentTarget.style.background='var(--violet-soft)'; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)';  e.currentTarget.style.background='var(--bg-glass)'; }}
-                  >
-                    <input ref={fileRef} type="file" accept="image/*" capture="environment" style={{ display:'none' }} onChange={e => handleFile(e.target.files[0])} />
-                    <div style={{ width:70, height:70, borderRadius:'50%', background:'var(--violet-soft)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1.5rem' }}>
-                      <Upload size={30} color="var(--violet)" />
-                    </div>
-                    <h3 style={{ fontWeight:800, marginBottom:'0.5rem', fontSize: '1.2rem' }}>Déposez votre feuille de réponses ici</h3>
-                    <p style={{ color:'var(--text-muted)', fontSize:'0.9rem', lineHeight:1.6, maxWidth: 460, margin: '0 auto' }}>
-                      Ou cliquez pour sélectionner un fichier depuis votre appareil.<br/>
-                      <span style={{ color:'var(--violet)', fontWeight:700 }}>Détection automatique de l'examen via QR Code</span>
-                    </p>
+                <div
+                  onDrop={handleDrop} onDragOver={e => e.preventDefault()}
+                  onClick={() => fileRef.current?.click()}
+                  style={{ border:'2px dashed var(--border)', borderRadius:'1.25rem', padding:'2.5rem 1rem', textAlign:'center', cursor:'pointer', transition:'all 0.25s', background:'var(--bg-glass)' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor='var(--violet)'; e.currentTarget.style.background='var(--violet-soft)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)';  e.currentTarget.style.background='var(--bg-glass)'; }}
+                >
+                  <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={e => handleFile(e.target.files[0])} />
+                  <div style={{ width:54, height:54, borderRadius:'50%', background:'var(--violet-soft)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1rem' }}>
+                    <Upload size={22} color="var(--violet)" />
                   </div>
-                  
-                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
-                    <button 
-                      className="btn" 
-                      onClick={() => setScanMethod('camera')}
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.5rem' }}
-                    >
-                      <Camera size={16} /> Activer la caméra intelligente
-                    </button>
-                  </div>
-                </>
+                  <h3 style={{ fontWeight:800, marginBottom:'0.25rem', fontSize: '1rem', color: 'var(--text-main)' }}>Sélectionner une photo</h3>
+                  <p style={{ color:'var(--text-muted)', fontSize:'0.78rem', lineHeight:1.5, maxWidth: 380, margin: '0 auto' }}>
+                    Cliquez pour choisir une photo de votre galerie.<br/>
+                    <span style={{ color:'var(--violet)', fontWeight:700 }}>Détection automatique via QR Code</span>
+                  </p>
+                </div>
               )}
 
               {/* Pro Tips */}
-              <div style={{ marginTop:'2.5rem' }}>
-                <h4 style={{ fontWeight:800, fontSize:'0.95rem', marginBottom:'1rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--text-subtle)' }}>💡 Conseils pour une numérisation parfaite :</h4>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.875rem' }}>
+              <div style={{ marginTop:'2rem' }}>
+                <h4 style={{ fontWeight:800, fontSize:'0.82rem', marginBottom:'0.75rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--text-subtle)' }}>💡 Conseils de numérisation :</h4>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:'0.6rem' }}>
                   {[
-                    ['💡','Éclairage homogène','Évitez les ombres portées et les reflets du soleil.'],
+                    ['💡','Éclairage homogène','Évitez les ombres portées et les reflets.'],
                     ['📐','Cadrage parallèle','Tenez votre caméra bien au-dessus de la feuille.'],
-                    ['🖊️','Bulles foncées','Assurez-vous de bien remplir les cercles au stylo noir/bleu.'],
-                    ['📷','Angles visibles','Les 4 repères de coins de la feuille doivent être visibles.'],
+                    ['🖊️','Bulles foncées','Remplissez les cercles au stylo noir/bleu.'],
+                    ['📷','Repères de coins','Les 4 repères de coins de la feuille doivent être visibles.'],
                   ].map(([ic,t,d]) => (
-                    <div key={t} style={{ display:'flex', gap:'0.75rem', padding:'0.875rem 1.1rem', background:'var(--bg-glass)', borderRadius:'0.875rem', border:'1px solid var(--border)' }}>
-                      <span style={{ fontSize:'1.3rem', flexShrink:0 }}>{ic}</span>
+                    <div key={t} style={{ display:'flex', gap:'0.6rem', padding:'0.65rem 0.85rem', background:'var(--bg-glass)', borderRadius:'0.75rem', border:'1px solid var(--border)' }}>
+                      <span style={{ fontSize:'1.1rem', flexShrink:0 }}>{ic}</span>
                       <div>
-                        <p style={{ fontWeight:800, fontSize:'0.85rem', marginBottom:'0.15rem' }}>{t}</p>
-                        <p style={{ color:'var(--text-muted)', fontSize:'0.78rem', lineHeight:1.4 }}>{d}</p>
+                        <p style={{ fontWeight:800, fontSize:'0.78rem', marginBottom:'0.1rem', color: 'var(--text-main)' }}>{t}</p>
+                        <p style={{ color:'var(--text-muted)', fontSize:'0.72rem', lineHeight:1.3 }}>{d}</p>
                       </div>
                     </div>
                   ))}
