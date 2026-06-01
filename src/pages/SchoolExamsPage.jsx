@@ -328,17 +328,41 @@ export default function SchoolExamsPage() {
                         <ScanLine size={15} /> Scanner
                       </button>
                       
-                      {exam.pdfUrl && (
-                        <a
-                          href={exam.pdfUrl}
-                          download={`${exam.name}.pdf`}
-                          className="btn-outline"
-                          title="Télécharger le sujet original PDF"
-                          style={{ display:'flex', alignItems:'center', gap:'0.4rem', color:'var(--emerald)', borderColor:'var(--emerald)', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }}
-                        >
-                          <FileDown size={15} /> Sujet
-                        </a>
-                      )}
+                      <button
+                        className="btn-outline"
+                        onClick={() => {
+                          if (exam.pdfUrl) {
+                            window.open(exam.pdfUrl, '_blank');
+                          } else {
+                            import('../utils/generateExamPDF').then(({ generateSubjectHTML }) => {
+                              const html = generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id });
+                              const win = window.open('', '_blank');
+                              win.document.write(html);
+                              win.document.close();
+                            });
+                          }
+                        }}
+                        title="Télécharger / Voir le sujet de l'examen"
+                        style={{ display:'flex', alignItems:'center', gap:'0.4rem', color:'var(--emerald)', borderColor:'var(--emerald)', flex: isMobile ? 1 : 'none', justifyContent: 'center' }}
+                      >
+                        <FileDown size={15} /> Sujet
+                      </button>
+
+                      <button
+                        className="btn-outline"
+                        onClick={() => {
+                          import('../utils/generateExamPDF').then(({ generateCorrectionHTML }) => {
+                            const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id });
+                            const win = window.open('', '_blank');
+                            win.document.write(html);
+                            win.document.close();
+                          });
+                        }}
+                        title="Télécharger / Voir le corrigé de l'examen"
+                        style={{ display:'flex', alignItems:'center', gap:'0.4rem', color:'var(--violet)', borderColor:'var(--violet)', flex: isMobile ? 1 : 'none', justifyContent: 'center' }}
+                      >
+                        <FileDown size={15} /> Corrigé
+                      </button>
                     </>
                   )}
                 </div>
