@@ -53,22 +53,23 @@ export default function LandingPage() {
         backdropFilter: 'blur(16px)',
         borderBottom: '1px solid var(--border)',
         boxShadow: isLight ? '0 1px 8px rgba(15,23,42,0.08)' : 'none',
-        padding: '0 1.25rem', height: '60px',
+        padding: '0 0.75rem', height: '60px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        maxWidth: '100%',
+        width: '100%',
+        boxSizing: 'border-box',
         transition: 'background 0.3s, box-shadow 0.3s',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <div style={{
-            width: 32, height: 32, borderRadius: '9px',
+            width: 28, height: 28, borderRadius: '8px',
             background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center'
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
           }}>
-            <BrainCircuit size={18} color="#fff" />
+            <BrainCircuit size={16} color="#fff" />
           </div>
-          <span style={{ fontWeight: 800, fontSize: '1.05rem', letterSpacing: '-0.02em' }}>L'Conq</span>
+          <span style={{ fontWeight: 800, fontSize: '0.95rem', letterSpacing: '-0.02em' }}>L'Conq</span>
         </div>
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
           {/* Theme toggle */}
           <button
             onClick={toggleTheme}
@@ -76,24 +77,24 @@ export default function LandingPage() {
             style={{
               background: 'transparent', border: '1px solid var(--border)',
               color: isLight ? 'var(--violet)' : 'var(--warning)',
-              cursor: 'pointer', padding: '6px 10px', borderRadius: '8px',
-              display: 'flex', alignItems: 'center', transition: 'all 0.2s'
+              cursor: 'pointer', padding: '6px 8px', borderRadius: '8px',
+              display: 'flex', alignItems: 'center', transition: 'all 0.2s',
+              flexShrink: 0
             }}
           >
-            {isLight ? <Moon size={16} /> : <Sun size={16} />}
+            {isLight ? <Moon size={14} /> : <Sun size={14} />}
           </button>
-          {/* Hide Connexion on very small screens */}
           {user ? (
-            <Link to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} className="btn" style={{ textDecoration: 'none', padding: '0.6rem 1rem', fontSize: '0.88rem' }}>
-              Mon Espace <ArrowRight size={14} />
+            <Link to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} className="btn" style={{ textDecoration: 'none', padding: '0.5rem 0.75rem', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+              Dashboard <ArrowRight size={12} />
             </Link>
           ) : (
             <>
-              <Link to="/login" className="btn-ghost landing-nav-cta" style={{ textDecoration: 'none', fontWeight: 600, fontSize: '0.9rem' }}>
+              <Link to="/login" className="btn-ghost" style={{ textDecoration: 'none', fontWeight: 600, fontSize: '0.8rem', padding: '0.5rem 0.5rem', whiteSpace: 'nowrap' }}>
                 Connexion
               </Link>
-              <Link to="/register" className="btn" style={{ textDecoration: 'none', padding: '0.6rem 1rem', fontSize: '0.88rem' }}>
-                Commencer <ArrowRight size={14} />
+              <Link to="/register" className="btn" style={{ textDecoration: 'none', padding: '0.5rem 0.75rem', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                Commencer
               </Link>
             </>
           )}
@@ -103,14 +104,15 @@ export default function LandingPage() {
       {/* ── Hero ── */}
       <section style={{
         maxWidth: '900px', margin: '0 auto',
-        padding: 'clamp(3.5rem, 10vw, 7rem) 1.25rem clamp(3rem, 8vw, 6rem)',
+        padding: 'clamp(2rem, 6vw, 4rem) 1rem clamp(2rem, 5vw, 3rem)',
         textAlign: 'center',
         position: 'relative',
+        boxSizing: 'border-box'
       }}>
         {/* Ambient glow */}
         <div style={{
           position: 'absolute', top: '30%', left: '50%', transform: 'translateX(-50%)',
-          width: '600px', height: '300px',
+          width: 'min(600px, 90vw)', height: '300px',
           background: 'radial-gradient(ellipse, rgba(99,102,241,0.15) 0%, transparent 70%)',
           pointerEvents: 'none', zIndex: 0,
         }} />
@@ -120,47 +122,49 @@ export default function LandingPage() {
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
             background: 'var(--violet-soft)', border: '1px solid rgba(99,102,241,0.3)',
-            padding: '0.35rem 1rem', borderRadius: '99px',
-            fontSize: '0.8rem', fontWeight: 700, color: 'var(--violet)',
-            marginBottom: '2rem'
+            padding: '0.35rem 0.75rem', borderRadius: '99px',
+            fontSize: '0.72rem', fontWeight: 700, color: 'var(--violet)',
+            marginBottom: '1.25rem',
+            maxWidth: '100%',
+            boxSizing: 'border-box'
           }}>
-            <Zap size={13} /> Propulsé par l'Intelligence Artificielle
+            <Zap size={11} /> Propulsé par l'IA
           </div>
 
-          <h1 style={{ fontSize: 'clamp(2.5rem, 6vw, 4rem)', fontWeight: 900, lineHeight: 1.1, marginBottom: '1.5rem', letterSpacing: '-0.03em' }}>
+          <h1 style={{ fontSize: 'clamp(1.8rem, 5vw, 3rem)', fontWeight: 900, lineHeight: 1.15, marginBottom: '1rem', letterSpacing: '-0.03em' }}>
             La préparation aux concours,{' '}
             <span className="text-gradient">repensée pour 2026.</span>
           </h1>
 
-          <p style={{ fontSize: '1.15rem', color: 'var(--text-muted)', maxWidth: '600px', margin: '0 auto 3rem', lineHeight: 1.7 }}>
+          <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', maxWidth: '540px', margin: '0 auto 2rem', lineHeight: 1.6 }}>
             Médecine, ENSA, ENSAM. Transformez les annales en sessions interactives avec des astuces de résolution rapide et un algorithme SRS qui s'adapte à vous.
           </p>
 
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap', padding: '0 0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap', width: '100%' }}>
             {user ? (
               <>
-                <Link to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} className="btn-emerald" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
-                  <Zap size={18} /> Tableau de Bord
+                <Link to={user.role === 'admin' ? "/admin/dashboard" : "/dashboard"} className="btn-emerald" style={{ textDecoration: 'none', fontSize: '0.88rem', padding: '0.75rem 1.5rem', flex: '1 1 140px', display: 'inline-flex', justifyContent: 'center', alignItems: 'center', gap: '0.4rem' }}>
+                  <Zap size={15} /> Dashboard
                 </Link>
-                <Link to="/schools" className="btn-outline" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
-                  Parcourir les écoles <ArrowRight size={16} />
+                <Link to="/schools" className="btn-outline" style={{ textDecoration: 'none', fontSize: '0.88rem', padding: '0.75rem 1.5rem', flex: '1 1 140px', display: 'inline-flex', justifyContent: 'center', alignItems: 'center' }}>
+                  Parcourir <ArrowRight size={14} />
                 </Link>
               </>
             ) : (
               <>
-                <Link to="/register" className="btn-emerald" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
-                  <Zap size={18} /> Démarrer gratuitement
+                <Link to="/register" className="btn-emerald" style={{ textDecoration: 'none', fontSize: '0.88rem', padding: '0.75rem 1.5rem', flex: '1 1 140px', display: 'inline-flex', justifyContent: 'center', alignItems: 'center', gap: '0.4rem' }}>
+                  <Zap size={15} /> Commencer
                 </Link>
-                <Link to="/login" className="btn-outline" style={{ textDecoration: 'none', fontSize: '1rem', padding: '0.875rem 2rem' }}>
-                  Voir la démo <ArrowRight size={16} />
+                <Link to="/login" className="btn-outline" style={{ textDecoration: 'none', fontSize: '0.88rem', padding: '0.75rem 1.5rem', flex: '1 1 140px', display: 'inline-flex', justifyContent: 'center', alignItems: 'center' }}>
+                  Voir la démo <ArrowRight size={14} />
                 </Link>
               </>
             )}
           </div>
 
           {/* Social proof */}
-          <p style={{ marginTop: '2rem', color: 'var(--text-subtle)', fontSize: '0.85rem' }}>
-            Rejoint par <strong className="text-muted">+2 000</strong> étudiants · Médecine · ENSA · ENSAM
+          <p style={{ marginTop: '1.5rem', color: 'var(--text-subtle)', fontSize: '0.78rem' }}>
+            Rejoint par <strong style={{ color: 'var(--text-main)' }}>+2 000</strong> étudiants · Médecine · ENSA · ENSAM
           </p>
         </div>
       </section>
