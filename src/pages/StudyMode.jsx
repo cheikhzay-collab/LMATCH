@@ -161,9 +161,24 @@ export default function StudyMode() {
     const totalDueToday = stats ? stats.dueToday : 0;
 
     return (
-      <div className="animate-fade-in" style={{ padding: '2rem', maxWidth: '1100px', margin: '0 auto', minHeight: '85vh' }}>
-        {/* Hub Header */}
-        <div style={{ textAlign: 'center', marginBottom: '2.5rem', marginTop: '1rem' }}>
+      <div className="animate-fade-in" style={{ padding: 'clamp(1rem, 4vw, 2.5rem) 1rem', maxWidth: '1100px', margin: '0 auto', minHeight: '85vh', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+        
+        {/* Top Header Bar */}
+        <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
+          <button 
+            onClick={() => navigate('/dashboard')}
+            className="btn-outline"
+            style={{ 
+              padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 800, 
+              display: 'inline-flex', alignItems: 'center', gap: '0.4rem' 
+            }}
+          >
+            <ArrowLeft size={16} /> Retour au Dashboard
+          </button>
+        </div>
+
+        {/* Hub Header Title */}
+        <div style={{ textAlign: 'center', marginBottom: '1rem' }}>
           <div style={{ 
             width: '60px', height: '60px', background: 'var(--violet-soft)', borderRadius: '18px', 
             display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem',
@@ -171,8 +186,8 @@ export default function StudyMode() {
           }}>
             <BrainCircuit size={30} />
           </div>
-          <h1 className="text-gradient" style={{ fontSize: '2.3rem', fontWeight: 900, marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>Espace Révision (SRS)</h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '1rem', maxWidth: '580px', margin: '0 auto', lineHeight: 1.6 }}>
+          <h1 className="text-gradient" style={{ fontSize: 'clamp(1.6rem, 5vw, 2.3rem)', fontWeight: 900, marginBottom: '0.5rem', letterSpacing: '-0.02em', lineHeight: 1.2 }}>Espace Révision (SRS)</h1>
+          <p style={{ color: 'var(--text-muted)', fontSize: 'clamp(0.85rem, 2.5vw, 1rem)', maxWidth: '580px', margin: '0 auto', lineHeight: 1.6 }}>
             Consolidez votre mémoire à long terme en révisant les notions au moment optimal calculé par notre algorithme de répétition espacée.
           </p>
         </div>
@@ -182,17 +197,18 @@ export default function StudyMode() {
           <div className="col-span-5">
             <div className="glass-panel" style={{ 
               height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-              padding: '2.25rem', border: '1px solid rgba(113, 109, 242, 0.2)', background: 'linear-gradient(180deg, var(--bg-card) 0%, rgba(113, 109, 242, 0.03) 100%)'
+              border: '1px solid rgba(113, 109, 242, 0.2)', background: 'linear-gradient(180deg, var(--bg-card) 0%, rgba(113, 109, 242, 0.03) 100%)',
+              gap: '1.5rem'
             }}>
               <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
                   <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--violet-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--violet)' }}>
                     <Zap size={18} fill="currentColor" />
                   </div>
-                  <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.2rem' }}>Parcours Guidé</h3>
+                  <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.15rem' }}>Parcours Guidé</h3>
                 </div>
 
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.55, marginBottom: '1.75rem' }}>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
                   Session intelligente regroupant toutes vos fiches en attente de révision aujourd'hui à travers tous vos concours actifs.
                 </p>
 
@@ -200,11 +216,11 @@ export default function StudyMode() {
                   background: totalDueToday > 0 ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)', 
                   border: `1px solid ${totalDueToday > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)'}`,
                   color: totalDueToday > 0 ? 'var(--danger)' : 'var(--emerald)',
-                  padding: '1.25rem', borderRadius: '14px', textAlign: 'center', marginBottom: '1.75rem'
+                  padding: '1.25rem 1rem', borderRadius: '14px', textAlign: 'center'
                 }}>
                   <div style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.15rem', lineHeight: 1 }}>{totalDueToday}</div>
-                  <div style={{ fontSize: '0.75rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    {totalDueToday > 0 ? 'Fiches à réviser aujourd\'hui' : 'Toutes vos fiches sont à jour !'}
+                  <div style={{ fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                    {totalDueToday > 0 ? "Fiches à réviser aujourd'hui" : "Toutes vos fiches sont à jour !"}
                   </div>
                 </div>
               </div>
@@ -229,8 +245,8 @@ export default function StudyMode() {
 
           {/* Right: Modules de Révision par Concours */}
           <div className="col-span-7">
-            <div className="glass-panel" style={{ height: '100%', padding: '2rem', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem' }}>
+            <div className="glass-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, margin: 0, fontSize: '1.1rem' }}>
                   <BookOpen size={18} color="var(--violet)" /> Modules de Révision
                 </h3>
@@ -240,12 +256,12 @@ export default function StudyMode() {
               </div>
 
               {activeExams.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-muted)', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
                   <BrainCircuit size={36} opacity={0.4} style={{ marginBottom: '1rem' }} />
                   <p style={{ fontWeight: 600 }}>Aucun module de révision disponible</p>
                 </div>
               ) : (
-                <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem', maxHeight: '420px', overflowY: 'auto', paddingRight: '0.5rem', flex: 1 }}>
+                <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '420px', overflowY: 'auto', paddingRight: '0.25rem', flex: 1 }}>
                   {Object.entries(groupedExams).map(([school, schoolExams]) => (
                     <div key={school}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
@@ -268,18 +284,7 @@ export default function StudyMode() {
                             <div 
                                key={exam.id} 
                                className="exam-card-premium"
-                               style={{ 
-                                 opacity: isLocked ? 0.8 : 1,
-                                 background: 'var(--bg-glass)',
-                                 border: '1px solid var(--border)',
-                                 borderRadius: '12px',
-                                 padding: '0.65rem 0.85rem',
-                                 display: 'flex',
-                                 alignItems: 'center',
-                                 justifyContent: 'space-between',
-                                 transition: 'all 0.2s ease',
-                                 gap: '1rem'
-                               }}
+                               style={{ opacity: isLocked ? 0.8 : 1 }}
                             >
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0, flex: 1 }}>
                                 <div style={{ 
@@ -316,8 +321,8 @@ export default function StudyMode() {
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                                     <div style={{ 
                                       background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', 
-                                      padding: '0.25rem 0.5rem', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
-                                      display: 'inline-flex', alignItems: 'center', gap: '0.2' + 'rem', border: '1px solid rgba(239, 68, 68, 0.1)'
+                                      padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
+                                      display: 'inline-flex', alignItems: 'center', gap: '0.2rem', border: '1px solid rgba(239, 68, 68, 0.1)'
                                     }}>
                                       {dueCount} À RÉVISER
                                     </div>
@@ -334,7 +339,7 @@ export default function StudyMode() {
                                     <div style={{ 
                                       background: 'rgba(16, 185, 129, 0.05)', color: 'var(--emerald)', 
                                       padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
-                                      display: 'inline-flex', alignItems: 'center', gap: '0.2' + 'rem', border: '1px solid rgba(16, 185, 129, 0.1)'
+                                      display: 'inline-flex', alignItems: 'center', gap: '0.2rem', border: '1px solid rgba(16, 185, 129, 0.1)'
                                     }}>
                                       COMPLÉTÉ ✨
                                     </div>
