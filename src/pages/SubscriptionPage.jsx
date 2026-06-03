@@ -140,7 +140,12 @@ export default function SubscriptionPage() {
               <button 
                 onClick={() => navigate('/schools')} 
                 className="btn"
-                style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)', fontWeight: 700, width: isMobile ? '100%' : 'auto' }}
+                style={{ 
+                  background: 'linear-gradient(135deg, var(--violet), #818cf8)', 
+                  fontWeight: 700, 
+                  width: isMobile ? '100%' : 'auto',
+                  borderRadius: '10px'
+                }}
               >
                 Accéder aux examens
               </button>
@@ -175,7 +180,20 @@ export default function SubscriptionPage() {
                 </p>
               </div>
             </div>
-            <a href="#offers" className="btn-outline" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, justifyContent: 'center', width: isMobile ? '100%' : 'auto' }}>
+            <a 
+              href="#offers" 
+              className="btn-outline" 
+              style={{ 
+                textDecoration: 'none', 
+                display: 'inline-flex', 
+                alignItems: 'center', 
+                gap: '0.5rem', 
+                fontWeight: 700, 
+                justifyContent: 'center', 
+                width: isMobile ? '100%' : 'auto',
+                borderRadius: '10px'
+              }}
+            >
               Voir les offres <ChevronRight size={16} />
             </a>
           </div>
@@ -229,7 +247,13 @@ export default function SubscriptionPage() {
               <button 
                 type="submit" 
                 className="btn"
-                style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)', fontWeight: 700, whiteSpace: 'nowrap', minHeight: isMobile ? '48px' : 'auto' }}
+                style={{ 
+                  background: 'linear-gradient(135deg, var(--violet), #818cf8)', 
+                  fontWeight: 700, 
+                  whiteSpace: 'nowrap', 
+                  minHeight: isMobile ? '48px' : 'auto',
+                  borderRadius: '10px'
+                }}
               >
                 Activer le code
               </button>
@@ -330,7 +354,14 @@ export default function SubscriptionPage() {
             <button 
               disabled 
               className="btn-outline" 
-              style={{ width: '100%', opacity: 0.5, cursor: 'default', justifyContent: 'center', minHeight: isMobile ? '50px' : 'auto', borderRadius: isMobile ? '16px' : 'var(--radius-lg)' }}
+              style={{ 
+                width: '100%', 
+                opacity: 0.5, 
+                cursor: 'default', 
+                justifyContent: 'center', 
+                minHeight: isMobile ? '44px' : '38px', 
+                borderRadius: '10px' 
+              }}
             >
               Plan Actuel par Défaut
             </button>
@@ -428,10 +459,10 @@ export default function SubscriptionPage() {
                       cursor: 'default',
                       fontWeight: 900,
                       justifyContent: 'center',
-                      padding: isMobile ? '0.9rem' : '0.75rem 1.75rem',
-                      borderRadius: isMobile ? '16px' : 'var(--radius-lg)',
-                      fontSize: isMobile ? '0.95rem' : '0.95rem',
-                      minHeight: isMobile ? '50px' : 'auto'
+                      padding: isMobile ? '0.75rem' : '0.5rem 1.5rem',
+                      borderRadius: '10px',
+                      fontSize: '0.9rem',
+                      minHeight: isMobile ? '44px' : '38px'
                     }}
                   >
                     ✓ Offre Active
@@ -447,13 +478,13 @@ export default function SubscriptionPage() {
                       marginTop: 'auto',
                       gap: '0.5rem',
                       fontWeight: 900,
-                      padding: isMobile ? '0.9rem' : '0.75rem 1.75rem',
-                      borderRadius: isMobile ? '16px' : 'var(--radius-lg)',
-                      fontSize: isMobile ? '0.95rem' : '0.95rem',
-                      minHeight: isMobile ? '50px' : 'auto'
+                      padding: isMobile ? '0.75rem' : '0.5rem 1.5rem',
+                      borderRadius: '10px',
+                      fontSize: '0.9rem',
+                      minHeight: isMobile ? '44px' : '38px'
                     }}
                   >
-                    <Zap size={15} fill={isRecommended ? "currentColor" : "none"} /> 
+                    <Zap size={14} fill={isRecommended ? "currentColor" : "none"} /> 
                     {plan.price > 0 ? "S'abonner maintenant" : "Choisir l'offre"}
                   </button>
                 )}
@@ -560,7 +591,12 @@ export default function SubscriptionPage() {
                   type="button" 
                   onClick={() => setSelectedPlan(null)} 
                   className="btn-outline" 
-                  style={{ flex: 1, justifyContent: 'center', minHeight: isMobile ? '48px' : 'auto', borderRadius: isMobile ? '12px' : 'var(--radius-md)' }}
+                  style={{ 
+                    flex: 1, 
+                    justifyContent: 'center', 
+                    minHeight: isMobile ? '44px' : '38px', 
+                    borderRadius: '10px' 
+                  }}
                   disabled={isProcessing}
                 >
                   Annuler
@@ -568,7 +604,14 @@ export default function SubscriptionPage() {
                 <button 
                   type="submit" 
                   className="btn" 
-                  style={{ flex: 2, justifyContent: 'center', background: 'linear-gradient(135deg, var(--violet), #818cf8)', fontWeight: 900, minHeight: isMobile ? '48px' : 'auto', borderRadius: isMobile ? '12px' : 'var(--radius-md)' }}
+                  style={{ 
+                    flex: 2, 
+                    justifyContent: 'center', 
+                    background: 'linear-gradient(135deg, var(--violet), #818cf8)', 
+                    fontWeight: 900, 
+                    minHeight: isMobile ? '44px' : '38px', 
+                    borderRadius: '10px' 
+                  }}
                   disabled={isProcessing}
                 >
                   {isProcessing ? "Paiement..." : `Payer ${selectedPlan.price} DH`}

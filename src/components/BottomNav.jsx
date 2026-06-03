@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, Trophy, GraduationCap,
-  Library, Users, UploadCloud, LogOut, Sun, Moon, Camera,
+  Library, Users, UploadCloud, LogOut, Sun, Moon, Camera, Zap,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -199,6 +199,49 @@ export default function BottomNav() {
 
             {/* ── Actions ── */}
             <div style={{ padding: '0.875rem 1.25rem 0', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+
+              {/* Subscription (Abonnement) */}
+              {isStudent && (
+                <button
+                  onClick={() => { navigate('/subscription'); setShowSheet(false); }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.875rem',
+                    padding: '0.75rem 0.875rem',
+                    background: 'var(--violet-soft)',
+                    border: '1px solid rgba(113, 109, 242, 0.22)',
+                    borderRadius: 'var(--radius-lg)',
+                    cursor: 'pointer', width: '100%',
+                    fontFamily: 'inherit', textAlign: 'left',
+                    transition: 'all 0.2s',
+                    marginBottom: '0.25rem'
+                  }}
+                  onMouseEnter={e => {
+                    e.currentTarget.style.background = 'rgba(113, 109, 242, 0.12)';
+                    e.currentTarget.style.borderColor = 'rgba(113, 109, 242, 0.4)';
+                  }}
+                  onMouseLeave={e => {
+                    e.currentTarget.style.background = 'var(--violet-soft)';
+                    e.currentTarget.style.borderColor = 'rgba(113, 109, 242, 0.22)';
+                  }}
+                >
+                  <div style={{
+                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                    background: 'var(--violet)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 10px rgba(113, 109, 242, 0.25)',
+                  }}>
+                    <Zap size={18} color="#fff" />
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-main)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {user?.tier === 'premium' ? 'Gérer mon abonnement Pro' : 'Devenir Premium (Pro)'}
+                    </span>
+                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {user?.tier === 'premium' ? 'Accès illimité actif' : 'Débloquez tous les QCM et examens'}
+                    </span>
+                  </div>
+                </button>
+              )}
 
               {/* Theme toggle */}
               <button

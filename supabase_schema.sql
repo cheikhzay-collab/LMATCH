@@ -8,6 +8,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   name text,
   email text,
+  phone text,
+  city text,
   role text DEFAULT 'student',
   tier text DEFAULT 'freemium',
   xp integer DEFAULT 0,
@@ -19,6 +21,10 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()),
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now())
 );
+
+-- Migration to ensure columns exist on existing databases
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone text;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS city text;
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 

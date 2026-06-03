@@ -281,22 +281,31 @@ export default function SchoolExamsPage() {
 
                     <div style={{
                       display: 'flex',
-                      flexDirection: 'column',
-                      gap: '0.75rem',
-                      width: isMobile ? '100%' : 'auto'
+                      flexDirection: isMobile ? 'column' : 'row',
+                      alignItems: isMobile ? 'stretch' : 'center',
+                      gap: isMobile ? '0.75rem' : '1rem',
+                      width: isMobile ? '100%' : 'auto',
+                      justifyContent: isMobile ? 'stretch' : 'flex-end',
                     }}>
-                      {/* Mode / Practice Row */}
+                      {/* 1. Primary Interactive Actions */}
                       <div style={{ 
                         display: 'flex', 
                         gap: '0.4rem', 
-                        width: '100%',
-                        justifyContent: isMobile ? 'stretch' : 'flex-end'
+                        flex: isMobile ? '1' : 'none',
+                        justifyContent: 'stretch',
                       }}>
                         <button
                           className="btn"
                           onClick={() => navigate(`/study?exam=${exam.id}`)}
                           title="Mode révision SRS"
-                          style={{ flex: 1, padding: '0.5rem 0.75rem', fontSize: '0.8rem', minHeight: '36px' }}
+                          style={{ 
+                            flex: 1, 
+                            padding: '0.5rem 1rem', 
+                            fontSize: '0.8rem', 
+                            minHeight: '36px',
+                            borderRadius: '10px',
+                            fontWeight: 700,
+                          }}
                         >
                           <BrainCircuit size={14} /> SRS
                         </button>
@@ -304,36 +313,38 @@ export default function SchoolExamsPage() {
                           className="btn-outline"
                           onClick={() => navigate(`/exam?exam=${exam.id}`)}
                           title="Concours blanc chronométré"
-                          style={{ flex: 1, padding: '0.5rem 0.75rem', fontSize: '0.8rem', minHeight: '36px' }}
+                          style={{ 
+                            flex: 1, 
+                            padding: '0.5rem 1rem', 
+                            fontSize: '0.8rem', 
+                            minHeight: '36px',
+                            borderRadius: '10px',
+                            fontWeight: 600,
+                          }}
                         >
                           <Play size={14} /> Blanc
                         </button>
-                        <button
-                          className="btn-outline"
-                          onClick={() => setScanExam(exam)}
-                          title="Scanner ma feuille remplie"
-                          style={{ flex: 1, padding: '0.5rem 0.75rem', fontSize: '0.8rem', color:'var(--violet)', borderColor:'var(--violet)40', background: 'var(--violet-soft)', minHeight: '36px' }}
-                        >
-                          <ScanLine size={14} /> Scanner
-                        </button>
                       </div>
 
-                      {/* Documents / Resources Row */}
+                      {/* Vertical Divider (Desktop Only) */}
+                      {!isMobile && (
+                        <div style={{ 
+                          width: '1px', 
+                          height: '24px', 
+                          background: 'var(--border)', 
+                          margin: '0 0.15rem',
+                          alignSelf: 'center' 
+                        }} />
+                      )}
+
+                      {/* 2. Secondary Utility & Resource Actions */}
                       <div style={{ 
                         display: 'flex', 
                         gap: '0.4rem', 
-                        width: '100%',
-                        justifyContent: isMobile ? 'stretch' : 'flex-end'
+                        flexWrap: 'wrap',
+                        width: isMobile ? '100%' : 'auto',
+                        justifyContent: isMobile ? 'space-between' : 'flex-end',
                       }}>
-                        <button
-                          className="btn-outline"
-                          onClick={() => handleDownloadPDF(exam)}
-                          title="Télécharger la grille de réponse OMR"
-                          style={{ flex: 1, padding: '0.5rem 0.5rem', fontSize: '0.75rem', minHeight: '34px', color: 'var(--text-muted)' }}
-                        >
-                          <FileDown size={13} /> Grille OMR
-                        </button>
-                        
                         <button
                           className="btn-outline"
                           onClick={() => {
@@ -349,9 +360,16 @@ export default function SchoolExamsPage() {
                             }
                           }}
                           title="Voir le sujet de l'examen"
-                          style={{ flex: 1, padding: '0.5rem 0.5rem', fontSize: '0.75rem', minHeight: '34px', color: 'var(--text-muted)' }}
+                          style={{ 
+                            flex: isMobile ? '1' : 'none', 
+                            padding: '0.45rem 0.65rem', 
+                            fontSize: '0.72rem', 
+                            minHeight: '32px', 
+                            color: 'var(--text-muted)',
+                            borderRadius: '8px',
+                          }}
                         >
-                          <FileDown size={13} /> Sujet
+                          <FileDown size={12} /> Sujet
                         </button>
 
                         <button
@@ -365,9 +383,50 @@ export default function SchoolExamsPage() {
                             });
                           }}
                           title="Voir le corrigé de l'examen"
-                          style={{ flex: 1, padding: '0.5rem 0.5rem', fontSize: '0.75rem', minHeight: '34px', color: 'var(--text-muted)' }}
+                          style={{ 
+                            flex: isMobile ? '1' : 'none', 
+                            padding: '0.45rem 0.65rem', 
+                            fontSize: '0.72rem', 
+                            minHeight: '32px', 
+                            color: 'var(--text-muted)',
+                            borderRadius: '8px',
+                          }}
                         >
-                          <FileDown size={13} /> Corrigé
+                          <FileDown size={12} /> Corrigé
+                        </button>
+
+                        <button
+                          className="btn-outline"
+                          onClick={() => handleDownloadPDF(exam)}
+                          title="Télécharger la grille de réponse OMR"
+                          style={{ 
+                            flex: isMobile ? '1' : 'none', 
+                            padding: '0.45rem 0.65rem', 
+                            fontSize: '0.72rem', 
+                            minHeight: '32px', 
+                            color: 'var(--text-muted)',
+                            borderRadius: '8px',
+                          }}
+                        >
+                          <FileDown size={12} /> Grille
+                        </button>
+
+                        <button
+                          className="btn-outline"
+                          onClick={() => setScanExam(exam)}
+                          title="Scanner ma feuille remplie"
+                          style={{ 
+                            flex: isMobile ? '1' : 'none', 
+                            padding: '0.45rem 0.65rem', 
+                            fontSize: '0.72rem', 
+                            minHeight: '32px', 
+                            color: 'var(--violet)', 
+                            borderColor: 'rgba(113, 109, 242, 0.25)', 
+                            background: 'var(--violet-soft)', 
+                            borderRadius: '8px',
+                          }}
+                        >
+                          <ScanLine size={12} /> Scanner
                         </button>
                       </div>
                     </div>

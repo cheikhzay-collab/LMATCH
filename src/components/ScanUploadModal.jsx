@@ -550,11 +550,21 @@ export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
                 </div>
               )}
 
-              <div style={{ display:'flex', gap:'0.75rem', marginTop:'1.25rem', justifyContent:'flex-end' }}>
-                <button className="btn-outline" onClick={reset} style={{ display:'flex', alignItems:'center', gap:'0.4rem' }}>
+              <div style={{ display:'flex', gap:'0.75rem', marginTop:'1.5rem', justifyContent:'flex-end' }}>
+                <button 
+                  className="btn-outline" 
+                  onClick={reset} 
+                  style={{ display:'flex', alignItems:'center', gap:'0.4rem', padding: '0.65rem 1.25rem', borderRadius: '10px' }}
+                >
                   <RotateCcw size={14} /> Rescanner
                 </button>
-                <button className="btn" onClick={onClose}>Fermer</button>
+                <button 
+                  className="btn" 
+                  onClick={onClose} 
+                  style={{ padding: '0.65rem 1.5rem', borderRadius: '10px', fontWeight: 700 }}
+                >
+                  Fermer
+                </button>
               </div>
             </div>
           )}

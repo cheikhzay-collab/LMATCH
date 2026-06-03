@@ -4,13 +4,40 @@ import { useAuth } from '../context/AuthContext';
 import { getAllProgress, getMockHistory } from '../services/userService';
 import { 
   ArrowLeft, Crown, User, Calendar, Target, Award, 
-  BarChart3, Clock, BookOpen, TrendingUp, Loader2
+  BarChart3, Clock, BookOpen, TrendingUp, Loader2,
+  Phone, MapPin
 } from 'lucide-react';
+
+const WhatsAppIcon = ({ size = 20, ...props }) => (
+  <svg 
+    viewBox="0 0 24 24" 
+    width={size} 
+    height={size} 
+    fill="currentColor" 
+    {...props}
+  >
+    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.513 2.262 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.79 1.451 5.485.002 9.948-4.463 9.95-9.952.002-2.66-1.033-5.16-2.907-7.037-1.874-1.877-4.374-2.91-7.035-2.911-5.49 0-9.954 4.465-9.956 9.955-.001 1.707.447 3.376 1.3 4.883l-.995 3.637 3.737-.98c1.513.824 3.03 1.25 4.616 1.253zm8.382-3.41c-.226-.113-1.341-.662-1.55-.737-.207-.076-.358-.113-.507.113-.15.225-.578.737-.708.887-.13.15-.26.168-.486.056-.225-.113-.954-.352-1.817-1.122-.671-.598-1.124-1.337-1.255-1.563-.13-.225-.014-.347.1-.459.102-.102.226-.263.338-.395.113-.13.15-.225.226-.375.075-.15.038-.282-.019-.395-.056-.113-.508-1.224-.696-1.677-.183-.44-.37-.38-.507-.387-.13-.007-.28-.008-.43-.008-.15 0-.395.056-.602.282-.206.225-.79.771-.79 1.882 0 1.11.808 2.182.92 2.332.113.15 1.59 2.428 3.853 3.404.538.233.957.371 1.285.475.54.172 1.03.148 1.418.09.432-.064 1.34-.548 1.53-1.076.19-.527.19-.979.133-1.076-.057-.1-.207-.15-.433-.263z" />
+  </svg>
+);
+
+const getWhatsAppLink = (phone) => {
+  if (!phone) return '#';
+  let cleaned = phone.replace(/[^\d+]/g, '');
+  if (cleaned.startsWith('0') && cleaned.length === 10) {
+    cleaned = '212' + cleaned.slice(1);
+  } else if (!cleaned.startsWith('+') && !cleaned.startsWith('212') && cleaned.length === 9) {
+    cleaned = '212' + cleaned;
+  }
+  cleaned = cleaned.replace(/^\+/, '');
+  return `https://wa.me/${cleaned}`;
+};
 
 export default function AdminStudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { users, plans, activateSubscription, cancelSubscription } = useAuth();
+  
+  const [isWaHovered, setIsWaHovered] = useState(false);
   
   const student = users.find(u => u.id === id || u.uid === id);
 
@@ -163,6 +190,97 @@ export default function AdminStudentDetail() {
                   </div>
                </div>
              </div>
+          </div>
+
+          {/* ── Coordonnées de l'élève ── */}
+          <div className="glass-panel" style={{ padding: '2rem' }}>
+            <h4 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Phone size={20} color="var(--primary)" /> Coordonnées de l'élève
+            </h4>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Téléphone */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--border)', padding: '0.85rem 1rem', borderRadius: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--violet-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--violet)' }}>
+                  <Phone size={18} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Téléphone</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: student.phone ? 'var(--text-main)' : 'var(--text-subtle)' }}>
+                    {student.phone || 'Non renseigné'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Ville */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--border)', padding: '0.85rem 1rem', borderRadius: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'var(--emerald-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--emerald)' }}>
+                  <MapPin size={18} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Ville</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: student.city ? 'var(--text-main)' : 'var(--text-subtle)' }}>
+                    {student.city || 'Non renseignée'}
+                  </div>
+                </div>
+              </div>
+
+              {/* WhatsApp Button */}
+              {student.phone ? (
+                <a 
+                  href={getWhatsAppLink(student.phone)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onMouseEnter={() => setIsWaHovered(true)}
+                  onMouseLeave={() => setIsWaHovered(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.6rem',
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '12px',
+                    background: isWaHovered 
+                      ? 'linear-gradient(135deg, #20ba5a 0%, #0e7569 100%)' 
+                      : 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                    color: '#ffffff',
+                    fontWeight: 700,
+                    fontSize: '0.9rem',
+                    textDecoration: 'none',
+                    boxShadow: isWaHovered 
+                      ? '0 6px 20px rgba(37, 211, 102, 0.4)' 
+                      : '0 4px 12px rgba(37, 211, 102, 0.25)',
+                    transform: isWaHovered ? 'translateY(-2px)' : 'translateY(0)',
+                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  }}
+                >
+                  <WhatsAppIcon size={18} />
+                  Contacter sur WhatsApp
+                </a>
+              ) : (
+                <div 
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.6rem',
+                    width: '100%',
+                    padding: '0.75rem',
+                    borderRadius: '12px',
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--text-subtle)',
+                    fontWeight: 600,
+                    fontSize: '0.9rem',
+                    cursor: 'not-allowed',
+                  }}
+                >
+                  <WhatsAppIcon size={18} style={{ opacity: 0.5 }} />
+                  WhatsApp non disponible
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ── Subscription Management Card ── */}

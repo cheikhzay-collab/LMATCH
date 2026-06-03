@@ -97,13 +97,76 @@ function StatCard({ icon: Icon, label, value, colorClass }) {
   );
 }
 
+const MOROCCAN_CITIES = [
+  "Casablanca", "Rabat", "Marrakech", "Fès", "Tanger", "Salé", "Meknès", "Agadir", 
+  "Oujda", "Kénitra", "Tétouan", "Safi", "Témara", "Mohammédia", "El Jadida", 
+  "Nador", "Taza", "Settat", "Khouribga", "Béni Mellal", "Khemisset", "Larache", 
+  "Guelmim", "Berrechid", "Ouarzazate", "Al Hoceima", "Errachidia", "Taroudant",
+  "Autre"
+];
+
 export default function StudentDashboard() {
-  const { user, exams, progress, getStudentStats, mockExamHistory, isExamLocked, profName, profPhone, profSite } = useAuth();
+  const { user, exams, progress, getStudentStats, mockExamHistory, isExamLocked, profName, profPhone, profSite, updateProfile } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const stats = getStudentStats();
 
   const [toastMessage, setToastMessage] = useState(null);
+  
+  // Onboarding states for phone number and city
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingPhone, setOnboardingPhone] = useState('');
+  const [onboardingCity, setOnboardingCity] = useState('');
+  const [onboardingLoading, setOnboardingLoading] = useState(false);
+  const [onboardingError, setOnboardingError] = useState('');
+
+  // Auto-trigger onboarding if fields are empty
+  useEffect(() => {
+    if (user && user.role === 'student' && (!user.phone || !user.city)) {
+      setShowOnboarding(true);
+      setOnboardingPhone(user.phone || '');
+      setOnboardingCity(user.city || '');
+    } else {
+      setShowOnboarding(false);
+    }
+  }, [user]);
+
+  const handleOnboardingSubmit = async (e) => {
+    e.preventDefault();
+    setOnboardingError('');
+    setOnboardingLoading(true);
+
+    const phoneClean = onboardingPhone.trim();
+    const cityClean = onboardingCity.trim();
+
+    if (!phoneClean) {
+      setOnboardingError('Veuillez saisir votre numéro de téléphone.');
+      setOnboardingLoading(false);
+      return;
+    }
+    
+    if (phoneClean.length < 8) {
+      setOnboardingError('Veuillez saisir un numéro de téléphone valide.');
+      setOnboardingLoading(false);
+      return;
+    }
+
+    if (!cityClean) {
+      setOnboardingError('Veuillez sélectionner votre ville.');
+      setOnboardingLoading(false);
+      return;
+    }
+
+    try {
+      await updateProfile({ phone: phoneClean, city: cityClean });
+      setShowOnboarding(false);
+    } catch (err) {
+      console.error('[Onboarding] Error:', err);
+      setOnboardingError(err.message || "Impossible de sauvegarder votre profil. Veuillez réessayer.");
+    } finally {
+      setOnboardingLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (location.state?.partialSave) {
@@ -927,6 +990,129 @@ export default function StudentDashboard() {
           >
             Fermer
           </button>
+        </div>
+      )}
+
+      {/* ── Onboarding Modal (Phone & City Capture) ── */}
+      {showOnboarding && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          zIndex: 9999,
+          background: 'rgba(9, 9, 11, 0.85)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+        }}>
+          <div className="glass-panel animate-fade-in" style={{
+            maxWidth: '460px',
+            width: '100%',
+            padding: '2.25rem 2rem',
+            background: 'var(--bg-card)',
+            border: '1px solid var(--border)',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+            borderRadius: '1.25rem',
+            textAlign: 'center',
+          }}>
+            {/* Icon */}
+            <div style={{
+              width: 56,
+              height: 56,
+              borderRadius: '16px',
+              background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.25rem',
+              boxShadow: '0 8px 20px rgba(113, 109, 242, 0.25)',
+            }}>
+              <BrainCircuit size={26} color="#fff" />
+            </div>
+
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-main)' }}>
+              Finalisez votre profil 🎯
+            </h2>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.5, marginBottom: '1.75rem' }}>
+              Pour personnaliser vos révisions et vous intégrer dans le **classement national**, veuillez saisir vos coordonnées :
+            </p>
+
+            {onboardingError && (
+              <div style={{
+                background: 'rgba(239, 68, 68, 0.08)',
+                border: '1px solid rgba(239, 68, 68, 0.25)',
+                padding: '0.75rem 1rem',
+                borderRadius: '10px',
+                color: 'var(--danger)',
+                fontSize: '0.82rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem',
+                marginBottom: '1.25rem',
+                textAlign: 'left',
+              }}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span style={{ fontWeight: 600 }}>{onboardingError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleOnboardingSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', textAlign: 'left' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Numéro de téléphone
+                </label>
+                <input
+                  type="tel"
+                  placeholder="06 XX XX XX XX ou +212..."
+                  className="input-control"
+                  value={onboardingPhone}
+                  onChange={e => setOnboardingPhone(e.target.value)}
+                  disabled={onboardingLoading}
+                  required
+                  style={{ width: '100%', borderRadius: '10px' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Votre ville
+                </label>
+                <select
+                  className="input-control"
+                  value={onboardingCity}
+                  onChange={e => setOnboardingCity(e.target.value)}
+                  disabled={onboardingLoading}
+                  required
+                  style={{ width: '100%', borderRadius: '10px', background: 'var(--bg-card)', color: 'var(--text-main)' }}
+                >
+                  <option value="">Sélectionnez votre ville...</option>
+                  {MOROCCAN_CITIES.map(city => (
+                    <option key={city} value={city}>{city}</option>
+                  ))}
+                </select>
+              </div>
+
+              <button
+                type="submit"
+                className="btn"
+                disabled={onboardingLoading}
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  padding: '0.85rem',
+                  fontSize: '0.95rem',
+                  fontWeight: 700,
+                  marginTop: '0.5rem',
+                  borderRadius: '10px',
+                  background: 'linear-gradient(135deg, var(--violet), #4f46e5)',
+                }}
+              >
+                {onboardingLoading ? 'Enregistrement...' : 'Valider et commencer'}
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>

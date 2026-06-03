@@ -218,17 +218,21 @@ function renderTextWithBold(text) {
 /* ─── 8. Main render function ────────────────────────────────────────────────
  *
  *  Entry point for ALL text rendering in the app.
- *  Pipeline: input → clean → auto-wrap → tokenize → render
+ *  Pipeline: input → split on \n → clean each segment → tokenize → render
+ *
+ *  FIX (2026-06): cleanControlChars was collapsing ALL \n into spaces,
+ *  destroying the multi-line structure of astuces (étapes numérotées).
+ *  Now we split FIRST on \n\n (paragraphs) and \n (lines), clean each
+ *  line individually, then reassemble with proper block/inline elements.
  */
 export function renderWithMath(text) {
   if (text === null || text === undefined) return null;
-
-  const cleaned = cleanControlChars(String(text));
-  if (!cleaned) return null;
+  const raw = String(text);
+  if (!raw.trim()) return null;
 
   // ── Image shorthand ──
-  if (cleaned.startsWith('img:')) {
-    const url = cleaned.slice(4).trim();
+  if (raw.trim().startsWith('img:')) {
+    const url = raw.trim().slice(4).trim();
     return (
       <div style={{ textAlign: 'center', margin: '1rem 0' }}>
         <img
@@ -248,19 +252,83 @@ export function renderWithMath(text) {
     );
   }
 
-  // ── Auto-wrap bare LaTeX ──
-  const toParse = autoWrapLatex(cleaned);
+  // ── Normalise line endings ──
+  // Also convert literal escape sequences "\n" (2-char: backslash + n) → real newline.
+  // These appear when astuces are stored/transmitted as JSON-escaped strings.
+  // LaTeX commands like \nabla, \neq, \nearrow etc. are safe because we only replace
+  // literal "\n" OUTSIDE of math blocks ($...$ or $$...$$).
+  const normalisedTemp = raw
+    .replace(/\r\n/g, '\n')                // Windows CRLF → LF
+    .replace(/\r/g, '\n');                 // lone CR → LF
+  
+  const normalised = normalisedTemp.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g)
+    .map((part, idx) => (idx % 2 === 1 ? part : part.replace(/\\n/g, '\n')))
+    .join('');
 
-  // ── Tokenize and render ──
-  const tokens = tokenizeMath(toParse);
+  const hasNewlines = normalised.includes('\n');
 
-  if (tokens.length === 1 && tokens[0].type === 'text') {
-    return <span>{renderTextWithBold(tokens[0].content)}</span>;
+
+  // ── Single-line fast path (questions, options, short text) ──
+  if (!hasNewlines) {
+    const cleaned = cleanControlChars(normalised);
+    if (!cleaned) return null;
+    const toParse = autoWrapLatex(cleaned);
+    const tokens = tokenizeMath(toParse);
+    if (tokens.length === 1 && tokens[0].type === 'text') {
+      return <span>{renderTextWithBold(tokens[0].content)}</span>;
+    }
+    return tokens.map((tok, i) => {
+      if (tok.type === 'block')  return <SafeBlockMath  key={i} math={tok.content} />;
+      if (tok.type === 'inline') return <SafeInlineMath key={i} math={tok.content} />;
+      return <span key={i}>{renderTextWithBold(tok.content)}</span>;
+    });
   }
 
-  return tokens.map((tok, i) => {
-    if (tok.type === 'block')  return <SafeBlockMath  key={i} math={tok.content} />;
-    if (tok.type === 'inline') return <SafeInlineMath key={i} math={tok.content} />;
-    return <span key={i}>{renderTextWithBold(tok.content)}</span>;
-  });
+  // ── Multi-line path: render each line, group by paragraphs ──
+  const renderLine = (line, key) => {
+    const cleaned = line
+      .replace(/\t/g, ' ')
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/ {2,}/g, ' ')
+      .trim();
+    if (!cleaned) return null;
+    const toParse = autoWrapLatex(cleaned);
+    const tokens = tokenizeMath(toParse);
+    const content = tokens.length === 1 && tokens[0].type === 'text'
+      ? renderTextWithBold(tokens[0].content)
+      : tokens.map((tok, i) => {
+          if (tok.type === 'block')  return <SafeBlockMath  key={i} math={tok.content} />;
+          if (tok.type === 'inline') return <SafeInlineMath key={i} math={tok.content} />;
+          return <span key={i}>{renderTextWithBold(tok.content)}</span>;
+        });
+    return <span key={key} style={{ display: 'block', lineHeight: 1.75 }}>{content}</span>;
+  };
+
+  // Split into paragraphs (double newline), then lines within each paragraph
+  const paragraphs = normalised.split(/\n{2,}/);
+
+  if (paragraphs.length === 1) {
+    // Single paragraph with line breaks
+    const lines = normalised.split('\n');
+    return (
+      <span style={{ display: 'block' }}>
+        {lines.map((line, i) => renderLine(line, i))}
+      </span>
+    );
+  }
+
+  return (
+    <>
+      {paragraphs.map((para, pi) => {
+        const lines = para.split('\n');
+        return (
+          <p key={pi} style={{ margin: '0.35em 0', lineHeight: 1.75 }}>
+            {lines.map((line, li) => renderLine(line, li))}
+          </p>
+        );
+      })}
+    </>
+  );
 }
+

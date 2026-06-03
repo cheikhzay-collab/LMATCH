@@ -223,6 +223,8 @@ export function AuthProvider({ children }) {
                 rank:         profile.rank  || null,
                 totalStudents: profile.totalStudents || 1200,
                 subscription: profile.subscription || null,
+                phone:        profile.phone || supabaseUser.user_metadata?.phone || '',
+                city:         profile.city  || supabaseUser.user_metadata?.city  || '',
               };
               setUser(enriched);
             }
@@ -607,6 +609,37 @@ export function AuthProvider({ children }) {
       setUsers(users.map(u => u.id === userId ? { ...u, tier: newTier } : u));
       if (user && user.id === userId) {
         setUser({ ...user, tier: newTier });
+      }
+    }
+  };
+
+  const updateProfile = async (updates) => {
+    if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
+      const userId = user.uid || user.id;
+      try {
+        await updateUserDoc(userId, updates);
+        setUser(u => ({ ...u, ...updates }));
+      } catch (dbErr) {
+        console.warn("[Auth] Failed to update profiles table, falling back to auth metadata:", dbErr.message);
+        try {
+          // Attempt to update Supabase auth metadata as a fallback
+          const { supabase } = await import('../lib/supabase');
+          if (supabase) {
+            await supabase.auth.updateUser({
+              data: { phone: updates.phone, city: updates.city }
+            });
+          }
+        } catch (authErr) {
+          console.warn("[Auth] Failed to update auth metadata:", authErr.message);
+        }
+        // Enforce state update locally so the student is not blocked
+        setUser(u => ({ ...u, ...updates }));
+      }
+    } else {
+      if (user) {
+        const updated = { ...user, ...updates };
+        setUser(updated);
+        setUsers(prev => prev.map(u => (u.id === user.id || u.uid === user.uid) ? { ...u, ...updates } : u));
       }
     }
   };
@@ -1366,7 +1399,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ 
-      user, users, login, logout, register, loginWithGoogle: loginGoogle, exams, addExam, updateUserTier,
+      user, users, login, logout, register, loginWithGoogle: loginGoogle, exams, addExam, updateUserTier, updateProfile,
       toggleExamStatus, updateExamDetails, deleteExam, toggleArchiveExam,
       plans, activateSubscription, cancelSubscription, addPlan, removePlan, updatePlan,
       activationCodes, generateActivationCodes, redeemActivationCode,

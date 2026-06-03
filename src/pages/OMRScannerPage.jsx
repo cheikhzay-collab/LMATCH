@@ -335,27 +335,63 @@ export default function OMRScannerPage() {
                 </div>
               )}
               
-              {/* Clean scan method switcher tab */}
-              <div style={{ display: 'flex', gap: '0.5rem', background: 'var(--bg-glass)', padding: '0.25rem', borderRadius: '0.75rem', border: '1px solid var(--border)', marginBottom: '1.5rem' }}>
+              {/* Premium Segmented Controller */}
+              <div style={{ 
+                display: 'flex', 
+                background: 'var(--bg-glass)', 
+                border: '1px solid var(--border)', 
+                padding: '0.25rem', 
+                borderRadius: '0.875rem', 
+                width: '100%',
+                marginBottom: '1.5rem'
+              }}>
                 <button 
                   onClick={() => setScanMethod('camera')}
                   style={{
-                    flex: 1, padding: '0.6rem', borderRadius: '0.6rem', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', transition: 'all 0.2s',
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    padding: '0.6rem',
+                    borderRadius: '0.65rem',
+                    border: 'none',
+                    fontWeight: 800,
+                    fontSize: '0.82rem',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    transition: 'all 0.25s',
                     background: scanMethod === 'camera' ? 'var(--violet)' : 'transparent',
-                    color: scanMethod === 'camera' ? '#fff' : 'var(--text-muted)'
+                    color: scanMethod === 'camera' ? '#fff' : 'var(--text-muted)',
+                    boxShadow: scanMethod === 'camera' ? '0 4px 12px var(--violet-glow)' : 'none'
                   }}
                 >
-                  <Camera size={15} /> Utiliser la caméra
+                  <Camera size={15} />
+                  Utiliser la caméra
                 </button>
                 <button 
                   onClick={() => setScanMethod('file')}
                   style={{
-                    flex: 1, padding: '0.6rem', borderRadius: '0.6rem', border: 'none', cursor: 'pointer', fontWeight: 700, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', transition: 'all 0.2s',
+                    flex: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    padding: '0.6rem',
+                    borderRadius: '0.65rem',
+                    border: 'none',
+                    fontWeight: 800,
+                    fontSize: '0.82rem',
+                    fontFamily: 'inherit',
+                    cursor: 'pointer',
+                    transition: 'all 0.25s',
                     background: scanMethod === 'file' ? 'var(--violet)' : 'transparent',
-                    color: scanMethod === 'file' ? '#fff' : 'var(--text-muted)'
+                    color: scanMethod === 'file' ? '#fff' : 'var(--text-muted)',
+                    boxShadow: scanMethod === 'file' ? '0 4px 12px var(--violet-glow)' : 'none'
                   }}
                 >
-                  <Upload size={15} /> Importer un fichier
+                  <Upload size={15} />
+                  Importer un fichier
                 </button>
               </div>
 
@@ -585,15 +621,42 @@ export default function OMRScannerPage() {
               </div>
 
               {/* Action row */}
-              <div style={{ display:'flex', gap:'0.75rem', marginTop:'2.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem', justifyContent:'flex-end', flexWrap: 'wrap' }}>
-                <button className="btn-outline" onClick={reset} style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding: '0.75rem 1.5rem' }}>
+              <div style={{ 
+                display:'flex', 
+                gap:'0.75rem', 
+                marginTop:'2.5rem', 
+                borderTop: '1px solid var(--border)', 
+                paddingTop: '1.5rem', 
+                justifyContent:'flex-end', 
+                flexWrap: 'wrap' 
+              }}>
+                <button 
+                  className="btn-outline" 
+                  onClick={reset} 
+                  style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding: '0.7rem 1.5rem', borderRadius: '10px' }}
+                >
                   <RotateCcw size={15} /> Scanner une autre feuille
                 </button>
-                <button className="btn" onClick={handlePrintReport} style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding: '0.75rem 1.75rem', background: 'linear-gradient(135deg, var(--violet), #4f46e5)', border: 'none', color: '#fff' }}>
-                  <Printer size={15} /> Télécharger le Rapport PDF
-                </button>
-                <button className="btn" onClick={() => navigate('/dashboard')} style={{ padding: '0.75rem 2rem' }}>
+                <button 
+                  className="btn-outline" 
+                  onClick={() => navigate('/dashboard')} 
+                  style={{ padding: '0.7rem 1.5rem', borderRadius: '10px' }}
+                >
                   Retour à l'accueil
+                </button>
+                <button 
+                  className="btn" 
+                  onClick={handlePrintReport} 
+                  style={{ 
+                    display:'flex', 
+                    alignItems:'center', 
+                    gap:'0.5rem', 
+                    padding: '0.7rem 1.75rem', 
+                    borderRadius: '10px',
+                    fontWeight: 700 
+                  }}
+                >
+                  <Printer size={15} /> Télécharger le Rapport PDF
                 </button>
               </div>
             </div>
