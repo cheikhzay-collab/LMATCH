@@ -1343,7 +1343,10 @@ body.light-theme .astuce-tabs {
 
   .col-span-3,.col-span-4,.col-span-5,
   .col-span-6,.col-span-7,.col-span-8,
-  .col-span-12 { grid-column: span 1 !important; }
+  .col-span-12 {
+    grid-column: span 1 !important;
+    min-width: 0 !important;
+  }
 
   /* Cards — tighter on mobile */
   .glass-card  { padding: 1rem 1rem; border-radius: var(--radius-xl); }
@@ -1739,12 +1742,27 @@ body.light-theme .astuce-tabs {
     align-items: flex-start !important;
     gap: 0.75rem !important;
   }
+  .exam-card-premium > div:first-child {
+    flex-direction: row !important;
+    align-items: center !important;
+    width: 100% !important;
+    gap: 0.85rem !important;
+  }
+  .exam-card-premium > div:first-child > div:last-child {
+    width: 100% !important;
+    min-width: 0 !important;
+    flex: 1 !important;
+  }
   .exam-card-premium > div:last-child {
     flex-direction: row !important;
     justify-content: space-between !important;
     align-items: center !important;
     width: 100%;
     gap: 1rem !important;
+  }
+  .exam-card-premium > div:last-child > div {
+    width: 100% !important;
+    justify-content: space-between !important;
   }
   .exam-card-premium > div:last-child button {
     padding: 0.5rem 1rem !important;
