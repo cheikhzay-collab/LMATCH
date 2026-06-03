@@ -5,6 +5,40 @@ import SessionSummary from '../components/SessionSummary';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Award, BrainCircuit, CheckCircle2, Zap, RefreshCw, Sparkles, Trophy, Lock, BookOpen, Clock } from 'lucide-react';
 
+// Helper to group cards by context, preserving original exam order and avoiding duplicates.
+function groupCardsByContext(compiledCards, questionsPool) {
+  const grouped = [];
+  const seenIds = new Set();
+
+  compiledCards.forEach(card => {
+    if (seenIds.has(card.id)) return;
+
+    if (card.context && card.context.trim()) {
+      const siblings = questionsPool.filter(q =>
+        q.context &&
+        q.context.trim() === card.context.trim() &&
+        q.examName === card.examName
+      );
+
+      siblings.forEach(q => {
+        if (!seenIds.has(q.id)) {
+          seenIds.add(q.id);
+          grouped.push({
+            ...q,
+            stage: card.stage || 'révision',
+            stageLabel: q.id === card.id ? (card.stageLabel || 'Révision') : `${card.stageLabel || 'Révision'} (Lié)`
+          });
+        }
+      });
+    } else {
+      seenIds.add(card.id);
+      grouped.push(card);
+    }
+  });
+
+  return grouped;
+}
+
 export default function StudyMode() {
   const { exams, progress: allProgress, updateCardProgress, isExamLocked, getStudentStats } = useAuth();
   const [searchParams] = useSearchParams();
@@ -108,7 +142,8 @@ export default function StudyMode() {
       .map(q => ({ ...q, stage: 'défi', stageLabel: 'Défi du Jour' }));
 
     const compiledCards = [...echauffement, ...consolidation, ...nouveautes, ...defi];
-    setSessionCards(compiledCards);
+    const groupedCards = groupCardsByContext(compiledCards, questionsPool);
+    setSessionCards(groupedCards);
   }, [currentExam, examId, exams, allProgress, sessionCards, sessionStarted]);
   // ────────────────────────────────────────────────────────────────────────────
 
@@ -162,9 +197,18 @@ export default function StudyMode() {
   };
 
   const handleForceReview = () => {
-    // Pick up to 10 random cards for a forced review session
-    const shuffled = [...currentExam.questions].sort(() => 0.5 - Math.random());
-    setSessionCards(shuffled.slice(0, 10));
+    if (!currentExam || !currentExam.questions) return;
+    const questionsPool = (currentExam.questions || []).map(q => ({ ...q, examName: currentExam.name }));
+    const shuffled = [...questionsPool].sort(() => 0.5 - Math.random());
+    
+    const sliced = shuffled.slice(0, 10).map(q => ({
+      ...q,
+      stage: 'révision',
+      stageLabel: 'Révision'
+    }));
+
+    const grouped = groupCardsByContext(sliced, questionsPool);
+    setSessionCards(grouped);
     setSessionFinished(false);
     setCurrentIndex(0);
     setSessionHistory([]);
