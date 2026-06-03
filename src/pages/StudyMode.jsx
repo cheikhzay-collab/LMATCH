@@ -15,11 +15,44 @@ export default function StudyMode() {
   const currentExam = examId ? exams.find(e => e.id === examId) : activeExamsList[0];
 
   const [sessionStarted, setSessionStarted] = useState(!!examId);
+  const isParcours = !examId;
 
   // ─── SNAPSHOT: Freeze the due cards list at session start ───────────────────
   const [sessionCards, setSessionCards] = useState(null); // null = not initialized yet
 
-  const isParcours = !examId;
+  // Dynamically allow scrolling on selector dashboard, but lock it in study session focus mode
+  useEffect(() => {
+    const layoutEl = document.querySelector('.focus-layout');
+    if (!sessionStarted) {
+      if (layoutEl) {
+        layoutEl.style.setProperty('overflow-y', 'auto', 'important');
+        layoutEl.style.setProperty('overflow-x', 'hidden', 'important');
+        layoutEl.style.setProperty('height', 'auto', 'important');
+      }
+      document.body.style.setProperty('overflow-y', 'auto', 'important');
+      document.body.style.setProperty('overflow-x', 'hidden', 'important');
+      document.body.style.setProperty('position', 'relative', 'important');
+    } else {
+      if (layoutEl) {
+        layoutEl.style.removeProperty('overflow-y');
+        layoutEl.style.removeProperty('overflow-x');
+        layoutEl.style.removeProperty('height');
+      }
+      document.body.style.removeProperty('overflow-y');
+      document.body.style.removeProperty('overflow-x');
+      document.body.style.removeProperty('position');
+    }
+    return () => {
+      if (layoutEl) {
+        layoutEl.style.removeProperty('overflow-y');
+        layoutEl.style.removeProperty('overflow-x');
+        layoutEl.style.removeProperty('height');
+      }
+      document.body.style.removeProperty('overflow-y');
+      document.body.style.removeProperty('overflow-x');
+      document.body.style.removeProperty('position');
+    };
+  }, [sessionStarted]);
 
   // Track sessionType/examId URL changes
   useEffect(() => {
