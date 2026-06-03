@@ -1253,18 +1253,19 @@ body.light-theme .astuce-tabs {
 /* ─── KATEX OVERRIDES ────────────────────────────────────────────── */
 .katex { color: var(--text-main) !important; }
 .inline-math-container {
-  display: inline-block;
+  display: inline !important;
+  white-space: normal !important;
   max-width: 100%;
   vertical-align: middle;
-  overflow-x: auto;
-  overflow-y: hidden;
   padding-bottom: 0.15em;
   margin-bottom: -0.15em;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
 }
-.inline-math-container::-webkit-scrollbar {
-  display: none;
+.inline-math-container .katex {
+  white-space: normal !important;
+}
+.inline-math-container .katex .base {
+  white-space: normal !important;
+  display: inline !important;
 }
 
 /* ─── ANIMATIONS ─────────────────────────────────────────────────── */
