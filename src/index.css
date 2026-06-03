@@ -706,14 +706,14 @@ body {
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  padding: 0.7rem 1.15rem;
-  min-height: 46px;
+  padding: 0.6rem 1rem;
+  min-height: 44px;
   background: var(--bg-glass);
   border: 1.5px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-md);
   color: var(--text-main);
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
   font-family: inherit;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1252,9 +1252,6 @@ body.light-theme .astuce-tabs {
 
 /* ─── KATEX OVERRIDES ────────────────────────────────────────────── */
 .katex { color: var(--text-main) !important; }
-.inline-math-container .katex, .katex-display .katex {
-  color: var(--violet) !important;
-}
 .inline-math-container {
   display: inline !important;
   white-space: normal !important;
@@ -2062,11 +2059,6 @@ body.light-theme .astuce-tabs {
   text-align: center;
 }
 
-body.light-theme .flashcard-context-pane {
-  background: linear-gradient(145deg, rgba(113, 109, 242, 0.03) 0%, rgba(113, 109, 242, 0.01) 100%) !important;
-  border-right: 1px solid rgba(113, 109, 242, 0.1) !important;
-}
-
 .flashcard-content-pane {
   flex: 1;
   padding: 2rem 2.25rem;
@@ -2101,10 +2093,10 @@ body.light-theme .flashcard-context-pane {
 }
 
 .flashcard-question-box {
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   margin-bottom: 1.25rem;
-  line-height: 1.75;
-  font-weight: 700;
+  line-height: 1.7;
+  font-weight: 400;
   color: var(--text-main);
 }
 
@@ -2234,8 +2226,7 @@ body.light-theme .flashcard-context-pane {
   }
   
   .flashcard-question-box {
-    font-size: 1.15rem;
-    font-weight: 700 !important;
+    font-size: 1.05rem;
     line-height: 1.6;
     margin-bottom: 0.75rem;
     word-break: normal !important;
