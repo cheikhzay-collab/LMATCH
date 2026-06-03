@@ -14,7 +14,6 @@ export default function Flashcard({ card, onNext }) {
   const [selectedOption, setSelectedOption] = useState(null);
   const [isFlipped, setIsFlipped] = useState(false);
   const [isShowingBack, setIsShowingBack] = useState(false);
-  const [isFlipFinished, setIsFlipFinished] = useState(false);
   const [astuceTab, setAstuceTab] = useState('rule');
   const [swipeClass, setSwipeClass] = useState('');
 
@@ -32,15 +31,12 @@ export default function Flashcard({ card, onNext }) {
       // 3D flip — switch content midway (220ms into the 600ms flip)
       setIsFlipped(true);
       setTimeout(() => setIsShowingBack(true), 220);
-      setTimeout(() => setIsFlipFinished(true), 500); // waits for flip transition to finish
     } else if (cardRevealMode === 'fade') {
       // Fade — no rotation, instant content swap with CSS opacity
       setIsShowingBack(true);
-      setIsFlipFinished(true);
     } else {
       // Instant — no animation at all
       setIsShowingBack(true);
-      setIsFlipFinished(true);
     }
   };
 
@@ -155,19 +151,19 @@ export default function Flashcard({ card, onNext }) {
   const cardStyle = (() => {
     // Shared base
     const base = {
-      transformStyle: isFlipMode && !isFlipFinished ? 'preserve-3d' : 'flat',
+      transformStyle: isFlipMode ? 'preserve-3d' : 'flat',
       cursor: isShowingBack && cardSwipeEnabled ? (isDragging ? 'grabbing' : 'grab') : 'default',
     };
 
     // ── Swipe-exit animation (inline for non-flip modes to bypass CSS !important) ──
-    if ((!isFlipMode || isFlipFinished) && swipeClass === 'swipe-right') {
+    if (!isFlipMode && swipeClass === 'swipe-right') {
       return { ...base, transform: 'translateX(48px) scale(0.93)', opacity: 0, transition: 'transform 0.28s ease, opacity 0.22s ease' };
     }
-    if ((!isFlipMode || isFlipFinished) && swipeClass === 'swipe-left') {
+    if (!isFlipMode && swipeClass === 'swipe-left') {
       return { ...base, transform: 'translateX(-48px) scale(0.93)', opacity: 0, transition: 'transform 0.28s ease, opacity 0.22s ease' };
     }
 
-    if (isFlipMode && !isFlipFinished) {
+    if (isFlipMode) {
       // Standard 3D flip: CSS classes handle is-flipped & swipe-right/left
       return {
         ...base,
@@ -180,7 +176,7 @@ export default function Flashcard({ card, onNext }) {
       };
     }
 
-    // Fade / Instant / Finished Flip: no rotation at all
+    // Fade / Instant: no rotation at all
     return {
       ...base,
       // Instantané = zero drag transforms, completely still
@@ -310,8 +306,8 @@ export default function Flashcard({ card, onNext }) {
         ) : (
           /* BACK SIDE */
           <div className={`glass-card flashcard-card flashcard-main-layout ${card.context ? 'has-context-layout' : 'no-context-layout'}`} style={{
-            // Counter-rotate only in flip mode and when flip is not finished; in fade/instant just show normally
-            transform: isFlipMode && !isFlipFinished ? 'rotateY(180deg)' : 'none',
+            // Counter-rotate only in flip mode; in fade/instant just show normally
+            transform: isFlipMode ? 'rotateY(180deg)' : 'none',
             animation: cardRevealMode === 'fade' ? 'fadeReveal 0.3s ease forwards' : 'none',
           }}>
             {/* Left Context Pane (Persisted for continuity) */}
