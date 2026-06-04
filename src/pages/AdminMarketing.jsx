@@ -218,7 +218,7 @@ function createCompositeCanvas(bgB64, feature, format, style, text) {
       ctx.fillStyle = botGrad;
       ctx.fillRect(0, H * 0.55, W, H * 0.45);
 
-      // ── 3. L'Conq brand badge (top-left) ──────────────────────────────
+      // ── 3. L'CONQ brand badge (top-left) ──────────────────────────────
       const badgePad = W * 0.045;
       const badgeH = H * 0.052;
       const brandTxt = "L'CONQ";
@@ -330,7 +330,7 @@ function createCompositeCanvas(bgB64, feature, format, style, text) {
       ctx.font = `800 ${sw * 0.14}px Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText("L'Conq", sx + sw / 2, sy + appH / 2);
+      ctx.fillText("L'CONQ", sx + sw / 2, sy + appH / 2);
       ctx.restore();
 
       // Feature title on screen
@@ -447,7 +447,7 @@ function createCompositeCanvas(bgB64, feature, format, style, text) {
       ctx.font = `900 ${ctaH * 0.42}px Arial`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`🚀 Rejoins L'Conq — Gratuit`, ctaX + ctaW / 2, ctaY + ctaH / 2);
+      ctx.fillText(`🚀 Rejoins L'CONQ — Gratuit`, ctaX + ctaW / 2, ctaY + ctaH / 2);
       ctx.restore();
     };
 
@@ -494,7 +494,7 @@ function buildClaudeTextPrompt(feature, format, lang) {
     ? 'HOOK in Moroccan Darija Arabic (Arabic script), BODY and CTA in French.'
     : 'Write entirely in French. Modern, motivating, youth tone.';
 
-  return `You are a viral social media copywriter for L'Conq, Morocco's top Bac preparation app targeting competitive entrance exams.
+  return `You are a viral social media copywriter for L'CONQ, Morocco's top Bac preparation app targeting competitive entrance exams.
 
 Feature to promote: **${feature.label}**
 Core message: "${feature.hook}"
@@ -716,7 +716,7 @@ export default function AdminMarketing() {
             role: 'user',
             content: `Write a FLUX.1 image prompt for this marketing poster background:
 
-PLATFORM: L'Conq — Morocco's top educational app for Bac students
+PLATFORM: L'CONQ — Morocco's top educational app for Bac students
 FEATURE: "${feature.label}" — ${feature.hook}
 SUBJECT/SCENE: ${feature.persona}
 LIGHTING STYLE: ${STYLE_LIGHTING[style.id]}
@@ -856,7 +856,7 @@ Write ONLY the prompt (4-5 sentences). No preamble.`
     return {
       hook:     raw.match(/HOOK:\s*(.+)/)?.[1]?.trim()                            || feature.hook,
       body:     raw.match(/BODY:\s*([\s\S]+?)(?=CTA:|HASHTAGS:|$)/)?.[1]?.trim() || '',
-      cta:      raw.match(/CTA:\s*(.+)/)?.[1]?.trim()                             || "Rejoins L'Conq",
+      cta:      raw.match(/CTA:\s*(.+)/)?.[1]?.trim()                             || "Rejoins L'CONQ",
       hashtags: raw.match(/HASHTAGS:\s*(.+)/)?.[1]?.trim()                        || '',
     };
   }, [claudeKey]);
@@ -1319,7 +1319,7 @@ Write ONLY the prompt (4-5 sentences). No preamble.`
                     <span style={{ fontSize: '2rem' }}>{selectedFeature.emoji}</span>
                     <span style={{ color: '#fff', fontWeight: 800, fontSize: '0.65rem', textAlign: 'center', padding: '0 0.5rem', textShadow: '0 2px 6px rgba(0,0,0,0.8)' }}>{selectedFeature.label}</span>
                     <div style={{ position: 'absolute', bottom: '10%', left: '50%', transform: 'translateX(-50%)', background: selectedStyle.accent, borderRadius: 99, padding: '0.2rem 0.6rem', fontSize: '0.48rem', fontWeight: 800, color: '#fff', whiteSpace: 'nowrap' }}>
-                      🚀 Rejoins L'Conq
+                      🚀 Rejoins L'CONQ
                     </div>
                   </div>
                   {/* Pipeline steps */}
@@ -1715,7 +1715,7 @@ Write ONLY the prompt (4-5 sentences). No preamble.`
                     </p>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, opacity: 0.85, fontSize: '0.68rem', marginTop: 3, color: '#F8FAFC', textShadow: '0 1px 3px rgba(0,0,0,0.9)' }}>
                       <span>🎵</span>
-                      <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', width: 120 }}>Son original - L'Conq Studio Pro</span>
+                      <span style={{ overflow: 'hidden', whiteSpace: 'nowrap', width: 120 }}>Son original - L'CONQ Studio Pro</span>
                     </div>
                   </div>
                 )}

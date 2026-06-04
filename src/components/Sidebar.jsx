@@ -27,7 +27,9 @@ export default function Sidebar() {
         }}>
           <BrainCircuit size={20} color="#fff" />
         </div>
-        <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em' }}>L'Conq</span>
+        <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em' }}>
+          L'<span style={{ background: 'linear-gradient(135deg, var(--violet), var(--emerald))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>CONQ</span>
+        </span>
       </div>
 
       {/* Navigation */}

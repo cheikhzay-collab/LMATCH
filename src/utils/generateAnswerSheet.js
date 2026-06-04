@@ -13,7 +13,7 @@ export async function generateAnswerSheet(exam, user) {
 
   // ── Premium Royal Palette ────────────────────────────────────────
   const navy      = [26, 26, 46];      // Royal Deep Navy #1a1a2e
-  const violet    = [124, 58, 237];    // L'Conq Purple #7c3aed
+  const violet    = [124, 58, 237];    // L'CONQ Purple #7c3aed
   const emerald   = [16, 163, 74];     // Emerald Green #10a34a
   const softBg    = [248, 247, 255];   // Light pastel purple-blue #f8f7ff
   const borderCol = [226, 232, 240];   // Light Gray Border #e2e8f0
@@ -55,7 +55,7 @@ export async function generateAnswerSheet(exam, user) {
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
-  doc.text("L'Conq", headerMargin + 6, 26);
+  doc.text("L'CONQ", headerMargin + 6, 26);
 
   // Logo gold dot
   doc.setFillColor(245, 158, 11); // Gold #f59e0b
@@ -266,7 +266,7 @@ export async function generateAnswerSheet(exam, user) {
   doc.setFontSize(7.5);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...mid);
-  doc.text("Après avoir terminé, scannez cette feuille via l'application L'Conq pour obtenir une correction instantanée.", margin, footerY + 5.5, { maxWidth: W - margin * 2 - 25 });
+  doc.text("Après avoir terminé, scannez cette feuille via l'application L'CONQ pour obtenir une correction instantanée.", margin, footerY + 5.5, { maxWidth: W - margin * 2 - 25 });
 
   // Unique Exam ID Watermark (High-end styling)
   doc.setFontSize(7);

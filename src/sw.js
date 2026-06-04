@@ -1,5 +1,5 @@
 /**
- * L'Conq — Custom Service Worker
+ * L'CONQ — Custom Service Worker
  * Strategy: injectManifest (Vite Plugin PWA)
  * 
  * The precache manifest is injected by vite-plugin-pwa at build time

@@ -220,7 +220,9 @@ export default function AdminOverview() {
               <div style={{ width: 44, height: 44, borderRadius: '14px', background: 'linear-gradient(135deg, var(--violet), var(--emerald))', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(113, 109, 242, 0.2)' }}>
                 <LayoutDashboard size={22} color="#fff" />
               </div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, color: 'var(--text-main)' }}>L'Conq Concours • Administration</h1>
+              <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, color: 'var(--text-main)' }}>
+                L'<span style={{ background: 'linear-gradient(135deg, var(--violet), var(--emerald))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>CONQ</span> Concours • Administration
+              </h1>
             </div>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>Gestion et analyse prédictive des préparations aux concours marocains (Médecine, ENSA, ENSAM).</p>
           </div>

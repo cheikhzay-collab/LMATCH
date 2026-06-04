@@ -1,5 +1,5 @@
 /**
- * mathRenderer.jsx — L'Conq | KaTeX rendering utility (v4 — Direct KaTeX)
+ * mathRenderer.jsx — L'CONQ | KaTeX rendering utility (v4 — Direct KaTeX)
  *
  * ROOT CAUSE FIX:
  *   react-katex@3.1.0 does NOT support the `settings` prop — it ignores it
@@ -97,7 +97,14 @@ export function SafeBlockMath({ math }) {
     <div
       className="notranslate"
       translate="no"
-      style={{ display: 'block', margin: '0.75em 0', overflowX: 'auto' }}
+      style={{
+        display: 'block',
+        margin: '0.75em 0',
+        overflowX: 'auto',
+        overflowY: 'hidden',
+        maxWidth: '100%',
+        WebkitOverflowScrolling: 'touch',
+      }}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -284,6 +291,19 @@ export function renderWithMath(text) {
     });
   }
 
+  const renderLineContent = (text) => {
+    const toParse = autoWrapLatex(text);
+    const tokens = tokenizeMath(toParse);
+    if (tokens.length === 1 && tokens[0].type === 'text') {
+      return renderTextWithBold(tokens[0].content);
+    }
+    return tokens.map((tok, i) => {
+      if (tok.type === 'block')  return <SafeBlockMath  key={i} math={tok.content} />;
+      if (tok.type === 'inline') return <SafeInlineMath key={i} math={tok.content} />;
+      return <span key={i}>{renderTextWithBold(tok.content)}</span>;
+    });
+  };
+
   // ── Multi-line path: render each line, group by paragraphs ──
   const renderLine = (line, key) => {
     const cleaned = line
@@ -293,15 +313,84 @@ export function renderWithMath(text) {
       .replace(/ {2,}/g, ' ')
       .trim();
     if (!cleaned) return null;
-    const toParse = autoWrapLatex(cleaned);
-    const tokens = tokenizeMath(toParse);
-    const content = tokens.length === 1 && tokens[0].type === 'text'
-      ? renderTextWithBold(tokens[0].content)
-      : tokens.map((tok, i) => {
-          if (tok.type === 'block')  return <SafeBlockMath  key={i} math={tok.content} />;
-          if (tok.type === 'inline') return <SafeInlineMath key={i} math={tok.content} />;
-          return <span key={i}>{renderTextWithBold(tok.content)}</span>;
-        });
+
+    // Response Block (Réponse :)
+    if (cleaned.toLowerCase().startsWith('**réponse') || cleaned.toLowerCase().startsWith('réponse')) {
+      const contentText = cleaned.replace(/^(\*\*)?réponse\s*:?\s*/i, '').replace(/\*\*$/, '');
+      return (
+        <div key={key} className="mfc-callout-response" style={{
+          background: 'rgba(16, 185, 129, 0.08)',
+          borderLeft: '4px solid var(--emerald)',
+          padding: '0.75rem 1rem',
+          borderRadius: '8px',
+          color: 'var(--text-main)',
+          margin: '0.75rem 0',
+          lineHeight: 1.6
+        }}>
+          <strong style={{ color: 'var(--emerald)', marginRight: '0.5rem', fontWeight: 800 }}>Réponse :</strong>
+          {renderLineContent(contentText)}
+        </div>
+      );
+    }
+
+    // Attention/Warning Block (Attention :)
+    if (cleaned.toLowerCase().startsWith('**attention') || cleaned.toLowerCase().startsWith('attention')) {
+      const contentText = cleaned.replace(/^(\*\*)?attention\s*:?\s*/i, '').replace(/\*\*$/, '');
+      return (
+        <div key={key} className="mfc-callout-attention" style={{
+          background: 'rgba(245, 158, 11, 0.08)',
+          borderLeft: '4px solid var(--warning)',
+          padding: '0.75rem 1rem',
+          borderRadius: '8px',
+          color: 'var(--text-main)',
+          margin: '0.75rem 0',
+          lineHeight: 1.6
+        }}>
+          <strong style={{ color: 'var(--warning)', marginRight: '0.5rem', fontWeight: 800 }}>Attention :</strong>
+          {renderLineContent(contentText)}
+        </div>
+      );
+    }
+
+    // Step Block (Étape N)
+    const stepRegex = /^(\*\*)?Étape\s*(\d+)\s*(?:—|-|:)?\s*(.*)$/i;
+    const stepMatch = cleaned.match(stepRegex);
+    if (stepMatch) {
+      const stepNum = stepMatch[2];
+      const stepText = stepMatch[3].replace(/\*\*$/, '');
+      return (
+        <div key={key} className="mfc-callout-step" style={{
+          margin: '1rem 0 0.75rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.35rem'
+        }}>
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            alignSelf: 'flex-start',
+            background: 'var(--violet-soft)',
+            color: 'var(--violet)',
+            padding: '0.2rem 0.65rem',
+            borderRadius: '6px',
+            fontSize: '0.72rem',
+            fontWeight: 900,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em'
+          }}>
+            <span>Étape {stepNum}</span>
+          </div>
+          {stepText && (
+            <div style={{ paddingLeft: '0.25rem', lineHeight: 1.7 }}>
+              {renderLineContent(stepText)}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    const content = renderLineContent(cleaned);
     return <span key={key} style={{ display: 'block', lineHeight: 1.75 }}>{content}</span>;
   };
 

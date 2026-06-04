@@ -1,5 +1,5 @@
 // src/services/examService.js
-// Supabase CRUD for exams — the core content of L'Conq
+// Supabase CRUD for exams — the core content of L'CONQ
 // All functions return empty/null when supabase is null (no Supabase configured).
 
 import { supabase } from '../lib/supabase';

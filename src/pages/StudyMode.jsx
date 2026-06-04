@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Flashcard from '../components/Flashcard';
+import MobileFlashcard from '../components/MobileFlashcard';
 import SessionSummary from '../components/SessionSummary';
 import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Award, BrainCircuit, CheckCircle2, Zap, RefreshCw, Sparkles, Trophy, Lock, BookOpen, Clock } from 'lucide-react';
@@ -44,6 +45,15 @@ export default function StudyMode() {
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const navigate = useNavigate();
+
+  // Mobile detection — updated on resize
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
 
   const activeExamsList = exams.filter(e => e.isActive !== false && e.isArchived !== true && !isExamLocked(e));
   const currentExam = examId ? exams.find(e => e.id === examId) : activeExamsList[0];
@@ -546,9 +556,11 @@ export default function StudyMode() {
       minHeight: '100dvh',
       display: 'flex',
       flexDirection: 'column',
-      maxWidth: '1200px',
+      maxWidth: isMobile ? '100%' : '1200px',
       margin: '0 auto',
-      padding: '0.5rem 1rem',
+      padding: isMobile ? '0.5rem 0.75rem' : '0.5rem 1rem',
+      overflowX: 'hidden',
+      boxSizing: 'border-box',
     }}>
       {/* ── Unified Minimalist Header (Single Line for Focus) ── */}
       <div className="study-session-header">
@@ -614,13 +626,31 @@ export default function StudyMode() {
         </div>
       </div>
 
-      {/* ── Flashcard ── */}
-      <div style={{ flex: 1, display: 'flex', alignItems: 'flex-start', justifyContent: 'center' }}>
-        <Flashcard
-          key={currentCard.id}
-          card={currentCard}
-          onNext={handleNext}
-        />
+      {/* ── Flashcard: desktop vs mobile ── */}
+      <div 
+        className="study-scroll-container"
+        style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: isMobile ? 'flex-start' : 'flex-start',
+          justifyContent: 'center',
+          /* On mobile: natural scroll, not squeezed */
+          overflowY: isMobile ? 'auto' : 'visible',
+          paddingBottom: isMobile ? '5rem' : 0,
+        }}>
+        {isMobile ? (
+          <MobileFlashcard
+            key={currentCard.id}
+            card={currentCard}
+            onNext={handleNext}
+          />
+        ) : (
+          <Flashcard
+            key={currentCard.id}
+            card={currentCard}
+            onNext={handleNext}
+          />
+        )}
       </div>
 
       {/* ── Exit Confirmation Modal ── */}
@@ -639,7 +669,7 @@ export default function StudyMode() {
           zIndex: 9999,
           padding: '1rem'
         }}>
-          <div className="glass-panel animate-fade-in" style={{
+          <div className="animate-fade-in" style={{
             maxWidth: '460px',
             width: '100%',
             padding: '2.5rem',

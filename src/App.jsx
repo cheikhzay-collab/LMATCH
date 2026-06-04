@@ -68,49 +68,49 @@ function AppContent() {
 
   React.useEffect(() => {
     const path = location.pathname;
-    let title = "L'Conq";
+    let title = "L'CONQ";
 
     if (path === '/') {
-      title = "L'Conq — Préparation aux Concours Grandes Écoles du Maroc";
+      title = "L'CONQ — Préparation aux Concours Grandes Écoles du Maroc";
     } else if (path === '/login') {
-      title = "Connexion — L'Conq";
+      title = "Connexion — L'CONQ";
     } else if (path === '/register') {
-      title = "Inscription — L'Conq";
+      title = "Inscription — L'CONQ";
     } else if (path === '/dashboard') {
-      title = "Tableau de Bord — L'Conq";
+      title = "Tableau de Bord — L'CONQ";
     } else if (path === '/subscription') {
-      title = "Mon Abonnement — L'Conq";
+      title = "Mon Abonnement — L'CONQ";
     } else if (path === '/schools') {
-      title = "Choix des Écoles — L'Conq";
+      title = "Choix des Écoles — L'CONQ";
     } else if (path.startsWith('/schools/')) {
       const school = decodeURIComponent(path.split('/')[2] || '');
-      title = school ? `${school} — L'Conq` : "Concours — L'Conq";
+      title = school ? `${school} — L'CONQ` : "Concours — L'CONQ";
     } else if (path === '/study') {
-      title = "Mode Révision (SRS) — L'Conq";
+      title = "Mode Révision (SRS) — L'CONQ";
     } else if (path === '/exam') {
-      title = "Examen Blanc Chronométré — L'Conq";
+      title = "Examen Blanc Chronométré — L'CONQ";
     } else if (path === '/scanner') {
-      title = "Scanner Intelligent OMR — L'Conq";
+      title = "Scanner Intelligent OMR — L'CONQ";
     } else if (path === '/ranking') {
-      title = "Classement National — L'Conq";
+      title = "Classement National — L'CONQ";
     } else if (path === '/admin/dashboard') {
-      title = "Admin : Vue d'ensemble — L'Conq";
+      title = "Admin : Vue d'ensemble — L'CONQ";
     } else if (path === '/admin/exams') {
-      title = "Admin : Bibliothèque Concours — L'Conq";
+      title = "Admin : Bibliothèque Concours — L'CONQ";
     } else if (path === '/admin/users') {
-      title = "Admin : Gestion des Élèves — L'Conq";
+      title = "Admin : Gestion des Élèves — L'CONQ";
     } else if (path.startsWith('/admin/users/')) {
-      title = "Admin : Dossier de l'Élève — L'Conq";
+      title = "Admin : Dossier de l'Élève — L'CONQ";
     } else if (path === '/admin/upload') {
-      title = "Admin : Upload de Sujets — L'Conq";
+      title = "Admin : Upload de Sujets — L'CONQ";
     } else if (path === '/admin/ai-import') {
-      title = "Admin : Importateur de Sujets IA — L'Conq";
+      title = "Admin : Importateur de Sujets IA — L'CONQ";
     } else if (path === '/admin/ebooks') {
-      title = "Admin : Générateur d'E-Books — L'Conq";
+      title = "Admin : Générateur d'E-Books — L'CONQ";
     } else if (path === '/admin/marketing') {
-      title = "Admin : Marketing & Contenus IA — L'Conq";
+      title = "Admin : Marketing & Contenus IA — L'CONQ";
     } else if (path === '/admin/settings') {
-      title = "Admin : Paramètres Système — L'Conq";
+      title = "Admin : Paramètres Système — L'CONQ";
     }
 
     document.title = title;

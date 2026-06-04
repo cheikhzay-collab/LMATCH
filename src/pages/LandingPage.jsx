@@ -67,7 +67,9 @@ export default function LandingPage() {
           }}>
             <BrainCircuit size={16} color="#fff" />
           </div>
-          <span style={{ fontWeight: 800, fontSize: '0.95rem', letterSpacing: '-0.02em' }}>L'Conq</span>
+          <span style={{ fontWeight: 800, fontSize: '0.95rem', letterSpacing: '-0.02em' }}>
+            L'<span style={{ background: 'linear-gradient(135deg, var(--violet), var(--emerald))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>CONQ</span>
+          </span>
         </div>
         <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
           {/* Theme toggle */}

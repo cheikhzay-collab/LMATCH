@@ -114,8 +114,8 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
 
   const siteUrl = profSite;
   const copyrightLine = profName
-    ? `© ${new Date().getFullYear()} L'Conq × ${profName}. Tous droits réservés.`
-    : `© ${new Date().getFullYear()} L'Conq. Tous droits réservés.`;
+    ? `© ${new Date().getFullYear()} L'CONQ × ${profName}. Tous droits réservés.`
+    : `© ${new Date().getFullYear()} L'CONQ. Tous droits réservés.`;
 
   // QR URLs:
   // Compact grid QR code:
@@ -217,7 +217,7 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
   const coverHtml = showCover ? `
 <div class="cover">
   <div class="cover-frame">
-    <div class="cover-logo">L'Conq</div>
+    <div class="cover-logo">L'CONQ</div>
     <div class="cover-subtitle">EXAMEN BLANC DE PRÉPARATION</div>
     <div class="cover-divider"></div>
     
@@ -307,7 +307,7 @@ body{
   margin:0.8cm 0 1.0cm 0;
   ${showPageNumbers ? `
   @bottom-left {
-    content: "⚡ L'Conq   |   ${examTitle}   |   ${copyrightLine}";
+    content: "⚡ L'CONQ   |   ${examTitle}   |   ${copyrightLine}";
     font-family: 'Inter', sans-serif;
     font-size: 7pt;
     font-weight: 500;
@@ -1226,7 +1226,7 @@ ${coverHtml}
 
   <!-- Navy Header Band -->
   <div class="omr-header">
-    <div class="omr-header-logo">L'Conq<span></span></div>
+    <div class="omr-header-logo">L'CONQ<span></span></div>
     <div class="omr-header-subtitle">Feuille de réponses officielle · Correction par Intelligence Artificielle</div>
     <div class="omr-header-title">${school} — ${examTitle} ${year || ''}</div>
     <div class="omr-header-qr">
@@ -1279,7 +1279,7 @@ ${coverHtml}
 
   <!-- Footer -->
   <div class="omr-footer" style="top: ${footerY}mm;">
-    <div class="omr-footer-text">Après avoir terminé, scannez cette feuille via l'application L'Conq pour obtenir une correction instantanée.</div>
+    <div class="omr-footer-text">Après avoir terminé, scannez cette feuille via l'application L'CONQ pour obtenir une correction instantanée.</div>
     <div class="omr-footer-right">
       <div class="omr-footer-exam-id">EXAM ID: ${examId.slice(0, 8).toUpperCase()}</div>
       <div class="omr-footer-brand">lconq.ma · IA OMR Engine v2.0</div>
@@ -1302,7 +1302,7 @@ ${coverHtml}
   <div class="c-omr-wrap">
     <div class="c-qr-col">
       <img src="${qrUrl}" alt="QR"/>
-      <span>Scanner avec<br>L'Conq App</span>
+      <span>Scanner avec<br>L'CONQ App</span>
     </div>
     <div class="c-omr-col">
       <div class="c-omr-title">📋 Grille de Réponses OMR</div>
@@ -1362,8 +1362,8 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
 
   const siteUrl = profSite;
   const copyrightLine = profName
-    ? `© ${new Date().getFullYear()} L'Conq × ${profName}. Tous droits réservés.`
-    : `© ${new Date().getFullYear()} L'Conq. Tous droits réservés.`;
+    ? `© ${new Date().getFullYear()} L'CONQ × ${profName}. Tous droits réservés.`
+    : `© ${new Date().getFullYear()} L'CONQ. Tous droits réservés.`;
 
   const examId = settings.examId || 'PREVIEW';
   const dateStr = new Date().toLocaleDateString('fr-MA');
@@ -1448,7 +1448,7 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
   const coverHtml = showCover ? `
 <div class="cover">
   <div class="cover-frame">
-    <div class="cover-logo">L'Conq</div>
+    <div class="cover-logo">L'CONQ</div>
     <div class="cover-subtitle">EXAMEN BLANC — CORRIGÉ DÉTAILLÉ</div>
     <div class="cover-divider"></div>
     
@@ -1545,7 +1545,7 @@ body{
   margin:0.8cm 0 1.0cm 0;
   ${showPageNumbers ? `
   @bottom-left {
-    content: "⚡ L'Conq   |   ${examTitle}   |   ${copyrightLine}";
+    content: "⚡ L'CONQ   |   ${examTitle}   |   ${copyrightLine}";
     font-family: 'Inter', sans-serif;
     font-size: 7pt;
     font-weight: 500;
@@ -2438,7 +2438,7 @@ ${coverHtml}
 
   <!-- Navy Header Band -->
   <div class="omr-header">
-    <div class="omr-header-logo">L'Conq<span></span></div>
+    <div class="omr-header-logo">L'CONQ<span></span></div>
     <div class="omr-header-subtitle">Grille de Réponses Officielle · Document de Correction de Référence</div>
     <div class="omr-header-title">${school} — ${examTitle} ${year || ''}</div>
     <div class="omr-header-qr">
@@ -2550,8 +2550,8 @@ export const generateEbookHTML = (topic, questionsWithSource, settings = {}) => 
   const year = new Date().getFullYear();
   const siteUrl = profSite || 'www.lconq.ma';
   const copyrightLine = profName
-    ? `© ${year} L'Conq × ${profName}. Tous droits réservés.`
-    : `© ${year} L'Conq. Tous droits réservés.`;
+    ? `© ${year} L'CONQ × ${profName}. Tous droits réservés.`
+    : `© ${year} L'CONQ. Tous droits réservés.`;
 
   const LETTERS = ['A', 'B', 'C', 'D', 'E'];
 
@@ -2614,7 +2614,7 @@ body{
   margin:0.8cm 0 1.0cm 0;
   ${showPageNumbers ? `
   @bottom-left {
-    content: "⚡ L'Conq   |   ${topic}   |   ${copyrightLine}";
+    content: "⚡ L'CONQ   |   ${topic}   |   ${copyrightLine}";
     font-family: 'Inter', sans-serif;
     font-size: 7pt;
     font-weight: 500;
@@ -3095,7 +3095,7 @@ html{counter-reset:page ${startPage - 1}}
 ${showCover ? `
 <div class="cover">
   <div class="cover-frame">
-    <div class="cover-logo">L'Conq</div>
+    <div class="cover-logo">L'CONQ</div>
     <div class="cover-subtitle">Guide de Maîtrise · Prépa Concours Maroc</div>
     <div class="cover-divider"></div>
     
@@ -3463,7 +3463,7 @@ body {
   </div>
 
   <div class="report-footer">
-    Généré automatiquement par L'Conq — Plateforme de Préparation aux Concours d'Excellence
+    Généré automatiquement par L'CONQ — Plateforme de Préparation aux Concours d'Excellence
     ${profSite ? `<br><strong>${profSite}</strong>` : ''}
   </div>
 </div>

@@ -7,10 +7,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
     <!-- ── SEO & Description ──────────────────────────────────────────── -->
-    <title>L'Conq — Prépare ton Concours Médecine</title>
-    <meta name="description" content="La plateforme SRS gamifiée pour préparer les concours de médecine au Maroc. Révise intelligemment avec L'Conq." />
+    <title>L'CONQ — Prépare ton Concours Médecine</title>
+    <meta name="description" content="La plateforme SRS gamifiée pour préparer les concours de médecine au Maroc. Révise intelligemment avec L'CONQ." />
     <meta name="keywords" content="concours médecine, Maroc, SRS, QCM, révision, prépa médecine" />
-    <meta name="author" content="L'Conq" />
+    <meta name="author" content="L'CONQ" />
 
     <!-- ── PWA / Manifest ─────────────────────────────────────────────── -->
     <link rel="manifest" href="/manifest.json" />
@@ -20,7 +20,7 @@
     <!-- ── iOS PWA (Safari) ───────────────────────────────────────────── -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="L'Conq" />
+    <meta name="apple-mobile-web-app-title" content="L'CONQ" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192.png" />
@@ -30,7 +30,7 @@
 
     <!-- ── Android / Chrome ───────────────────────────────────────────── -->
     <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="application-name" content="L'Conq" />
+    <meta name="application-name" content="L'CONQ" />
 
     <!-- ── Microsoft Tiles ────────────────────────────────────────────── -->
     <meta name="msapplication-TileColor" content="#5254F0" />
@@ -39,8 +39,8 @@
 
     <!-- ── Open Graph (sharing) ───────────────────────────────────────── -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="L'Conq — Prépare ton Concours Médecine" />
-    <meta property="og:description" content="La plateforme SRS gamifiée pour les concours de médecine au Maroc." />
+    <meta property="og:title" content="L'CONQ — Prépare ton Concours Médecine" />
+    <meta property="og:description" content="La plateforme SRS gamifiée pour les concours de médecine au Maroc. Conçue par L'CONQ." />
     <meta property="og:image" content="/icons/icon-512.png" />
 
     <!-- ── Favicon ────────────────────────────────────────────────────── -->
@@ -83,10 +83,13 @@
       #splash-name {
         margin-top: 1.5rem;
         font-family: 'Plus Jakarta Sans', sans-serif;
-        font-size: 1.5rem;
+        font-size: 1.6rem;
         font-weight: 900;
         letter-spacing: -0.02em;
-        background: linear-gradient(135deg, #818cf8, #5254F0);
+        color: rgba(255,255,255,0.9);
+      }
+      #splash-name .brand-accent {
+        background: linear-gradient(135deg, #818cf8, #34d399);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -131,7 +134,7 @@
       <svg xmlns="http://www.w3.org/2000/svg" width="48" height="46" fill="none" viewBox="0 0 48 46">
         <path fill="#5254F0" d="M25.946 44.938c-.664.845-2.021.375-2.021-.698V33.937a2.26 2.26 0 0 0-2.262-2.262H10.287c-.92 0-1.456-1.04-.92-1.788l7.48-10.471c1.07-1.497 0-3.578-1.842-3.578H1.237c-.92 0-1.456-1.04-.92-1.788L10.013.474c.214-.297.556-.474.92-.474h28.894c.92 0 1.456 1.04.92 1.788l-7.48 10.471c-1.07 1.498 0 3.579 1.842 3.579h11.377c.943 0 1.473 1.088.89 1.83L25.947 44.94z"/>
       </svg>
-      <div id="splash-name">L'Conq</div>
+      <div id="splash-name">L'<span class="brand-accent">CONQ</span></div>
       <div id="splash-tagline">Concours Médecine · Maroc</div>
       <div id="splash-dots">
         <span></span><span></span><span></span>

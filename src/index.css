@@ -831,6 +831,17 @@ body {
   border-radius: var(--radius-xl);
   border: 1px solid rgba(99, 102, 241, 0.25);
   animation: fadeIn 0.35s ease;
+  /* Prevent overflow of math content */
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.astuce-box p,
+.astuce-box span {
+  word-break: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
 }
 
 .astuce-header {
@@ -938,6 +949,12 @@ body {
   background: rgba(255,255,255,0.025);
   border-radius: var(--radius-md);
   border-left: 3px solid var(--violet);
+  /* Prevent math overflow */
+  overflow: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 @keyframes astuceSlideIn {
@@ -1252,6 +1269,19 @@ body.light-theme .astuce-tabs {
 
 /* ─── KATEX OVERRIDES ────────────────────────────────────────────── */
 .katex { color: var(--text-main) !important; }
+
+/* Block math: always scrollable, never wider than container */
+.katex-display {
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  max-width: 100% !important;
+  padding-bottom: 0.5rem; /* room for scrollbar on mobile */
+  -webkit-overflow-scrolling: touch;
+}
+.katex-display > .katex {
+  max-width: 100% !important;
+}
+
 .inline-math-container {
   display: inline !important;
   white-space: normal !important;
@@ -2130,150 +2160,515 @@ body.light-theme .astuce-tabs {
   transform: translateY(-1px);
 }
 
+
+/* ══════════════════════════════════════════════════════════════════
+   📱  MOBILE FLASHCARD — MobileFlashcard.jsx
+   Standalone mobile card, zero dependency on desktop layout classes.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Root container — fills the available space, slides on swipe */
+.mfc-root {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Phase wrapper — scrollable column */
+.mfc-phase {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+
+/* ── Topic badge ─────────────────────────────────────────────────── */
+.mfc-topic {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--violet-soft);
+  color: var(--violet);
+  border-bottom: 1px solid rgba(99,102,241,0.15);
+  padding: 0.6rem 1rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Context collapsible ─────────────────────────────────────────── */
+.mfc-context-wrap {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-glass);
+}
+
+.mfc-context-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.65rem 1rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+  transition: color 0.15s;
+}
+.mfc-context-toggle.open {
+  color: var(--violet);
+}
+.mfc-context-toggle span {
+  flex: 1;
+}
+
+.mfc-context-body {
+  padding: 0 1rem 1rem;
+  font-size: 0.9rem;
+  line-height: 1.65;
+  color: var(--text-main);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  /* Math equations scroll horizontally */
+  overflow-x: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+  animation: mfc-fade-in 0.2s ease;
+}
+.mfc-context-body .katex-display {
+  overflow-x: auto;
+  max-width: 100%;
+  padding-bottom: 0.4rem;
+}
+
+/* ── Question ────────────────────────────────────────────────────── */
+.mfc-question {
+  padding: 1.25rem 1rem 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  line-height: 1.6;
+  color: var(--text-main);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  overflow-x: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.mfc-question .katex-display {
+  overflow-x: auto;
+  max-width: 100%;
+  font-size: 1em;
+  padding-bottom: 0.4rem;
+}
+
+/* Compact question ref on review phase */
+.mfc-question-ref {
+  padding: 0.65rem 1rem;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  border-bottom: 1px solid var(--border);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  overflow-x: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.mfc-question-ref .katex-display {
+  overflow-x: auto;
+  font-size: 0.95em;
+  padding-bottom: 0.3rem;
+}
+
+/* ── Options ─────────────────────────────────────────────────────── */
+.mfc-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0.75rem 1rem;
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.mfc-opt {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  width: 100%;
+  min-height: 48px;
+  padding: 0.6rem 0.75rem;
+  background: var(--bg-glass);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-main);
+  font-size: 0.92rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.18s ease;
+  box-sizing: border-box;
+  margin-bottom: 0.4rem;
+  /* Prevent ANY overflow */
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.mfc-opt:last-child {
+  margin-bottom: 0;
+}
+
+.mfc-opt:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Option states */
+.mfc-opt.correct {
+  border-color: var(--emerald) !important;
+  background: rgba(16,185,129,0.08) !important;
+  color: var(--emerald) !important;
+  font-weight: 700;
+}
+.mfc-opt.wrong {
+  border-color: var(--danger) !important;
+  background: rgba(239,68,68,0.07) !important;
+  color: #f87171 !important;
+}
+
+/* Letter badge */
+.mfc-opt-letter {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.78rem;
+  flex-shrink: 0;
+  transition: all 0.18s;
+}
+.mfc-opt.correct .mfc-opt-letter {
+  background: var(--emerald) !important;
+  border-color: var(--emerald) !important;
+  color: #fff !important;
+}
+.mfc-opt.wrong .mfc-opt-letter {
+  background: var(--danger) !important;
+  border-color: var(--danger) !important;
+  color: #fff !important;
+}
+
+/* Option text */
+.mfc-opt-text {
+  flex: 1;
+  min-width: 0;             /* CRITICAL for flex overflow */
+  word-break: break-word;
+  overflow-wrap: break-word;
+  overflow: hidden;
+  line-height: 1.45;
+}
+.mfc-opt-text .katex-display {
+  overflow-x: auto;
+  font-size: 0.95em;
+  margin: 0.2em 0;
+  padding-bottom: 0.2rem;
+}
+
+/* Icon at right */
+.mfc-opt-icon {
+  flex-shrink: 0;
+  margin-left: auto;
+}
+.mfc-opt.correct .mfc-opt-icon { color: var(--emerald); }
+.mfc-opt.wrong   .mfc-opt-icon { color: var(--danger);  }
+
+/* Review mode: options are divs, not buttons */
+.mfc-options-review .mfc-opt {
+  cursor: default;
+}
+
+/* ── Reveal button ───────────────────────────────────────────────── */
+.mfc-reveal-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: calc(100% - 2rem);
+  margin: 0 1rem 1rem;
+  padding: 0.7rem 1rem;
+  background: none;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  color: var(--text-subtle);
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.18s;
+  box-sizing: border-box;
+}
+.mfc-reveal-btn:active {
+  color: var(--violet);
+  border-color: var(--violet);
+  background: var(--violet-soft);
+}
+
+/* ── Result banner ───────────────────────────────────────────────── */
+.mfc-result-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.88rem;
+  font-weight: 700;
+  animation: mfc-slide-down 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  border-bottom: 1px solid transparent;
+}
+.mfc-result-banner.correct {
+  background: rgba(16,185,129,0.1);
+  color: var(--emerald);
+  border-bottom-color: rgba(16,185,129,0.2);
+}
+.mfc-result-banner.wrong {
+  background: rgba(239,68,68,0.08);
+  color: #f87171;
+  border-bottom-color: rgba(239,68,68,0.15);
+}
+.mfc-result-banner.skipped {
+  background: rgba(99,102,241,0.08);
+  color: var(--violet);
+  border-bottom-color: rgba(99,102,241,0.15);
+}
+
+/* ── Astuce panel ────────────────────────────────────────────────── */
+.mfc-astuce {
+  margin: 0 0.875rem 0.875rem;
+  border-radius: 14px;
+  background: linear-gradient(145deg, rgba(99,102,241,0.07) 0%, rgba(16,185,129,0.04) 100%);
+  border: 1px solid rgba(99,102,241,0.22);
+  overflow: hidden;
+  animation: mfc-fade-in 0.3s ease;
+  max-width: calc(100% - 1.75rem);
+  box-sizing: border-box;
+}
+
+.mfc-astuce-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.875rem 0;
+  gap: 0.5rem;
+}
+
+.mfc-astuce-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--violet);
+}
+
+.mfc-astuce-zap {
+  font-size: 0.75rem;
+}
+
+.mfc-astuce-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, var(--violet), #818cf8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.mfc-astuce-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 3px;
+}
+
+.mfc-atab {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 99px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.mfc-atab.active {
+  background: var(--violet);
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(99,102,241,0.35);
+}
+.mfc-atab.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.mfc-astuce-body {
+  padding: 0.65rem 0.875rem 0.875rem;
+  font-size: 0.86rem;
+  line-height: 1.65;
+  color: var(--text-main);
+  word-break: break-word;
+  overflow-wrap: break-word;
+  overflow-x: hidden;
+  max-width: 100%;
+  box-sizing: border-box;
+  animation: mfc-fade-in 0.22s ease;
+}
+.mfc-astuce-body .katex-display {
+  overflow-x: auto;
+  max-width: 100%;
+  font-size: 0.95em;
+  padding-bottom: 0.35rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* ── Actions / Rating ────────────────────────────────────────────── */
+.mfc-actions {
+  padding: 0 0.875rem 1rem;
+  box-sizing: border-box;
+}
+
+.mfc-action-primary {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: linear-gradient(135deg, var(--violet), #818cf8);
+  border: none;
+  border-radius: 14px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(99,102,241,0.35);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+.mfc-action-primary:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(99,102,241,0.25);
+}
+
+.mfc-rating-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.mfc-rate-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.75rem 0.5rem;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-glass);
+  color: var(--text-main);
+  font-size: 0.78rem;
+  font-weight: 800;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.18s ease;
+}
+.mfc-rate-btn:active     { transform: scale(0.96); }
+.mfc-rate-btn.hard:active   { background: rgba(239,68,68,0.12);    color: #f87171;       border-color: var(--danger); }
+.mfc-rate-btn.medium:active { background: rgba(245,158,11,0.1);    color: var(--warning); border-color: var(--warning); }
+.mfc-rate-btn.easy:active   { background: rgba(16,185,129,0.1);    color: var(--emerald); border-color: var(--emerald); }
+
+/* ── Swipe indicators ────────────────────────────────────────────── */
+.mfc-swipe-indicator {
+  position: absolute;
+  top: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 1rem;
+  border-radius: 2rem;
+  font-weight: 800;
+  font-size: 0.85rem;
+  z-index: 10;
+  pointer-events: none;
+  border: 2px solid #fff;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.mfc-swipe-right {
+  left: 1rem;
+  background: var(--emerald);
+  color: #fff;
+  transform: rotate(-8deg);
+}
+.mfc-swipe-left {
+  right: 1rem;
+  background: var(--danger);
+  color: #fff;
+  transform: rotate(8deg);
+}
+
+/* ── Animations ──────────────────────────────────────────────────── */
+@keyframes mfc-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes mfc-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Light theme ─────────────────────────────────────────────────── */
+body.light-theme .mfc-phase {
+  background: #fff;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+}
+body.light-theme .mfc-astuce {
+  background: linear-gradient(145deg, rgba(82,84,240,0.05), rgba(5,150,105,0.03));
+}
+
+/* ══════════════════════════════════════════════════════════════════ */
 /* Mobile overrides (<= 768px) */
 @media (max-width: 768px) {
+
   .study-session-header {
     margin-bottom: 0.75rem !important;
     padding: 0.5rem 0.75rem !important;
     gap: 0.5rem !important;
-  }
-
-  .flashcard-wrapper {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    overflow-x: hidden !important;
-  }
-
-  .flashcard-3d {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    height: calc(100vh - 100px);
-    height: calc(100dvh - 90px);
-    max-height: 650px;
-    min-height: 480px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .flashcard-card {
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-    height: 100%;
-    max-height: 100%;
-    display: flex;
-    flex-direction: column !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .flashcard-card::-webkit-scrollbar {
-    width: 4px;
-  }
-  .flashcard-card::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  .flashcard-card::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.25);
-    border-radius: 99px;
-  }
-
-  .flashcard-main-layout.has-context-layout {
-    flex-direction: column;
-    min-height: auto;
-  }
-  
-  .flashcard-context-pane {
-    flex: none;
-    width: 100%;
-    border-right: none;
-    border-bottom: 1px solid var(--border);
-    padding: 1rem 0.875rem;
-  }
-  
-  .flashcard-content-pane {
-    padding: 1.25rem 1rem 1.5rem !important;
-    justify-content: flex-start !important;
-  }
-  
-  .flashcard-badge-row {
-    margin-bottom: 0.75rem !important;
-  }
-
-  .flashcard-actions-row {
-    margin-top: 0.75rem !important;
-  }
-
-  .flashcard-banner {
-    margin-bottom: 0.75rem !important;
-    padding: 0.6rem 0.85rem !important;
-    font-size: 0.82rem !important;
-    border-radius: 10px !important;
-  }
-
-  .flashcard-context-title {
-    margin-bottom: 0.75rem;
-  }
-  
-  .flashcard-context-text {
-    font-size: 1.05rem;
-    line-height: 1.6;
-    word-break: normal !important;
-    overflow-wrap: break-word !important;
-  }
-  
-  .flashcard-question-box {
-    font-size: 1.05rem;
-    line-height: 1.6;
-    margin-bottom: 0.75rem;
-    word-break: normal !important;
-    overflow-wrap: break-word !important;
-  }
-
-  .options-grid {
-    gap: 0.5rem !important;
-    margin-bottom: 0.75rem !important;
-  }
-
-  .option-btn {
-    padding: 0.6rem 0.875rem !important;
-    min-height: 42px !important;
-    font-size: 0.88rem !important;
-    gap: 0.5rem !important;
-    border-radius: 12px !important;
-  }
-
-  .option-letter {
-    width: 26px !important;
-    height: 26px !important;
-    margin-right: 0.15rem !important;
-    border-radius: 6px !important;
-    font-size: 0.78rem !important;
-  }
-
-  .astuce-match-box {
-    padding: 0.875rem 1rem !important;
-    gap: 0.6rem !important;
-    margin-bottom: 1rem !important;
-    border-radius: 14px !important;
-  }
-
-  .astuce-match-title {
-    font-size: 0.8rem !important;
-  }
-
-  .astuce-tab {
-    padding: 0.2rem 0.6rem !important;
-    font-size: 0.7rem !important;
-  }
-
-  .astuce-match-content {
-    padding: 0.5rem 0.75rem !important;
-    font-size: 0.85rem !important;
-    line-height: 1.6 !important;
   }
 }
 

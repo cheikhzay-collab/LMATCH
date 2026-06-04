@@ -101,7 +101,9 @@ export default function Login() {
           <div style={{ width: 64, height: 64, borderRadius: '18px', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
             <BrainCircuit size={34} color="#fff" />
           </div>
-          <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '1rem', letterSpacing: '-0.03em' }}>L'Conq</h2>
+          <h2 style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '1rem', letterSpacing: '-0.03em' }}>
+            L'<span style={{ color: '#a5f3c8', fontWeight: 900 }}>CONQ</span>
+          </h2>
           <p style={{ opacity: 0.75, fontSize: '1rem', lineHeight: 1.65, maxWidth: 260 }}>
             La plateforme de préparation aux concours propulsée par l'IA — Médecine, ENSA, ENSAM.
           </p>

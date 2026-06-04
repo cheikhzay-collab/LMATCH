@@ -655,11 +655,11 @@ export function AuthProvider({ children }) {
       }
     }
     
-    // Default fallback plans aligned with the new Premium L'Conq mockup
+    // Default fallback plans aligned with the new Premium L'CONQ mockup
     const defaultPlans = [
       {
         id: 'plan_lconq',
-        name: "Premium L'Conq",
+        name: "Premium L'CONQ",
         price: 99,
         durationDays: 30,
         description: "Le pack complet pour la réussite.",

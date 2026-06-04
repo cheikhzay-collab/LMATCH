@@ -298,7 +298,7 @@ export default function SubscriptionPage() {
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Bénéficiaire :</span>
-                <strong style={{ color: 'var(--text-main)' }}>L'Conq SARL</strong>
+                <strong style={{ color: 'var(--text-main)' }}>L'CONQ SARL</strong>
               </div>
             </div>
           </div>
