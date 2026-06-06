@@ -222,6 +222,24 @@ function renderTextWithBold(text) {
   });
 }
 
+// Helper to retroactively repair LaTeX formulas corrupted by JSON string escaping (e.g., \right becoming ight)
+const repairCorruptedLatex = (text) => {
+  if (!text) return text;
+  return text
+    // Replace " ight" or control-char + "ight" or lone "ight" (not preceded by letter/backslash) with "\right"
+    .replace(/(?<![a-zA-Z\\])ight\b/g, '\\right')
+    // Replace "right" (not preceded by backslash) with "\right"
+    .replace(/(?<!\\)right\b/g, '\\right')
+    // Replace "left" (not preceded by backslash) with "\left"
+    .replace(/(?<!\\)left\b/g, '\\left')
+    // Replace "frac{" (not preceded by backslash) with "\frac{"
+    .replace(/(?<!\\)frac\{/g, '\\frac{')
+    // Replace "dfrac{" (not preceded by backslash) with "\dfrac{"
+    .replace(/(?<!\\)dfrac\{/g, '\\dfrac{')
+    // Replace "rac{" (not preceded by letter/backslash) with "\frac{" (in case f was stripped as form feed)
+    .replace(/(?<![a-zA-Z\\])rac\{/g, '\\frac{');
+};
+
 /* ─── 8. Main render function ────────────────────────────────────────────────
  *
  *  Entry point for ALL text rendering in the app.
@@ -234,7 +252,8 @@ function renderTextWithBold(text) {
  */
 export function renderWithMath(text) {
   if (text === null || text === undefined) return null;
-  const raw = String(text);
+  const repaired = repairCorruptedLatex(String(text));
+  const raw = repaired;
   if (!raw.trim()) return null;
 
   // ── Image shorthand ──

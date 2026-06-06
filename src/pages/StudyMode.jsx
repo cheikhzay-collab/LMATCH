@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Flashcard from '../components/Flashcard';
 import MobileFlashcard from '../components/MobileFlashcard';
 import SessionSummary from '../components/SessionSummary';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Award, BrainCircuit, CheckCircle2, Zap, RefreshCw, Sparkles, Trophy, Lock, BookOpen, Clock } from 'lucide-react';
+import { ArrowLeft, BrainCircuit, CheckCircle2, Zap, RefreshCw, Sparkles, Trophy } from 'lucide-react';
 
 // Helper to group cards by context, preserving original exam order and avoiding duplicates.
 function groupCardsByContext(compiledCards, questionsPool) {
@@ -41,13 +41,22 @@ function groupCardsByContext(compiledCards, questionsPool) {
 }
 
 export default function StudyMode() {
-  const { exams, progress: allProgress, updateCardProgress, isExamLocked, getStudentStats } = useAuth();
+  const { exams, progress: allProgress, updateCardProgress, isExamLocked } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
+  const topicId = searchParams.get('topic');
   const navigate = useNavigate();
 
-  // Mobile detection — updated on resize
+  // State hooks declared at the very top to avoid accessed-before-declaration ReferenceErrors
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
+  const [sessionStarted, setSessionStarted] = useState(!!examId || !!topicId);
+  const [sessionCards, setSessionCards] = useState(null); // null = not initialized yet
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [sessionFinished, setSessionFinished] = useState(false);
+  const [sessionHistory, setSessionHistory] = useState([]);
+  const [showExitModal, setShowExitModal] = useState(false);
+
+  // Mobile detection — updated on resize
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
     const handler = (e) => setIsMobile(e.matches);
@@ -58,11 +67,7 @@ export default function StudyMode() {
   const activeExamsList = exams.filter(e => e.isActive !== false && e.isArchived !== true && !isExamLocked(e));
   const currentExam = examId ? exams.find(e => e.id === examId) : activeExamsList[0];
 
-  const [sessionStarted, setSessionStarted] = useState(!!examId);
-  const isParcours = !examId;
-
-  // ─── SNAPSHOT: Freeze the due cards list at session start ───────────────────
-  const [sessionCards, setSessionCards] = useState(null); // null = not initialized yet
+  const isParcours = !examId && !topicId;
 
   // Dynamically allow scrolling on selector dashboard, but lock it in study session focus mode
   useEffect(() => {
@@ -98,69 +103,170 @@ export default function StudyMode() {
     };
   }, [sessionStarted]);
 
-  // Track sessionType/examId URL changes
+  // Track sessionType/examId/topicId URL changes
   useEffect(() => {
-    if (examId) {
-      setSessionStarted(true);
-    } else {
-      setSessionStarted(false);
-      setSessionCards(null);
+    const shouldBeStarted = !!(examId || topicId);
+    if (shouldBeStarted !== sessionStarted) {
+      Promise.resolve().then(() => {
+        setSessionStarted(shouldBeStarted);
+      });
     }
-  }, [examId]);
+    if (!shouldBeStarted) {
+      Promise.resolve().then(() => {
+        setSessionCards(null);
+        setCurrentIndex(0);
+        setSessionHistory([]);
+      });
+    }
+  }, [examId, topicId, sessionStarted]);
 
   useEffect(() => {
     if (!sessionStarted || sessionCards !== null) return;
 
     const now = new Date();
-    let questionsPool = [];
+    let questionsPool;
 
     if (examId) {
       if (!currentExam || !currentExam.questions) return;
       questionsPool = (currentExam.questions || []).map(q => ({ ...q, examName: currentExam.name }));
+
+      // Map and filter questions that are due (unseen or due for review)
+      const compiledCards = questionsPool
+        .filter(q => {
+          const p = allProgress[q.id];
+          if (!p) return true;
+          return new Date(p.nextReviewDate) <= now;
+        })
+        .map(q => {
+          const p = allProgress[q.id];
+          let stage = 'révision';
+          let stageLabel = 'Révision';
+          if (!p) {
+            stage = 'nouveautés';
+            stageLabel = 'Nouvelle Notion';
+          } else if (p.repetitions >= 3) {
+            stage = 'échauffement';
+            stageLabel = 'Échauffement';
+          } else if (p.easeFactor < 2.2) {
+            stage = 'défi';
+            stageLabel = 'Défi du Jour';
+          } else if (p.repetitions > 0 && new Date(p.nextReviewDate) <= now) {
+            stage = 'consolidation';
+            stageLabel = 'Consolidation';
+          }
+          return {
+            ...q,
+            stage,
+            stageLabel
+          };
+        });
+
+      // Keep cards completely independent, do not pull un-due sibling questions
+      Promise.resolve().then(() => {
+        setSessionCards(compiledCards);
+      });
+    } else if (topicId) {
+      questionsPool = activeExamsList.flatMap(e =>
+        (e.questions || []).map(q => ({ ...q, examName: e.name }))
+      );
+
+      // Filter questions by topic and keep only independent questions (exclude questions with a context)
+      const topicQuestions = questionsPool.filter(q => 
+        (q.topic || 'Général').trim().toLowerCase() === topicId.trim().toLowerCase() &&
+        (!q.context || !q.context.trim())
+      );
+
+      // Separate into due and reviewed
+      const duePool = topicQuestions.filter(q => {
+        const p = allProgress[q.id];
+        return !p || new Date(p.nextReviewDate) <= now;
+      });
+
+      const otherPool = topicQuestions.filter(q => {
+        const p = allProgress[q.id];
+        return p && new Date(p.nextReviewDate) > now;
+      });
+
+      // Prioritize due cards first (up to 10)
+      const selectedDue = duePool.sort(() => 0.5 - Math.random()).slice(0, 10);
+      let selectedCards = [...selectedDue];
+
+      // If less than 10, backfill from other cards of this topic
+      if (selectedCards.length < 10 && otherPool.length > 0) {
+        const needed = 10 - selectedCards.length;
+        const additional = otherPool.sort(() => 0.5 - Math.random()).slice(0, needed);
+        selectedCards = [...selectedCards, ...additional];
+      }
+
+      const compiledCards = selectedCards.map(q => {
+        const p = allProgress[q.id];
+        let stage = 'révision';
+        let stageLabel = 'Révision';
+        if (!p) {
+          stage = 'nouveautés';
+          stageLabel = 'Nouvelle Notion';
+        } else if (p.repetitions >= 3) {
+          stage = 'échauffement';
+          stageLabel = 'Échauffement';
+        } else if (p.easeFactor < 2.2) {
+          stage = 'défi';
+          stageLabel = 'Défi du Jour';
+        } else if (p.repetitions > 0 && new Date(p.nextReviewDate) <= now) {
+          stage = 'consolidation';
+          stageLabel = 'Consolidation';
+        }
+        return {
+          ...q,
+          stage,
+          stageLabel
+        };
+      });
+
+      // Keep cards completely independent, do not pull un-due sibling questions
+      Promise.resolve().then(() => {
+        setSessionCards(compiledCards.slice(0, 10));
+      });
     } else {
       questionsPool = activeExamsList.flatMap(e =>
         (e.questions || []).map(q => ({ ...q, examName: e.name }))
       );
+
+      // Classification
+      // 1. Échauffement (repetitions >= 3)
+      const echauffementPool = questionsPool.filter(q => allProgress[q.id]?.repetitions >= 3);
+      const echauffement = echauffementPool.sort(() => 0.5 - Math.random()).slice(0, 3)
+        .map(q => ({ ...q, stage: 'échauffement', stageLabel: 'Échauffement' }));
+
+      // 2. Consolidation (due & repetitions > 0)
+      const consolidationPool = questionsPool.filter(q => {
+        const p = allProgress[q.id];
+        return p && p.repetitions > 0 && new Date(p.nextReviewDate) <= now;
+      });
+      const consolidation = consolidationPool.sort(() => 0.5 - Math.random()).slice(0, 5)
+        .map(q => ({ ...q, stage: 'consolidation', stageLabel: 'Consolidation' }));
+
+      // 3. Nouveautés (not seen)
+      const nouveautesPool = questionsPool.filter(q => !allProgress[q.id]);
+      const nouveautes = nouveautesPool.sort(() => 0.5 - Math.random()).slice(0, 5)
+        .map(q => ({ ...q, stage: 'nouveautés', stageLabel: 'Nouvelle Notion' }));
+
+      // 4. Défi (easeFactor < 2.2)
+      const defiPool = questionsPool.filter(q => {
+        const p = allProgress[q.id];
+        return p && p.easeFactor < 2.2;
+      });
+      const fallbackDefiPool = defiPool.length > 0 ? defiPool : questionsPool.filter(q => allProgress[q.id]);
+      const defi = fallbackDefiPool.sort(() => 0.5 - Math.random()).slice(0, 2)
+        .map(q => ({ ...q, stage: 'défi', stageLabel: 'Défi du Jour' }));
+
+      const compiledCards = [...echauffement, ...consolidation, ...nouveautes, ...defi];
+      const groupedCards = groupCardsByContext(compiledCards, questionsPool);
+      Promise.resolve().then(() => {
+        setSessionCards(groupedCards);
+      });
     }
-
-    // Classification
-    // 1. Échauffement (repetitions >= 3)
-    const echauffementPool = questionsPool.filter(q => allProgress[q.id]?.repetitions >= 3);
-    const echauffement = echauffementPool.sort(() => 0.5 - Math.random()).slice(0, 3)
-      .map(q => ({ ...q, stage: 'échauffement', stageLabel: 'Échauffement' }));
-
-    // 2. Consolidation (due & repetitions > 0)
-    const consolidationPool = questionsPool.filter(q => {
-      const p = allProgress[q.id];
-      return p && p.repetitions > 0 && new Date(p.nextReviewDate) <= now;
-    });
-    const consolidation = consolidationPool.sort(() => 0.5 - Math.random()).slice(0, 5)
-      .map(q => ({ ...q, stage: 'consolidation', stageLabel: 'Consolidation' }));
-
-    // 3. Nouveautés (not seen)
-    const nouveautesPool = questionsPool.filter(q => !allProgress[q.id]);
-    const nouveautes = nouveautesPool.sort(() => 0.5 - Math.random()).slice(0, 5)
-      .map(q => ({ ...q, stage: 'nouveautés', stageLabel: 'Nouvelle Notion' }));
-
-    // 4. Défi (easeFactor < 2.2)
-    const defiPool = questionsPool.filter(q => {
-      const p = allProgress[q.id];
-      return p && p.easeFactor < 2.2;
-    });
-    const fallbackDefiPool = defiPool.length > 0 ? defiPool : questionsPool.filter(q => allProgress[q.id]);
-    const defi = fallbackDefiPool.sort(() => 0.5 - Math.random()).slice(0, 2)
-      .map(q => ({ ...q, stage: 'défi', stageLabel: 'Défi du Jour' }));
-
-    const compiledCards = [...echauffement, ...consolidation, ...nouveautes, ...defi];
-    const groupedCards = groupCardsByContext(compiledCards, questionsPool);
-    setSessionCards(groupedCards);
-  }, [currentExam, examId, exams, allProgress, sessionCards, sessionStarted]);
+  }, [currentExam, examId, topicId, exams, allProgress, sessionCards, sessionStarted, activeExamsList]);
   // ────────────────────────────────────────────────────────────────────────────
-
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [sessionFinished, setSessionFinished] = useState(false);
-  const [sessionHistory, setSessionHistory] = useState([]);
-  const [showExitModal, setShowExitModal] = useState(false);
 
   const handleBackClick = () => {
     if (sessionHistory.length > 0) {
@@ -178,12 +284,14 @@ export default function StudyMode() {
       }
       return;
     }
-    if (!currentExam && activeExamsList.length > 0) {
-      navigate(`/study?exam=${activeExamsList[0].id}`, { replace: true });
-    } else if (activeExamsList.length === 0) {
-      navigate('/dashboard');
+    if (!topicId) {
+      if (!currentExam && activeExamsList.length > 0) {
+        navigate(`/study?exam=${activeExamsList[0].id}`, { replace: true });
+      } else if (activeExamsList.length === 0) {
+        navigate('/dashboard');
+      }
     }
-  }, [currentExam, activeExamsList, navigate, isParcours]);
+  }, [currentExam, activeExamsList, navigate, isParcours, topicId]);
 
   const handleNext = (questionId, quality) => {
     updateCardProgress(questionId, quality); // Updates SRS data in background
@@ -226,27 +334,6 @@ export default function StudyMode() {
 
   // ── Study Selector Dashboard (Main screen when no exam/session is selected) ──
   if (!sessionStarted) {
-    const getDueCount = (examQuestions) => {
-      const now = new Date();
-      return (examQuestions || []).filter(q => {
-        const p = allProgress[q.id];
-        if (!p) return true;
-        return new Date(p.nextReviewDate) <= now;
-      }).length;
-    };
-
-    const activeExams = exams.filter(e => e.isActive !== false && e.isArchived !== true);
-
-    const groupedExams = activeExams.reduce((acc, exam) => {
-      const school = exam.school || 'Général';
-      if (!acc[school]) acc[school] = [];
-      acc[school].push(exam);
-      return acc;
-    }, {});
-
-    const stats = getStudentStats ? getStudentStats() : null;
-    const totalDueToday = stats ? stats.dueToday : 0;
-
     return (
       <div className="animate-fade-in" style={{ padding: 'clamp(1rem, 4vw, 2.5rem) 1rem', maxWidth: '1100px', margin: '0 auto', minHeight: '85vh', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         
@@ -279,178 +366,144 @@ export default function StudyMode() {
           </p>
         </div>
 
-        <div className="dashboard-grid">
-          {/* Left: General Daily Guided Session Card */}
-          <div className="col-span-5">
-            <div className="glass-panel" style={{ 
-              height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
-              border: '1px solid rgba(113, 109, 242, 0.2)', background: 'linear-gradient(180deg, var(--bg-card) 0%, rgba(113, 109, 242, 0.03) 100%)',
-              gap: '1.5rem'
-            }}>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: 'var(--violet-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--violet)' }}>
-                    <Zap size={18} fill="currentColor" />
-                  </div>
-                  <h3 style={{ margin: 0, fontWeight: 800, fontSize: '1.15rem' }}>Parcours Guidé</h3>
-                </div>
+        {/* List of chapters in clean layout */}
+        {(() => {
+          const topicCounts = {};
+          const now = new Date();
+          
+          activeExamsList.forEach(e => {
+            (e.questions || []).forEach(q => {
+              const topic = q.topic || 'Général';
+              if (!topicCounts[topic]) {
+                topicCounts[topic] = { total: 0, due: 0 };
+              }
+              topicCounts[topic].total++;
+              
+              const p = allProgress[q.id];
+              const isDue = !p || new Date(p.nextReviewDate) <= now;
+              if (isDue) {
+                topicCounts[topic].due++;
+              }
+            });
+          });
+          
+          const topicsData = Object.entries(topicCounts).map(([name, counts]) => ({
+            name,
+            total: counts.total,
+            due: counts.due
+          })).sort((a, b) => b.due - a.due || b.total - a.total);
 
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.5, marginBottom: '1.5rem' }}>
-                  Session intelligente regroupant toutes vos fiches en attente de révision aujourd'hui à travers tous vos concours actifs.
-                </p>
-
-                <div style={{ 
-                  background: totalDueToday > 0 ? 'rgba(239, 68, 68, 0.05)' : 'rgba(16, 185, 129, 0.05)', 
-                  border: `1px solid ${totalDueToday > 0 ? 'rgba(239, 68, 68, 0.12)' : 'rgba(16, 185, 129, 0.12)'}`,
-                  color: totalDueToday > 0 ? 'var(--danger)' : 'var(--emerald)',
-                  padding: '1.25rem 1rem', borderRadius: '14px', textAlign: 'center'
-                }}>
-                  <div style={{ fontSize: '2rem', fontWeight: 900, marginBottom: '0.15rem', lineHeight: 1 }}>{totalDueToday}</div>
-                  <div style={{ fontSize: '0.72rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                    {totalDueToday > 0 ? "Fiches à réviser aujourd'hui" : "Toutes vos fiches sont à jour !"}
-                  </div>
-                </div>
+          if (topicsData.length === 0) {
+            return (
+              <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)', minHeight: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                <BrainCircuit size={36} opacity={0.4} style={{ marginBottom: '1rem' }} />
+                <p style={{ fontWeight: 600 }}>Aucun chapitre disponible</p>
               </div>
+            );
+          }
 
-              <button 
-                className="btn" 
-                onClick={() => setSessionStarted(true)} 
-                disabled={totalDueToday === 0}
-                style={{ 
-                  width: '100%', padding: '0.85rem', fontWeight: 800, 
-                  background: totalDueToday > 0 ? 'var(--btn-primary-bg)' : 'var(--bg-glass)',
-                  color: totalDueToday > 0 ? '#fff' : 'var(--text-subtle)',
-                  cursor: totalDueToday > 0 ? 'pointer' : 'default',
-                  opacity: totalDueToday > 0 ? 1 : 0.6,
-                  border: totalDueToday > 0 ? 'none' : '1px solid var(--border)'
-                }}
-              >
-                {totalDueToday > 0 ? 'Démarrer la session globale' : 'Revenez demain ✨'}
-              </button>
-            </div>
-          </div>
-
-          {/* Right: Modules de Révision par Concours */}
-          <div className="col-span-7">
-            <div className="glass-panel" style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, margin: 0, fontSize: '1.1rem' }}>
-                  <BookOpen size={18} color="var(--violet)" /> Modules de Révision
-                </h3>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                  {activeExams.length} examen{activeExams.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-
-              {activeExams.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)', flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <BrainCircuit size={36} opacity={0.4} style={{ marginBottom: '1rem' }} />
-                  <p style={{ fontWeight: 600 }}>Aucun module de révision disponible</p>
+          return (
+            <div style={{ maxWidth: '800px', width: '100%', margin: '0 auto' }}>
+              <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '0.85rem', marginBottom: '0.25rem' }}>
+                  <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, margin: 0, fontSize: '1.15rem' }}>
+                    <BrainCircuit size={20} color="var(--violet)" /> Révision par Chapitres
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>
+                    {topicsData.length} chapitre{topicsData.length !== 1 ? 's' : ''} au total
+                  </span>
                 </div>
-              ) : (
-                <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', maxHeight: '420px', overflowY: 'auto', paddingRight: '0.25rem', flex: 1 }}>
-                  {Object.entries(groupedExams).map(([school, schoolExams]) => (
-                    <div key={school}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.85rem' }}>
-                        <h4 style={{ 
-                          margin: 0, fontSize: '0.72rem', fontWeight: 900, color: 'var(--text-muted)', 
-                          textTransform: 'uppercase', letterSpacing: '0.12em', whiteSpace: 'nowrap' 
-                        }}>
-                          {school}
-                        </h4>
-                        <div style={{ height: '1px', background: 'linear-gradient(90deg, var(--border), transparent)', flex: 1 }}></div>
-                      </div>
 
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                        {schoolExams.map((exam) => {
-                          const dueCount = getDueCount(exam.questions);
-                          const isCompleted = dueCount === 0;
-                          const isLocked = isExamLocked(exam);
+                <div className="custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '500px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                  {topicsData.map((topic) => {
+                    const isCompleted = topic.due === 0;
+                    
+                    // Select an appropriate design based on the topic name
+                    const nameLower = topic.name.toLowerCase();
+                    let bgSoft = 'var(--violet-soft)';
+                    let textColor = 'var(--violet)';
+                    
+                    if (nameLower.includes('analyse') || nameLower.includes('suit')) {
+                      bgSoft = 'rgba(16, 185, 129, 0.08)';
+                      textColor = 'var(--emerald)';
+                    } else if (nameLower.includes('algè') || nameLower.includes('alge') || nameLower.includes('matric')) {
+                      bgSoft = 'rgba(239, 68, 68, 0.08)';
+                      textColor = 'var(--danger)';
+                    } else if (nameLower.includes('géo') || nameLower.includes('geo') || nameLower.includes('espac')) {
+                      bgSoft = 'rgba(245, 158, 11, 0.08)';
+                      textColor = 'var(--warning)';
+                    }
 
-                          return (
-                            <div 
-                               key={exam.id} 
-                               className="exam-card-premium"
-                               style={{ opacity: isLocked ? 0.8 : 1 }}
-                            >
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0, flex: 1 }}>
-                                <div style={{ 
-                                  width: '38px', height: '38px', borderRadius: '10px', 
-                                  background: isLocked ? 'var(--bg-glass)' : (isCompleted ? 'rgba(16, 185, 129, 0.05)' : 'var(--violet-soft)'),
-                                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                                  color: isLocked ? 'var(--text-subtle)' : (isCompleted ? 'var(--emerald)' : 'var(--violet)')
-                                }}>
-                                  {isLocked ? <Lock size={15} /> : <BookOpen size={16} />}
-                                </div>
-                                <div style={{ minWidth: 0, flex: 1 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap', minWidth: 0 }}>
-                                    <h4 style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{exam.name}</h4>
-                                    {isLocked && <span className="badge badge-pro" style={{ fontSize: '0.55rem', padding: '0.05rem 0.25rem', flexShrink: 0 }}><Zap size={7} /> PRO</span>}
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
-                                    <span>{exam.year}</span>
-                                    <span>·</span>
-                                    <span>{exam.questions.length} QCM</span>
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
-                                {isLocked ? (
-                                  <button 
-                                    className="btn-outline" 
-                                    onClick={() => navigate('/subscription')}
-                                    style={{ padding: '0.4rem 0.85rem', fontSize: '0.72rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                                  >
-                                    <Lock size={10} /> S'abonner
-                                  </button>
-                                ) : !isCompleted ? (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                    <div style={{ 
-                                      background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', 
-                                      padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
-                                      display: 'inline-flex', alignItems: 'center', gap: '0.2rem', border: '1px solid rgba(239, 68, 68, 0.1)'
-                                    }}>
-                                      {dueCount} À RÉVISER
-                                    </div>
-                                    <button 
-                                      className="btn" 
-                                      onClick={() => navigate(`/study?exam=${exam.id}`)}
-                                      style={{ padding: '0.45rem 1rem', fontSize: '0.72rem', fontWeight: 800 }}
-                                    >
-                                      Réviser
-                                    </button>
-                                  </div>
-                                ) : (
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                    <div style={{ 
-                                      background: 'rgba(16, 185, 129, 0.05)', color: 'var(--emerald)', 
-                                      padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
-                                      display: 'inline-flex', alignItems: 'center', gap: '0.2rem', border: '1px solid rgba(16, 185, 129, 0.1)'
-                                    }}>
-                                      COMPLÉTÉ ✨
-                                    </div>
-                                    <button 
-                                      className="btn-outline" 
-                                      disabled
-                                      style={{ padding: '0.45rem 0.85rem', fontSize: '0.72rem', opacity: 0.4, cursor: 'default', borderStyle: 'dashed' }}
-                                    >
-                                      Demain
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
+                    return (
+                      <div 
+                        key={topic.name} 
+                        className="exam-card-premium"
+                        style={{ padding: '0.85rem 1.25rem' }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0, flex: 1 }}>
+                          <div style={{ 
+                            width: '38px', height: '38px', borderRadius: '10px', 
+                            background: isCompleted ? 'rgba(16, 185, 129, 0.05)' : bgSoft,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+                            color: isCompleted ? 'var(--emerald)' : textColor
+                          }}>
+                            <BrainCircuit size={16} />
+                          </div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <h4 style={{ margin: 0, fontWeight: 800, fontSize: '0.92rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>
+                              {topic.name}
+                            </h4>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.1rem' }}>
+                              <span>{topic.total} fiches au total</span>
                             </div>
-                          );
-                        })}
+                          </div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+                          {!isCompleted ? (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                              <div style={{ 
+                                background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', 
+                                padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
+                                display: 'inline-flex', alignItems: 'center', gap: '0.2rem', border: '1px solid rgba(239, 68, 68, 0.1)'
+                              }}>
+                                {topic.due} À RÉVISER
+                              </div>
+                              <button 
+                                className="btn" 
+                                onClick={() => navigate(`/study?topic=${encodeURIComponent(topic.name)}`)}
+                                style={{ padding: '0.45rem 1rem', fontSize: '0.72rem', fontWeight: 800 }}
+                              >
+                                Réviser (Max 10)
+                              </button>
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                              <div style={{ 
+                                background: 'rgba(16, 185, 129, 0.05)', color: 'var(--emerald)', 
+                                padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
+                                display: 'inline-flex', alignItems: 'center', gap: '0.2rem', border: '1px solid rgba(16, 185, 129, 0.1)'
+                              }}>
+                                COMPLÉTÉ ✨
+                              </div>
+                              <button 
+                                className="btn-outline"
+                                onClick={() => navigate(`/study?topic=${encodeURIComponent(topic.name)}`)}
+                                style={{ padding: '0.45rem 0.85rem', fontSize: '0.72rem', fontWeight: 800 }}
+                              >
+                                Entraînement
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
-              )}
+              </div>
             </div>
-          </div>
-        </div>
+          );
+        })()}
       </div>
     );
   }
@@ -479,7 +532,7 @@ export default function StudyMode() {
   }
 
   // ── Loading state ──
-  if ((!isParcours && !currentExam) || sessionCards === null) {
+  if ((!isParcours && !currentExam && !topicId) || sessionCards === null) {
     return (
       <div style={{ height: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
@@ -491,7 +544,7 @@ export default function StudyMode() {
   }
 
   // ── Empty exam ──
-  if (!isParcours && currentExam.questions && currentExam.questions.length === 0) {
+  if (!isParcours && !topicId && currentExam?.questions && currentExam?.questions.length === 0) {
     return (
       <div style={{ height: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div className="glass-panel" style={{ textAlign: 'center', padding: '3rem', maxWidth: '500px' }}>
@@ -514,15 +567,17 @@ export default function StudyMode() {
           <div style={{ width: '80px', height: '80px', background: 'rgba(16,185,129,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem' }}>
             <CheckCircle2 size={40} color="var(--emerald)" />
           </div>
-          <h2 className="text-gradient" style={{ fontSize: '2rem', marginBottom: '1rem' }}>{isParcours ? "Parcours Complété !" : "Tout est à jour !"}</h2>
+          <h2 className="text-gradient" style={{ fontSize: '2rem', marginBottom: '1rem' }}>{isParcours ? "Parcours Complété !" : topicId ? "Tout est révisé !" : "Tout est à jour !"}</h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', fontSize: '1.1rem' }}>
             {isParcours 
               ? "Vous avez terminé tout votre parcours guidé d'aujourd'hui. Excellent travail pour maintenir votre régularité !"
-              : `Vous avez révisé toutes les cartes prévues pour aujourd'hui dans ${currentExam.name}.`
+              : topicId 
+                ? `Toutes les fiches du chapitre ${topicId} sont révisées pour aujourd'hui.`
+                : `Vous avez révisé toutes les cartes prévues pour aujourd'hui dans ${currentExam.name}.`
             }
           </p>
           <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column' }}>
-            {!isParcours && (
+            {!isParcours && !topicId && (
               <button className="btn-outline" onClick={handleForceReview} style={{ width: '100%', borderColor: 'var(--violet)', color: 'var(--violet)' }}>
                 Forcer une révision (10 cartes)
               </button>
@@ -541,8 +596,8 @@ export default function StudyMode() {
     return (
       <SessionSummary 
         sessionHistory={sessionHistory}
-        examName={isParcours ? "Session de révision du jour" : currentExam.name}
-        onForceReview={isParcours ? null : handleForceReview}
+        examName={isParcours ? "Session de révision du jour" : topicId ? `Chapitre : ${topicId}` : currentExam.name}
+        onForceReview={isParcours || topicId ? null : handleForceReview}
         onBackToDashboard={() => navigate('/dashboard')}
       />
     );
@@ -574,7 +629,7 @@ export default function StudyMode() {
           </button>
           
           <span className="study-session-title">
-            {isParcours ? "Révision du jour" : currentExam.name}
+            {isParcours ? "Révision du jour" : topicId ? `Quiz : ${topicId}` : currentExam.name}
           </span>
 
           {currentCard?.stageLabel && (

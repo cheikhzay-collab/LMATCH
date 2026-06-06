@@ -1,16 +1,75 @@
 import katex from 'katex';
 
+/* ── PDF Template Settings configuration (book design expert options) ── */
+const getPdfSettings = (settings = {}) => {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return {
+      avoidPageBreaks: settings.avoidPageBreaks !== undefined ? settings.avoidPageBreaks : true,
+      forcePrintColors: settings.forcePrintColors !== undefined ? settings.forcePrintColors : true,
+      fontSize: settings.fontSize || '11pt',
+      fontFamily: settings.fontFamily || 'Computer Modern Serif',
+      pageMargins: settings.pageMargins || 'standard',
+    };
+  }
+
+  return {
+    avoidPageBreaks: settings.avoidPageBreaks !== undefined ? settings.avoidPageBreaks : (localStorage.getItem('pdf_avoid_page_breaks') !== 'false'),
+    forcePrintColors: settings.forcePrintColors !== undefined ? settings.forcePrintColors : (localStorage.getItem('pdf_force_print_colors') !== 'false'),
+    fontSize: settings.fontSize || (localStorage.getItem('pdf_font_size') || '11pt'),
+    fontFamily: settings.fontFamily || (localStorage.getItem('pdf_font_family') || 'Computer Modern Serif'),
+    pageMargins: settings.pageMargins || (localStorage.getItem('pdf_page_margins') || 'standard'),
+  };
+};
+
+const getMarginStyle = (margin) => {
+  if (margin === 'compact') return '0.3cm 0.8cm 0.2cm';
+  if (margin === 'wide') return '0.8cm 1.8cm 0.4cm';
+  return '0.5cm 1.3cm 0.3cm'; // standard
+};
+
+const getFontFamilyStyle = (font) => {
+  if (font === 'Times New Roman') return "'Times New Roman', Times, serif";
+  if (font === 'STIX Two Text') return "'STIX Two Text', serif";
+  if (font === 'Inter') return "'Inter', sans-serif";
+  return "'Computer Modern Serif', 'STIX Two Text', 'Times New Roman', serif";
+};
+
+
+// Helper to retroactively repair LaTeX formulas corrupted by JSON string escaping (e.g., \right becoming ight)
+const repairCorruptedLatex = (text) => {
+  if (!text) return text;
+  return text
+    // Replace " ight" or control-char + "ight" or lone "ight" (not preceded by letter/backslash) with "\right"
+    .replace(/(?<![a-zA-Z\\])ight\b/g, '\\right')
+    // Replace "right" (not preceded by backslash) with "\right"
+    .replace(/(?<!\\)right\b/g, '\\right')
+    // Replace "left" (not preceded by backslash) with "\left"
+    .replace(/(?<!\\)left\b/g, '\\left')
+    // Replace "frac{" (not preceded by backslash) with "\frac{"
+    .replace(/(?<!\\)frac\{/g, '\\frac{')
+    // Replace "dfrac{" (not preceded by backslash) with "\dfrac{"
+    .replace(/(?<!\\)dfrac\{/g, '\\dfrac{')
+    // Replace "rac{" (not preceded by letter/backslash) with "\frac{" (in case f was stripped as form feed)
+    .replace(/(?<![a-zA-Z\\])rac\{/g, '\\frac{');
+};
+
 /* ── Math renderer: LaTeX → HTML string ── */
 const renderMath = (text) => {
   if (!text) return '';
+  
+  const repairedText = repairCorruptedLatex(text);
+  
+  // Format steps automatically by inserting newlines before Step/Étape/الخطوة
+  const formattedText = repairedText.replace(/(?<!^)\s*(Étape \d+|Step \d+|الخطوة \d+)/gi, '\n$1');
+  
   const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   
   // 1. Extract all math blocks
   const mathBlocks = [];
-  const mathRegex = /(\$\$[\s\S]+?\$\$|\$[^\$\n]+?\$)/g;
+  const mathRegex = /(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$)/g;
   
   let placeholderIndex = 0;
-  const textWithPlaceholders = text.replace(mathRegex, (match) => {
+  const textWithPlaceholders = formattedText.replace(mathRegex, (match) => {
     const placeholder = `___MATH_BLOCK_PLACEHOLDER_${placeholderIndex}___`;
     mathBlocks.push({ placeholder, original: match });
     placeholderIndex++;
@@ -98,6 +157,11 @@ const getOptionsLayoutClass = (options) => {
    1. SUJET BLANC — Exam Paper
    ═══════════════════════════════════════════════ */
 export const generateSubjectHTML = (examTitle, school, year, questions, settings = {}) => {
+  const pdfConf = getPdfSettings(settings);
+  const marginCSS = getMarginStyle(pdfConf.pageMargins);
+  const fontFamilyCSS = getFontFamilyStyle(pdfConf.fontFamily);
+  const fontSizeCSS = pdfConf.fontSize;
+
   let profName = settings.profName || '';
   let profPhone = settings.profPhone || '';
   let profSite = settings.profSite || 'www.lconq.ma';
@@ -296,8 +360,8 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
 <style>
 *{box-decoration-break:clone;-webkit-box-decoration-break:clone;box-sizing:border-box;margin:0;padding:0}
 body{
-  font-family:'Computer Modern Serif','STIX Two Text','Times New Roman',serif;
-  color:#111;background:#fff;font-size:11pt;line-height:1.65;
+  font-family:${fontFamilyCSS};
+  color:#111;background:#fff;font-size:${fontSizeCSS};line-height:1.65;
   padding-bottom:1.2cm;
   print-color-adjust:exact;-webkit-print-color-adjust:exact;
   font-feature-settings:'liga' 1,'kern' 1;
@@ -371,7 +435,7 @@ html{counter-reset:page ${startPage - 1}}
   box-sizing:border-box;
 }
 .cover-logo{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:2.2rem;
   font-weight:bold;
   letter-spacing:6px;
@@ -411,7 +475,7 @@ html{counter-reset:page ${startPage - 1}}
   margin-bottom:1rem;
 }
 .cover-topic{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:2.4rem;
   font-weight:bold;
   line-height:1.25;
@@ -419,7 +483,7 @@ html{counter-reset:page ${startPage - 1}}
   color:#0f172a;
 }
 .cover-desc{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:1rem;
   color:#475569;
   font-style:italic;
@@ -441,7 +505,7 @@ html{counter-reset:page ${startPage - 1}}
   background:#f8fafc;
 }
 .cover-stat .num{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:1.6rem;
   font-weight:bold;
   color:#0f172a;
@@ -484,7 +548,7 @@ html{counter-reset:page ${startPage - 1}}
   color:#334155;
 }
 .cover-prof{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   margin-top:1.5rem;
   font-size:0.95rem;
   color:#334155;
@@ -1068,10 +1132,10 @@ html{counter-reset:page ${startPage - 1}}
 }
 
 /* ── CONTENT ── */
-.content{padding:0.5cm 1.3cm 0.3cm}
+.content{padding:${marginCSS}}
 .section-hdr{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
-  font-size:13pt;
+  font-family:inherit;
+  font-size:1.15em;
   font-weight:bold;
   letter-spacing:1px;
   text-transform:uppercase;
@@ -1095,6 +1159,7 @@ html{counter-reset:page ${startPage - 1}}
   margin-bottom:20px;
   background:#ffffff;
   box-shadow:0 1px 3px 0 rgba(0, 0, 0, 0.04),0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  ${pdfConf.avoidPageBreaks ? 'page-break-inside:avoid; break-inside:avoid;' : ''}
 }
 .card-hdr{
   display:flex;
@@ -1135,14 +1200,16 @@ html{counter-reset:page ${startPage - 1}}
   -webkit-print-color-adjust:exact;
 }
 .qtext{
-  font-family:'Computer Modern Serif','STIX Two Text','Times New Roman',serif;
-  font-size:11.5pt;
+  font-family:inherit;
+  font-size:1.05em;
   font-weight:500;
   line-height:1.65;
   color:#1e293b;
   margin-bottom:14px;
   break-inside:avoid;
   page-break-inside:avoid;
+  white-space:pre-line;
+  text-align:justify;
 }
 .opts{
   display:grid;
@@ -1173,7 +1240,7 @@ html{counter-reset:page ${startPage - 1}}
   display:flex;
   align-items:center;
   gap:12px;
-  font-size:10.5pt;
+  font-size:0.95em;
   color:#334155;
   padding:6px 12px;
   border-radius:8px;
@@ -1196,6 +1263,12 @@ html{counter-reset:page ${startPage - 1}}
 }
 
 @media print{
+  ${pdfConf.forcePrintColors ? `
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  ` : ''}
   .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   ${!showCover ? '.cover{display:none!important}' : ''}
 }
@@ -1346,6 +1419,11 @@ printWhenReady();
    2. GUIDE DES ASTUCES — Correction Book
    ═══════════════════════════════════════════════ */
 export const generateCorrectionHTML = (examTitle, school, year, questions, settings = {}) => {
+  const pdfConf = getPdfSettings(settings);
+  const marginCSS = getMarginStyle(pdfConf.pageMargins);
+  const fontFamilyCSS = getFontFamilyStyle(pdfConf.fontFamily);
+  const fontSizeCSS = pdfConf.fontSize;
+
   let profName = settings.profName || '';
   let profPhone = settings.profPhone || '';
   let profSite = settings.profSite || 'www.lconq.ma';
@@ -1534,8 +1612,8 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
 <style>
 *{box-decoration-break:clone;-webkit-box-decoration-break:clone;box-sizing:border-box;margin:0;padding:0}
 body{
-  font-family:'Computer Modern Serif','STIX Two Text','Times New Roman',serif;
-  color:#111;background:#fff;font-size:11pt;line-height:1.65;
+  font-family:${fontFamilyCSS};
+  color:#111;background:#fff;font-size:${fontSizeCSS};line-height:1.65;
   padding-bottom:1.2cm;
   print-color-adjust:exact;-webkit-print-color-adjust:exact;
   font-feature-settings:'liga' 1,'kern' 1;
@@ -1609,7 +1687,7 @@ html{counter-reset:page ${startPage - 1}}
   box-sizing:border-box;
 }
 .cover-logo{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:2.2rem;
   font-weight:bold;
   letter-spacing:6px;
@@ -1649,7 +1727,7 @@ html{counter-reset:page ${startPage - 1}}
   margin-bottom:1rem;
 }
 .cover-topic{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:2.4rem;
   font-weight:bold;
   line-height:1.25;
@@ -1657,7 +1735,7 @@ html{counter-reset:page ${startPage - 1}}
   color:#0f172a;
 }
 .cover-desc{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:1rem;
   color:#475569;
   font-style:italic;
@@ -1679,7 +1757,7 @@ html{counter-reset:page ${startPage - 1}}
   background:#f8fafc;
 }
 .cover-stat .num{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:1.6rem;
   font-weight:bold;
   color:#0f172a;
@@ -1722,7 +1800,7 @@ html{counter-reset:page ${startPage - 1}}
   color:#334155;
 }
 .cover-prof{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   margin-top:1.5rem;
   font-size:0.95rem;
   color:#334155;
@@ -2163,10 +2241,10 @@ html{counter-reset:page ${startPage - 1}}
 }
 
 /* ── CONTENT ── */
-.content{padding:0.5cm 1.3cm 0.3cm}
+.content{padding:${marginCSS}}
 .section-hdr{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
-  font-size:13pt;
+  font-family:inherit;
+  font-size:1.15em;
   font-weight:bold;
   letter-spacing:1px;
   text-transform:uppercase;
@@ -2190,6 +2268,7 @@ html{counter-reset:page ${startPage - 1}}
   margin-bottom:20px;
   background:#ffffff;
   box-shadow:0 1px 3px 0 rgba(0, 0, 0, 0.04),0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  ${pdfConf.avoidPageBreaks ? 'page-break-inside:avoid; break-inside:avoid;' : ''}
 }
 .card-hdr{
   display:flex;
@@ -2245,14 +2324,16 @@ html{counter-reset:page ${startPage - 1}}
   -webkit-print-color-adjust:exact;
 }
 .qtext{
-  font-family:'Computer Modern Serif','STIX Two Text','Times New Roman',serif;
-  font-size:11.5pt;
+  font-family:inherit;
+  font-size:1.05em;
   font-weight:500;
   line-height:1.65;
   color:#1e293b;
   margin-bottom:14px;
   break-inside:avoid;
   page-break-inside:avoid;
+  white-space:pre-line;
+  text-align:justify;
 }
 .opts{
   display:grid;
@@ -2283,7 +2364,7 @@ html{counter-reset:page ${startPage - 1}}
   display:flex;
   align-items:center;
   gap:12px;
-  font-size:10.5pt;
+  font-size:0.95em;
   color:#334155;
   padding:6px 12px;
   border-radius:8px;
@@ -2342,14 +2423,16 @@ html{counter-reset:page ${startPage - 1}}
   background:#f8fafc;
   border-left:3px solid #64748b;
   padding:6px 10px;
-  font-size:9pt;
+  font-size:0.85em;
   margin-bottom:8px;
   border-radius:0 4px 4px 0;
   print-color-adjust:exact;
   -webkit-print-color-adjust:exact;
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:inherit;
   break-inside:avoid;
   page-break-inside:avoid;
+  white-space:pre-line;
+  text-align:justify;
 }
 
 .rule-box{
@@ -2374,10 +2457,12 @@ html{counter-reset:page ${startPage - 1}}
   text-transform:uppercase;
 }
 .rule-body{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
-  font-size:9pt;
-  line-height:1.55;
+  font-family:inherit;
+  font-size:0.85em;
+  line-height:1.6;
   color:#78350f;
+  white-space:pre-line;
+  text-align:justify;
 }
 .trick-box{
   background:#fdf4ff;
@@ -2401,13 +2486,21 @@ html{counter-reset:page ${startPage - 1}}
   text-transform:uppercase;
 }
 .trick-body{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
-  font-size:9pt;
-  line-height:1.55;
+  font-family:inherit;
+  font-size:0.85em;
+  line-height:1.6;
   color:#581c87;
+  white-space:pre-line;
+  text-align:justify;
 }
 
 @media print{
+  ${pdfConf.forcePrintColors ? `
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  ` : ''}
   .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   ${!showCover ? '.cover{display:none!important}' : ''}
 }
@@ -2535,6 +2628,11 @@ export const openPrintWindow = (html) => {
    3. DOMAIN E-BOOK — "كتاب الحيل الموجهة"
    ═══════════════════════════════════════════════ */
 export const generateEbookHTML = (topic, questionsWithSource, settings = {}) => {
+  const pdfConf = getPdfSettings(settings);
+  const marginCSS = getMarginStyle(pdfConf.pageMargins);
+  const fontFamilyCSS = getFontFamilyStyle(pdfConf.fontFamily);
+  const fontSizeCSS = pdfConf.fontSize;
+
   const {
     showCover = true,
     showTricks = true,
@@ -2602,9 +2700,9 @@ export const generateEbookHTML = (topic, questionsWithSource, settings = {}) => 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{
-  font-family:'Computer Modern Serif','STIX Two Text','Times New Roman',serif;
+  font-family:${fontFamilyCSS};
   background:#fff;color:#111;
-  font-size:11pt;line-height:1.65;
+  font-size:${fontSizeCSS};line-height:1.65;
   padding-bottom:1.2cm;
   print-color-adjust:exact;-webkit-print-color-adjust:exact;
   font-feature-settings:'liga' 1,'kern' 1;}
@@ -2673,7 +2771,7 @@ html{counter-reset:page ${startPage - 1}}
   box-sizing:border-box;
 }
 .cover-logo{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:2.2rem;
   font-weight:bold;
   letter-spacing:6px;
@@ -2713,7 +2811,7 @@ html{counter-reset:page ${startPage - 1}}
   margin-bottom:1rem;
 }
 .cover-topic{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:2.4rem;
   font-weight:bold;
   line-height:1.25;
@@ -2721,7 +2819,7 @@ html{counter-reset:page ${startPage - 1}}
   color:#0f172a;
 }
 .cover-desc{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:1rem;
   color:#475569;
   font-style:italic;
@@ -2743,7 +2841,7 @@ html{counter-reset:page ${startPage - 1}}
   background:#f8fafc;
 }
 .cover-stat .num{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   font-size:1.6rem;
   font-weight:bold;
   color:#0f172a;
@@ -2774,7 +2872,7 @@ html{counter-reset:page ${startPage - 1}}
   color:#0f172a;
 }
 .cover-prof{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:${fontFamilyCSS};
   margin-top:1.5rem;
   font-size:0.95rem;
   color:#334155;
@@ -2829,10 +2927,10 @@ html{counter-reset:page ${startPage - 1}}
   --text: #3730a3;
 }
 
-.content{padding:0.5cm 1.3cm 0.3cm}
+.content{padding:${marginCSS}}
 .section-hdr{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
-  font-size:13pt;
+  font-family:inherit;
+  font-size:1.15em;
   font-weight:bold;
   letter-spacing:1px;
   text-transform:uppercase;
@@ -2856,6 +2954,7 @@ html{counter-reset:page ${startPage - 1}}
   margin-bottom:20px;
   background:#ffffff;
   box-shadow:0 1px 3px 0 rgba(0, 0, 0, 0.04),0 1px 2px 0 rgba(0, 0, 0, 0.02);
+  ${pdfConf.avoidPageBreaks ? 'page-break-inside:avoid; break-inside:avoid;' : ''}
 }
 .card-hdr{
   display:flex;
@@ -2911,14 +3010,16 @@ html{counter-reset:page ${startPage - 1}}
   -webkit-print-color-adjust:exact;
 }
 .qtext{
-  font-family:'Computer Modern Serif','STIX Two Text','Times New Roman',serif;
-  font-size:11.5pt;
+  font-family:inherit;
+  font-size:1.05em;
   font-weight:500;
   line-height:1.65;
   color:#1e293b;
   margin-bottom:14px;
   break-inside:avoid;
   page-break-inside:avoid;
+  white-space:pre-line;
+  text-align:justify;
 }
 .opts{
   display:grid;
@@ -2949,7 +3050,7 @@ html{counter-reset:page ${startPage - 1}}
   display:flex;
   align-items:center;
   gap:12px;
-  font-size:10.5pt;
+  font-size:0.95em;
   color:#334155;
   padding:6px 12px;
   border-radius:8px;
@@ -3008,14 +3109,16 @@ html{counter-reset:page ${startPage - 1}}
   background:#f8fafc;
   border-left:3px solid #64748b;
   padding:6px 10px;
-  font-size:9pt;
+  font-size:0.85em;
   margin-bottom:8px;
   border-radius:0 4px 4px 0;
   print-color-adjust:exact;
   -webkit-print-color-adjust:exact;
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
+  font-family:inherit;
   break-inside:avoid;
   page-break-inside:avoid;
+  white-space:pre-line;
+  text-align:justify;
 }
 
 .rule-box{
@@ -3040,10 +3143,12 @@ html{counter-reset:page ${startPage - 1}}
   text-transform:uppercase;
 }
 .rule-body{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
-  font-size:9pt;
-  line-height:1.55;
+  font-family:inherit;
+  font-size:0.85em;
+  line-height:1.6;
   color:#78350f;
+  white-space:pre-line;
+  text-align:justify;
 }
 .trick-box{
   background:#fdf4ff;
@@ -3067,13 +3172,21 @@ html{counter-reset:page ${startPage - 1}}
   text-transform:uppercase;
 }
 .trick-body{
-  font-family:'Computer Modern Serif','STIX Two Text',serif;
-  font-size:9pt;
-  line-height:1.55;
+  font-family:inherit;
+  font-size:0.85em;
+  line-height:1.6;
   color:#581c87;
+  white-space:pre-line;
+  text-align:justify;
 }
 
 @media print{
+  ${pdfConf.forcePrintColors ? `
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  ` : ''}
   .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   ${!showCover ? '.cover{display:none!important}' : ''}
 }
@@ -3150,21 +3263,19 @@ printWhenReady();
 };
 
 export const generateStudentReportHTML = (exam, score, corrected, settings = {}) => {
+  const pdfConf = getPdfSettings(settings);
+  const fontFamilyCSS = getFontFamilyStyle(pdfConf.fontFamily);
   const {
-    profName = '',
-    profPhone = '',
     profSite = 'www.lconq.ma',
   } = settings;
 
   const total = corrected.length;
   let correctCount = 0;
   let wrongCount = 0;
-  let emptyCount = 0;
   
   corrected.forEach(row => {
     if (row.result === 'correct') correctCount++;
     else if (row.result === 'wrong') wrongCount++;
-    else emptyCount++;
   });
 
   const successRate = total > 0 ? Math.round((correctCount / total) * 100) : 0;
@@ -3235,11 +3346,12 @@ export const generateStudentReportHTML = (exam, score, corrected, settings = {})
 <head>
 <meta charset="utf-8">
 <title>Rapport de Performance OMR - ${exam.name}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 html { font-size: 9.5pt; }
 body {
-  font-family: 'Plus Jakarta Sans', serif;
+  font-family: ${fontFamilyCSS};
   margin: 0;
   padding: 0;
   background-color: #fff;
@@ -3401,6 +3513,12 @@ body {
 }
 
 @media print {
+  ${pdfConf.forcePrintColors ? `
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  ` : ''}
   body { background-color: #fff; }
   .print-hint { display: none !important; }
 }

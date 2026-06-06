@@ -7,6 +7,62 @@ import { generateSubjectHTML, generateCorrectionHTML, openPrintWindow } from '..
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href;
 
+// Helper to recursively clean double-backslashes in LaTeX expressions inside parsed JSON
+const cleanDoubleBackslashes = (obj) => {
+  if (typeof obj === 'string') {
+    // Clean double backslashes before LaTeX commands but preserve them for newlines/matrices (not followed by letters)
+    return obj.replace(/\\\\([a-zA-Z]+)\b/g, '\\$1');
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(cleanDoubleBackslashes);
+  }
+  if (obj && typeof obj === 'object') {
+    const newObj = {};
+    for (const key in obj) {
+      newObj[key] = cleanDoubleBackslashes(obj[key]);
+    }
+    return newObj;
+  }
+  return obj;
+};
+
+// Preprocess LaTeX backslashes to avoid JavaScript string escape corruption (like \to -> tab, \frac -> form feed, \right -> carriage return)
+const sanitizeLatexJson = (str) => {
+  if (!str) return str;
+  let result = '';
+  let i = 0;
+  while (i < str.length) {
+    if (str[i] === '\\') {
+      const next = str[i + 1];
+      if (next === '"') {
+        result += '\\"';
+        i += 2;
+      } else if (next === '\\') {
+        result += '\\\\';
+        i += 2;
+      } else if (next === 'n') {
+        // Check if it's a LaTeX command starting with \n (like \nu, \neq, \neg, \nearrow, \nabla)
+        const rest = str.slice(i + 2, i + 12); // lookahead
+        if (/^(u|eq|eg|earrow|abla|onumber|ewline)([^a-zA-Z]|$)/.test(rest)) {
+          result += '\\\\';
+          i += 1;
+        } else {
+          result += '\\n';
+          i += 2;
+        }
+      } else {
+        result += '\\\\';
+        i += 1;
+      }
+    } else {
+      result += str[i];
+      i += 1;
+    }
+  }
+  return result;
+};
+
+
 // Convert File to pure base64 string (no data: prefix)
 const fileToBase64 = (file) => new Promise((resolve, reject) => {
   const reader = new FileReader();
@@ -242,6 +298,9 @@ export default function AdminAIImport() {
   const [phase, setPhase] = useState(draft?.phase || 1);
 
   // Setup state
+  const [provider, setProvider] = useState(() => draft?.provider || localStorage.getItem('aiImportProvider') || 'gemini');
+  const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('geminiApiKey') || '');
+  const [geminiModel, setGeminiModel] = useState(() => draft?.geminiModel || localStorage.getItem('geminiModel') || 'gemini-2.0-flash');
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('claudeApiKey') || '');
   const [proxyUrl, setProxyUrl] = useState(() => localStorage.getItem('claudeProxyUrl') || '');
   const [claudeModel, setClaudeModel] = useState(() => localStorage.getItem('claudeModel') || 'claude-opus-4-5');
@@ -292,6 +351,7 @@ export default function AdminAIImport() {
     const sync = () => {
       setApiKey(localStorage.getItem('claudeApiKey') || '');
       setProxyUrl(localStorage.getItem('claudeProxyUrl') || '');
+      setGeminiKey(localStorage.getItem('geminiApiKey') || '');
     };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
@@ -301,8 +361,8 @@ export default function AdminAIImport() {
   useEffect(() => {
     if (phase === 3) { localStorage.removeItem(DRAFT_KEY); return; } // clear after publish
     if (phase === 1 && questions.length === 0) return; // nothing to save yet
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ phase, questions, examName, school, year, tier, mode, correctionPageFrom, correctionPageTo }));
-  }, [phase, questions, examName, school, year, tier, mode, correctionPageFrom, correctionPageTo]);
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ phase, questions, examName, school, year, tier, mode, correctionPageFrom, correctionPageTo, provider, geminiModel }));
+  }, [phase, questions, examName, school, year, tier, mode, correctionPageFrom, correctionPageTo, provider, geminiModel]);
 
   const clearDraft = () => {
     localStorage.removeItem(DRAFT_KEY);
@@ -312,6 +372,8 @@ export default function AdminAIImport() {
     setMode('simple');
     setCorrectionPageFrom(1);
     setCorrectionPageTo(1);
+    setProvider('gemini');
+    setGeminiModel('gemini-2.0-flash');
     setError('');
     setProgress('');
   };
@@ -326,6 +388,125 @@ export default function AdminAIImport() {
     const doc = await pdfjsLib.getDocument({ data: buf }).promise;
     setTotalPages(doc.numPages);
     setPageTo(Math.min(doc.numPages, 15));
+  };
+
+  // Helper to fetch QCM from Gemini API with schema enforcement
+  const fetchGeminiWithPdf = async (base64Pdf) => {
+    let pageNote = '';
+    let userPromptText = '';
+
+    if (mode === 'with_correction') {
+      pageNote = `IMPORTANT : Le fichier PDF fourni contient à la fois les questions de l'examen et la correction officielle/grille de réponses.
+- Les questions QCM à extraire se trouvent sur les pages ${pageFrom} à ${pageTo}.
+- La grille de réponses correctes ou les pages de correction se trouvent sur les pages ${correctionPageFrom} à ${correctionPageTo}.
+
+Tu dois :
+1. Parcourir les questions se trouvant sur les pages ${pageFrom} à ${pageTo}.
+2. Pour chaque question, trouver la réponse officielle correspondante sur les pages de correction/grille de réponses se trouvant sur les pages ${correctionPageFrom} à ${correctionPageTo}. Ne résous pas la question toi-même si elle est présente dans le corrigé, extrait strictement la réponse indiquée dans la grille ou le texte de correction (A, B, C, D ou E).
+3. Remplir le champ "correct_answer" avec la lettre correspondante de la grille de correction.
+4. Remplir le champ "astuce" en résumant l'explication/justification du corrigé officiel de la question pour aider l'élève à comprendre.
+
+⚠️ EXIGENCE DE SÉCURITÉ DE L'INFORMATION ET RIGUEUR :
+Tu dois extraire les questions et les choix de réponses EXACTEMENT telles qu'elles sont écrites dans le document PDF original, sans aucune modification de texte, sans correction d'erreurs, sans traduction et sans reformulation.
+Pour les réponses correctes (field 'correct_answer'), tu dois STRICTEMENT extraire la lettre de réponse depuis la grille de correction ou le corrigé officiel présent dans le fichier aux pages spécifiées. N'essaye pas de résoudre la question toi-même et ne change pas la réponse officielle sous aucun prétexte, même si tu penses qu'elle est fausse ou incomplète. Extrais la réponse telle qu'elle est indiquée dans le corrigé/grille du document.
+Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le document aux pages de correction spécifiées, sans inventer ta propre explication.
+`;
+      userPromptText = `${pageNote}\n\nExtrais toutes les questions en associant les réponses du corrigé et retourne le JSON demandé.`;
+    } else {
+      pageNote = totalPages && (pageFrom > 1 || pageTo < totalPages)
+        ? `Concentre-toi uniquement sur les pages ${pageFrom} à ${pageTo} du document (ignore les autres).\n`
+        : '';
+      userPromptText = `${pageNote}Extrais TOUTES les questions QCM de ce document et retourne le JSON demandé.`;
+    }
+
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`;
+    
+    // Create fresh AbortController for this request
+    abortRef.current = new AbortController();
+    
+    const payload = {
+      contents: [
+        {
+          parts: [
+            {
+              inlineData: {
+                mimeType: "application/pdf",
+                data: base64Pdf
+              }
+            },
+            {
+              text: userPromptText
+            }
+          ]
+        }
+      ],
+      systemInstruction: {
+        parts: [
+          {
+            text: SYSTEM_PROMPT
+          }
+        ]
+      },
+      generationConfig: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "ARRAY",
+          items: {
+            type: "OBJECT",
+            properties: {
+              question_number: { type: "INTEGER" },
+              context: { type: "STRING" },
+              subject: { type: "STRING" },
+              question: { type: "STRING" },
+              options: {
+                type: "ARRAY",
+                items: { type: "STRING" }
+              },
+              correct_answer: { type: "STRING" },
+              astuce: { type: "STRING" },
+              trick: { type: "STRING" }
+            },
+            required: ["question_number", "context", "subject", "question", "options", "correct_answer", "astuce", "trick"]
+          }
+        }
+      }
+    };
+
+    const res = await fetch(endpoint, {
+      signal: abortRef.current.signal,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || err?.message || JSON.stringify(err);
+      throw new Error(`Erreur Gemini ${res.status}: ${msg}`);
+    }
+
+    const data = await res.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) {
+      throw new Error("Gemini n'a renvoyé aucun texte ou la génération a été bloquée.");
+    }
+
+    const cleanRawText = sanitizeLatexJson(rawText.trim());
+    try {
+      return JSON.parse(cleanRawText);
+    } catch (err) {
+      const jsonMatch = cleanRawText.match(/\[[\s\S]*/);
+      if (jsonMatch) {
+        try {
+          return JSON.parse(jsonMatch[0]);
+        } catch (e) {
+          throw new Error(`Erreur lors du décodage du JSON de Gemini: ${err.message}`);
+        }
+      }
+      throw new Error(`Erreur lors du décodage du JSON de Gemini: ${err.message}`);
+    }
   };
 
   // Stream PDF to Claude using SSE streaming API
@@ -343,6 +524,11 @@ Tu dois :
 2. Pour chaque question, trouver la réponse officielle correspondante sur les pages de correction/grille de réponses se trouvant sur les pages ${correctionPageFrom} à ${correctionPageTo}. Ne résous pas la question toi-même si elle est présente dans le corrigé, extrait strictement la réponse indiquée dans la grille ou le texte de correction (A, B, C, D ou E).
 3. Remplir le champ "correct_answer" avec la lettre correspondante de la grille de correction.
 4. Remplir le champ "astuce" en résumant l'explication/justification du corrigé officiel de la question pour aider l'élève à comprendre.
+
+⚠️ EXIGENCE DE SÉCURITÉ DE L'INFORMATION ET RIGUEUR :
+Tu dois extraire les questions et les choix de réponses EXACTEMENT telles qu'elles sont écrites dans le document PDF original, sans aucune modification de texte, sans correction d'erreurs, sans traduction et sans reformulation.
+Pour les réponses correctes (field 'correct_answer'), tu dois STRICTEMENT extraire la lettre de réponse depuis la grille de correction ou le corrigé officiel présent dans le fichier aux pages spécifiées. N'essaye pas de résoudre la question toi-même et ne change pas la réponse officielle sous aucun prétexte, même si tu penses qu'elle est fausse ou incomplète. Extrais la réponse telle qu'elle est indiquée dans le corrigé/grille du document.
+Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le document aux pages de correction spécifiées, sans inventer ta propre explication.
 `;
       userPromptText = `${pageNote}\n\nExtrais toutes les questions en associant les réponses du corrigé et retourne le JSON demandé.`;
     } else {
@@ -427,35 +613,6 @@ Tu dois :
     if (!jsonMatch) throw new Error('Aucune donnée JSON trouvée dans la réponse de Claude.');
     const rawJson = jsonMatch[0];
 
-    // Preprocess LaTeX backslashes to avoid JavaScript string escape corruption (like \to -> tab, \frac -> form feed, \right -> carriage return)
-    const sanitizeLatexJson = (str) => {
-      if (!str) return str;
-      let result = '';
-      let i = 0;
-      while (i < str.length) {
-        if (str[i] === '\\') {
-          const next = str[i + 1];
-          if (next === '"') {
-            result += '\\"';
-            i += 2;
-          } else if (next === '\\') {
-            result += '\\\\';
-            i += 2;
-          } else if (next === 'n') {
-            result += '\\n';
-            i += 2;
-          } else {
-            result += '\\\\';
-            i += 1;
-          }
-        } else {
-          result += str[i];
-          i += 1;
-        }
-      }
-      return result;
-    };
-
     const cleanJson = sanitizeLatexJson(rawJson);
 
     // Strategy 1: direct parse
@@ -508,12 +665,16 @@ Tu dois :
   };
 
   const handleAnalyze = async () => {
-    if (!proxyUrl) {
-      if (!apiKey) { setError('Clé API Claude manquante. Configurez-la dans Paramètres.'); return; }
-      if (!apiKey.startsWith('sk-ant-')) {
-        setError('⚠️ Clé invalide: doit commencer par "sk-ant-". Obtenez-la sur console.anthropic.com.');
-        return;
+    if (provider === 'claude') {
+      if (!proxyUrl) {
+        if (!apiKey) { setError('Clé API Claude manquante. Configurez-la dans Paramètres.'); return; }
+        if (!apiKey.startsWith('sk-ant-')) {
+          setError('⚠️ Clé invalide: doit commencer par "sk-ant-". Obtenez-la sur console.anthropic.com.');
+          return;
+        }
       }
+    } else {
+      if (!geminiKey) { setError('Clé API Gemini manquante. Configurez-la dans Paramètres.'); return; }
     }
     if (!pdfFile) { setError('Veuillez sélectionner un PDF.'); return; }
     setError('');
@@ -536,8 +697,17 @@ Tu dois :
       setProgress('Encodage du PDF...');
       const base64Pdf = await fileToBase64(pdfFile);
 
-      setProgress('Envoi du PDF à Claude AI...');
-      const parsed = await streamClaudeWithPdf(base64Pdf);
+      let parsedRaw;
+      if (provider === 'claude') {
+        setProgress('Envoi du PDF à Claude AI...');
+        parsedRaw = await streamClaudeWithPdf(base64Pdf);
+      } else {
+        setProgress('Envoi du PDF à Gemini AI...');
+        parsedRaw = await fetchGeminiWithPdf(base64Pdf);
+      }
+
+      // Clean double backslashes recursively in both Gemini and Claude outputs
+      const parsed = cleanDoubleBackslashes(parsedRaw);
 
       clearInterval(timerRef.current);
       setProgress(`✓ Analyse terminée — ${parsed.length} questions extraites`);
@@ -698,17 +868,72 @@ Tu dois :
             </div>
           )}
 
-          {!apiKey && !proxyUrl && (
+          {/* AI Provider Toggle */}
+          <div className="input-group" style={{ marginBottom: '1.5rem' }}>
+            <label>Moteur d'intelligence artificielle</label>
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+              <button
+                type="button"
+                onClick={() => { setProvider('gemini'); localStorage.setItem('aiImportProvider', 'gemini'); }}
+                style={{
+                  flex: 1,
+                  padding: '0.6rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  borderColor: provider === 'gemini' ? '#4285F4' : 'var(--border)',
+                  background: provider === 'gemini' ? 'rgba(66,133,244,0.12)' : 'var(--bg-glass)',
+                  color: provider === 'gemini' ? '#4285F4' : 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <span style={{ fontSize: '1.1rem' }}>✨</span>
+                Google Gemini (Sécurisé & Rapide)
+              </button>
+              <button
+                type="button"
+                onClick={() => { setProvider('claude'); localStorage.setItem('aiImportProvider', 'claude'); }}
+                style={{
+                  flex: 1,
+                  padding: '0.6rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  borderColor: provider === 'claude' ? '#7c3aed' : 'var(--border)',
+                  background: provider === 'claude' ? 'rgba(124,58,237,0.12)' : 'var(--bg-glass)',
+                  color: provider === 'claude' ? '#7c3aed' : 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <span style={{ fontSize: '1.1rem' }}>🧠</span>
+                Anthropic Claude (Modèle d'Examen)
+              </button>
+            </div>
+          </div>
+
+          {provider === 'claude' && !apiKey && !proxyUrl && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', marginBottom: '1.5rem' }}>
               <AlertCircle size={20} color="var(--danger)" />
               <div>
-                <p style={{ margin: 0, fontWeight: 700, color: 'var(--danger)', fontSize: '0.9rem' }}>Clé API ou Proxy manquant</p>
+                <p style={{ margin: 0, fontWeight: 700, color: 'var(--danger)', fontSize: '0.9rem' }}>Clé API ou Proxy Claude manquant</p>
                 <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Allez dans <strong>Paramètres</strong> pour configurer votre clé Anthropic ou l'URL du proxy.</p>
               </div>
             </div>
           )}
 
-          {apiKey && !proxyUrl && (
+          {provider === 'claude' && apiKey && !proxyUrl && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.75rem 1.25rem', borderRadius: 12, background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', marginBottom: '1.5rem', fontSize: '0.82rem' }}>
               <AlertCircle size={18} color="var(--warning)" style={{ flexShrink: 0 }} />
               <div>
@@ -720,6 +945,16 @@ Tu dois :
             </div>
           )}
 
+          {provider === 'gemini' && !geminiKey && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', marginBottom: '1.5rem' }}>
+              <AlertCircle size={20} color="var(--danger)" />
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, color: 'var(--danger)', fontSize: '0.9rem' }}>Clé API Gemini manquante</p>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Allez dans <strong>Paramètres</strong> pour configurer votre clé Google Gemini.</p>
+              </div>
+            </div>
+          )}
+
           {/* PDF Upload */}
           <div className="input-group" style={{ marginBottom: '1.5rem' }}>
             <label>Fichier PDF (Sujet de concours)</label>
@@ -727,12 +962,12 @@ Tu dois :
               <input ref={fileRef} type="file" accept=".pdf" onChange={handlePdfSelect} style={{ display: 'none' }} />
               {!pdfFile ? (
                 <>
-                  <UploadCloud size={36} style={{ marginBottom: '0.75rem', color: 'var(--violet)' }} />
+                  <UploadCloud size={36} style={{ marginBottom: '0.75rem', color: provider === 'claude' ? 'var(--violet)' : '#4285F4' }} />
                   <p style={{ fontWeight: 700 }}>Cliquez pour choisir un PDF</p>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Sujets de concours, annales, examens...</p>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Sujets de concours, examens, corrigés...</p>
                 </>
               ) : (
-                <div className="text-violet">
+                <div style={{ color: provider === 'claude' ? 'var(--violet)' : '#4285F4' }}>
                   <CheckCircle2 size={36} style={{ margin: '0 auto 0.5rem' }} />
                   <p style={{ fontWeight: 800 }}>{pdfName}</p>
                   {totalPages && <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{totalPages} pages détectées</p>}
@@ -855,33 +1090,63 @@ Tu dois :
           </div>
 
           {/* Model selector */}
-          <div className="input-group" style={{ marginBottom: '1.5rem' }}>
-            <label>Modèle Claude <span style={{fontWeight:400, color:'var(--text-muted)'}}>— ID exact de l'API</span></label>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-              {['claude-opus-4-5','claude-sonnet-4-5','claude-haiku-4-5','claude-3-5-sonnet-20241022','claude-3-haiku-20240307'].map(m => (
-                <button key={m} type="button"
-                  onClick={() => { setClaudeModel(m); localStorage.setItem('claudeModel', m); }}
-                  style={{ padding: '0.3rem 0.65rem', borderRadius: 8, border: '1px solid', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
-                    borderColor: claudeModel === m ? 'var(--violet)' : 'var(--border)',
-                    background: claudeModel === m ? 'rgba(124,58,237,0.15)' : 'var(--bg-glass)',
-                    color: claudeModel === m ? 'var(--violet)' : 'var(--text-muted)'
-                  }}>{m}</button>
-              ))}
+          {provider === 'claude' ? (
+            <div className="input-group" style={{ marginBottom: '1.5rem' }}>
+              <label>Modèle Claude <span style={{fontWeight:400, color:'var(--text-muted)'}}>— ID exact de l'API</span></label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                {['claude-opus-4-5','claude-sonnet-4-5','claude-haiku-4-5','claude-3-5-sonnet-20241022','claude-3-haiku-20240307'].map(m => (
+                  <button key={m} type="button"
+                    onClick={() => { setClaudeModel(m); localStorage.setItem('claudeModel', m); }}
+                    style={{ padding: '0.3rem 0.65rem', borderRadius: 8, border: '1px solid', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+                      borderColor: claudeModel === m ? 'var(--violet)' : 'var(--border)',
+                      background: claudeModel === m ? 'rgba(124,58,237,0.15)' : 'var(--bg-glass)',
+                      color: claudeModel === m ? 'var(--violet)' : 'var(--text-muted)'
+                    }}>{m}</button>
+                ))}
+              </div>
+              <input
+                type="text"
+                className="input-control"
+                value={claudeModel}
+                onChange={e => { setClaudeModel(e.target.value); localStorage.setItem('claudeModel', e.target.value); }}
+                placeholder="ex: claude-opus-4-5"
+                style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+              />
+              <p style={{ marginTop: '0.4rem', fontSize: '0.73rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                💡 Vérifiez les IDs disponibles sur{' '}
+                <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" className="text-violet">console.anthropic.com</a>{' '}
+                → Models. La clé API doit venir de <strong>console.anthropic.com</strong> (≠ claude.ai).
+              </p>
             </div>
-            <input
-              type="text"
-              className="input-control"
-              value={claudeModel}
-              onChange={e => { setClaudeModel(e.target.value); localStorage.setItem('claudeModel', e.target.value); }}
-              placeholder="ex: claude-opus-4-5"
-              style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
-            />
-            <p style={{ marginTop: '0.4rem', fontSize: '0.73rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              💡 Vérifiez les IDs disponibles sur{' '}
-              <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" className="text-violet">console.anthropic.com</a>{' '}
-              → Models. La clé API doit venir de <strong>console.anthropic.com</strong> (≠ claude.ai).
-            </p>
-          </div>
+          ) : (
+            <div className="input-group" style={{ marginBottom: '1.5rem' }}>
+              <label>Modèle Gemini <span style={{fontWeight:400, color:'var(--text-muted)'}}>— ID exact de l'API</span></label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                {['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-pro-exp'].map(m => (
+                  <button key={m} type="button"
+                    onClick={() => { setGeminiModel(m); localStorage.setItem('geminiModel', m); }}
+                    style={{ padding: '0.3rem 0.65rem', borderRadius: 8, border: '1px solid', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+                      borderColor: geminiModel === m ? '#4285F4' : 'var(--border)',
+                      background: geminiModel === m ? 'rgba(66,133,244,0.15)' : 'var(--bg-glass)',
+                      color: geminiModel === m ? '#4285F4' : 'var(--text-muted)'
+                    }}>{m}</button>
+                ))}
+              </div>
+              <input
+                type="text"
+                className="input-control"
+                value={geminiModel}
+                onChange={e => { setGeminiModel(e.target.value); localStorage.setItem('geminiModel', e.target.value); }}
+                placeholder="ex: gemini-2.0-flash"
+                style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+              />
+              <p style={{ marginTop: '0.4rem', fontSize: '0.73rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                💡 Vérifiez les IDs disponibles sur{' '}
+                <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" style={{ color: '#4285F4', fontWeight: 600 }}>aistudio.google.com</a>.
+                Le modèle <strong>gemini-2.0-flash</strong> est recommandé pour sa rapidité et son respect strict du schéma de sortie.
+              </p>
+            </div>
+          )}
 
           <div className="input-group" style={{ marginBottom: '1.5rem' }}>
             <label>Titre de l'examen (affiché aux élèves)</label>
@@ -899,7 +1164,7 @@ Tu dois :
               <button
                 className="btn"
                 disabled
-                style={{ flex: 1, padding: '1.1rem', fontSize: '1rem', justifyContent: 'center', background: 'linear-gradient(135deg,#7c3aed,#6366f1)', boxShadow: '0 8px 24px rgba(124,58,237,0.35)', opacity: 0.85 }}
+                style={{ flex: 1, padding: '1.1rem', fontSize: '1rem', justifyContent: 'center', background: provider === 'claude' ? 'linear-gradient(135deg,#7c3aed,#6366f1)' : 'linear-gradient(135deg,#4285F4,#34A853)', boxShadow: provider === 'claude' ? '0 8px 24px rgba(124,58,237,0.35)' : '0 8px 24px rgba(66,133,244,0.35)', opacity: 0.85 }}
               >
                 <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> {progress || 'Traitement...'}
               </button>
@@ -915,10 +1180,10 @@ Tu dois :
             <button
               className="btn"
               onClick={handleAnalyze}
-              disabled={!pdfFile || (!apiKey && !proxyUrl)}
-              style={{ width: '100%', padding: '1.1rem', fontSize: '1rem', justifyContent: 'center', background: 'linear-gradient(135deg,#7c3aed,#6366f1)', boxShadow: '0 8px 24px rgba(124,58,237,0.35)' }}
+              disabled={!pdfFile || (provider === 'claude' ? (!apiKey && !proxyUrl) : !geminiKey)}
+              style={{ width: '100%', padding: '1.1rem', fontSize: '1rem', justifyContent: 'center', background: provider === 'claude' ? 'linear-gradient(135deg,#7c3aed,#6366f1)' : 'linear-gradient(135deg,#4285F4,#34A853)', boxShadow: provider === 'claude' ? '0 8px 24px rgba(124,58,237,0.35)' : '0 8px 24px rgba(66,133,244,0.35)' }}
             >
-              <Sparkles size={20} /> Analyser avec Claude AI ✨
+              <Sparkles size={20} /> Analyser avec {provider === 'claude' ? 'Claude AI' : 'Gemini AI'} ✨
             </button>
           )}
         </div>

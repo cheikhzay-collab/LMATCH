@@ -979,6 +979,16 @@ export function AuthProvider({ children }) {
       };
 
       let { difficulty, stability, repetitions } = card;
+
+      // Robust FSRS fields initialization for backward compatibility
+      if (difficulty === undefined || difficulty === null) {
+        const ef = card.easeFactor || 2.5;
+        difficulty = Math.max(1.0, Math.min(10.0, 1.0 + 4.5 * (3.0 - ef)));
+      }
+      if (stability === undefined || stability === null) {
+        stability = repetitions > 0 ? Math.max(1.0, 2.0 * Math.pow(3, repetitions - 1)) : 2.0;
+      }
+
       const now = new Date();
       const lastReview = card.lastReviewDate ? new Date(card.lastReviewDate) : now;
 
@@ -1093,36 +1103,74 @@ export function AuthProvider({ children }) {
     let masteredCards = 0;
     let learningCards = 0;
     let dueToday = 0;
-    const topicMap = {}; // topic -> { totalEF, count, mastered, total }
+    let totalWeightedMasterySum = 0;
+    let studiedQuestionsCount = 0;
+    const topicMap = {}; // topic -> { totalEF, count, weightedMasterySum, total }
 
     allQuestions.forEach(q => {
       const p = progress[q.id];
       const topic = q.topic || 'Général';
-      if (!topicMap[topic]) topicMap[topic] = { totalEF: 0, count: 0, mastered: 0, total: 0 };
+      if (!topicMap[topic]) topicMap[topic] = { totalEF: 0, count: 0, weightedMasterySum: 0, total: 0 };
       topicMap[topic].total++;
       if (!p) return;
-      const { repetitions, easeFactor, nextReviewDate } = p;
-      if (repetitions >= 3) { masteredCards++; topicMap[topic].mastered++; }
-      else if (repetitions > 0) learningCards++;
+      const { repetitions, easeFactor, nextReviewDate, stability } = p;
+      
+      // Calculate question mastery weight
+      let weight = 0;
+      
+      // Fallback stability calculation for older card records
+      const cardStability = stability !== undefined && stability !== null
+        ? stability
+        : (repetitions > 0 ? Math.max(1.0, 2.0 * Math.pow(3, repetitions - 1)) : 2.0);
+
+      if (repetitions >= 3) {
+        weight = 1.0;
+        masteredCards++;
+      } else if (repetitions === 2) {
+        weight = 0.7;
+        learningCards++;
+      } else if (repetitions === 1) {
+        if (cardStability > 1.0) {
+          weight = 0.4;
+        } else {
+          weight = 0.0;
+        }
+        learningCards++;
+      }
+
+      topicMap[topic].weightedMasterySum += weight;
+      totalWeightedMasterySum += weight;
+      studiedQuestionsCount++;
+
       topicMap[topic].totalEF += easeFactor;
       topicMap[topic].count++;
       if (new Date(nextReviewDate) <= now) dueToday++;
     });
 
-    // Topics sorted by avg ease factor (weakest first)
+    // Topics sorted by mastery (weakest first)
+    // Note: divide by s.total (all cards of topic) to show real progress over total exam material
     const topicsArr = Object.entries(topicMap)
-      .filter(([, s]) => s.count > 0)
-      .map(([name, s]) => ({
-        name,
-        avgEF: s.totalEF / s.count,
-        masteryPct: Math.round((s.mastered / s.total) * 100),
-        mastered: s.mastered,
-        total: s.total,
-      }))
-      .sort((a, b) => a.avgEF - b.avgEF);
+      .map(([name, s]) => {
+        const masteryPct = s.total > 0 ? Math.round((s.weightedMasterySum / s.total) * 100) : 0;
+        return {
+          name,
+          avgEF: s.count > 0 ? s.totalEF / s.count : 2.5,
+          masteryPct,
+          mastered: s.weightedMasterySum,
+          total: s.total,
+          count: s.count
+        };
+      });
 
-    const weakTopics  = topicsArr.filter(t => t.avgEF < 2.2).slice(0, 4);
-    const strongTopics = [...topicsArr].sort((a, b) => b.avgEF - a.avgEF).filter(t => t.avgEF >= 2.4).slice(0, 3);
+    const weakTopics = [...topicsArr]
+      .filter(t => t.count > 0 && t.masteryPct < 85)
+      .sort((a, b) => a.masteryPct - b.masteryPct)
+      .slice(0, 4);
+
+    const strongTopics = [...topicsArr]
+      .filter(t => t.count > 0 && t.masteryPct >= 70)
+      .sort((a, b) => b.masteryPct - a.masteryPct)
+      .slice(0, 3);
 
     // Weekly activity from dailyActivity store
     const dailyActivity = JSON.parse(localStorage.getItem('dailyActivity') || '{}');
@@ -1144,7 +1192,10 @@ export function AuthProvider({ children }) {
       else break;
     }
 
-    const globalMasteryPct = totalCards > 0 ? Math.round((masteredCards / totalCards) * 100) : 0;
+    // Global mastery percentage is relative to totalCards in active exams (curriculum coverage)
+    const globalMasteryPct = totalCards > 0 
+      ? Math.round((totalWeightedMasterySum / totalCards) * 100) 
+      : 0;
 
     // Dynamic live rank based on real leaderboard or XP fallback
     let totalStudents = user?.totalStudents || 1200;

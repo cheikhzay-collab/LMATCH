@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  ArrowLeft, BrainCircuit, Play, Lock, Zap,
-  BookOpen, Trophy, Clock, GraduationCap, FileDown, ScanLine,
+  ArrowLeft, BrainCircuit, Play, Zap,
+  BookOpen, Clock, GraduationCap, FileDown, ScanLine,
   Stethoscope, Cpu, Wrench, BarChart3, Wifi, TrendingUp, Compass
 } from 'lucide-react';
 import { generateAnswerSheet } from '../utils/generateAnswerSheet';
@@ -53,7 +53,7 @@ function useIsMobile() {
 export default function SchoolExamsPage() {
   const { schoolName } = useParams();
   const school = decodeURIComponent(schoolName);
-  const { exams, user, schoolBranding, isExamLocked } = useAuth();
+  const { exams, user, schoolBranding } = useAuth();
   const navigate = useNavigate();
   const [scanExam, setScanExam] = useState(null);
   const isMobile = useIsMobile();
@@ -216,7 +216,6 @@ export default function SchoolExamsPage() {
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:'0.875rem' }}>
           {schoolExams.map((exam, idx) => {
-            const isLocked  = isExamLocked(exam);
             const qCount    = exam.questions.length;
 
             return (
@@ -351,11 +350,9 @@ export default function SchoolExamsPage() {
                             if (exam.pdfUrl) {
                               window.open(exam.pdfUrl, '_blank');
                             } else {
-                              import('../utils/generateExamPDF').then(({ generateSubjectHTML }) => {
+                              import('../utils/generateExamPDF').then(({ generateSubjectHTML, openPrintWindow }) => {
                                 const html = generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id });
-                                const win = window.open('', '_blank');
-                                win.document.write(html);
-                                win.document.close();
+                                openPrintWindow(html);
                               });
                             }
                           }}
@@ -375,11 +372,9 @@ export default function SchoolExamsPage() {
                         <button
                           className="btn-outline"
                           onClick={() => {
-                            import('../utils/generateExamPDF').then(({ generateCorrectionHTML }) => {
+                            import('../utils/generateExamPDF').then(({ generateCorrectionHTML, openPrintWindow }) => {
                               const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id });
-                              const win = window.open('', '_blank');
-                              win.document.write(html);
-                              win.document.close();
+                              openPrintWindow(html);
                             });
                           }}
                           title="Voir le corrigé de l'examen"

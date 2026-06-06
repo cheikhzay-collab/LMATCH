@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, Zap, RefreshCw, Layers, MousePointerClick, Crown, Download, Copy, Sliders } from 'lucide-react';
+import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, Zap, RefreshCw, Layers, MousePointerClick, Crown, Download, Sliders, FileText } from 'lucide-react';
 
 export default function AdminSettings() {
   const { 
@@ -17,18 +17,11 @@ export default function AdminSettings() {
   const [activeTab, setActiveTab] = useState('general');
 
   // Voucher states
-  const [voucherPlanId, setVoucherPlanId] = useState('');
+  const [voucherPlanId, setVoucherPlanId] = useState(() => (plans && plans.length > 0) ? plans[0].id : '');
   const [voucherCount, setVoucherCount] = useState('10');
   const [voucherBatchName, setVoucherBatchName] = useState('');
   const [copiedCode, setCopiedCode] = useState('');
   const [voucherFilter, setVoucherFilter] = useState('all');
-
-  // Set default voucher plan ID
-  React.useEffect(() => {
-    if (plans && plans.length > 0 && !voucherPlanId) {
-      setVoucherPlanId(plans[0].id);
-    }
-  }, [plans, voucherPlanId]);
 
   // Subscription plan states
   const [newPlanName, setNewPlanName] = useState('');
@@ -101,9 +94,11 @@ export default function AdminSettings() {
   const [brandSaved, setBrandSaved] = useState(false);
 
   React.useEffect(() => {
-    if (initialProfName !== undefined) setProfName(initialProfName);
-    if (initialProfPhone !== undefined) setProfPhone(initialProfPhone);
-    if (initialProfSite !== undefined) setProfSite(initialProfSite);
+    Promise.resolve().then(() => {
+      if (initialProfName !== undefined) setProfName(initialProfName);
+      if (initialProfPhone !== undefined) setProfPhone(initialProfPhone);
+      if (initialProfSite !== undefined) setProfSite(initialProfSite);
+    });
   }, [initialProfName, initialProfPhone, initialProfSite]);
 
   const saveBranding = async () => {
@@ -114,6 +109,24 @@ export default function AdminSettings() {
     });
     setBrandSaved(true);
     setTimeout(() => setBrandSaved(false), 2500);
+  };
+
+  // ── PDF Styling Settings ───────────────────────────────────────────────────
+  const [pdfPageMargins, setPdfPageMargins] = useState(() => localStorage.getItem('pdf_page_margins') || 'standard');
+  const [pdfFontSize, setPdfFontSize] = useState(() => localStorage.getItem('pdf_font_size') || '11pt');
+  const [pdfFontFamily, setPdfFontFamily] = useState(() => localStorage.getItem('pdf_font_family') || 'Computer Modern Serif');
+  const [pdfAvoidPageBreaks, setPdfAvoidPageBreaks] = useState(() => localStorage.getItem('pdf_avoid_page_breaks') !== 'false');
+  const [pdfForcePrintColors, setPdfForcePrintColors] = useState(() => localStorage.getItem('pdf_force_print_colors') !== 'false');
+  const [pdfSaved, setPdfSaved] = useState(false);
+
+  const savePdfSettings = () => {
+    localStorage.setItem('pdf_page_margins', pdfPageMargins);
+    localStorage.setItem('pdf_font_size', pdfFontSize);
+    localStorage.setItem('pdf_font_family', pdfFontFamily);
+    localStorage.setItem('pdf_avoid_page_breaks', String(pdfAvoidPageBreaks));
+    localStorage.setItem('pdf_force_print_colors', String(pdfForcePrintColors));
+    setPdfSaved(true);
+    setTimeout(() => setPdfSaved(false), 2500);
   };
 
   const handleAdd = (e) => {
@@ -268,6 +281,7 @@ export default function AdminSettings() {
         <div className="settings-tabs">
           {[
             { id: 'general', label: 'Général & Branding', icon: Sliders, desc: 'Identité PDF & Écoles' },
+            { id: 'pdf', label: 'Design & Impression PDF', icon: FileText, desc: 'Marges, polices & sauts' },
             { id: 'flashcards', label: 'Méthode Flashcards', icon: Layers, desc: 'Animations & Révélation' },
             { id: 'apis', label: 'Clés API & IA', icon: KeyRound, desc: 'Claude, Gemini, FLUX.1' },
             { id: 'subscriptions', label: 'Baqat & Vouchers', icon: Crown, desc: 'Tarifs & Activation' },
@@ -292,6 +306,146 @@ export default function AdminSettings() {
 
         {/* Right Content Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', minWidth: 0 }}>
+
+        {/* ── PDF Page Layout Settings ── */}
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'pdf' ? 'block' : 'none' }}>
+          <h3 style={{ marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <FileText size={20} /> Paramètres de Mise en Page & Design PDF
+          </h3>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+            Configurez l&apos;affichage de vos documents PDF générés (Sujets, Corrigés, E-Books) pour un rendu professionnel.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            
+            {/* Margins & Font Size & Font Family Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', flexWrap: 'wrap' }}>
+              
+              {/* Page Margins */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                  Marges de page (Marges intérieures)
+                </label>
+                <select
+                  value={pdfPageMargins}
+                  onChange={e => setPdfPageMargins(e.target.value)}
+                  className="input-control"
+                  style={{ fontSize: '0.85rem' }}
+                >
+                  <option value="standard">Standard (Marge équilibrée - A4 classique)</option>
+                  <option value="compact">Compacte (Marge étroite pour économiser des pages)</option>
+                  <option value="wide">Large (Rendu très aéré de type livre d&apos;art)</option>
+                </select>
+              </div>
+
+              {/* Font Size */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                  Taille de la police de base
+                </label>
+                <select
+                  value={pdfFontSize}
+                  onChange={e => setPdfFontSize(e.target.value)}
+                  className="input-control"
+                  style={{ fontSize: '0.85rem' }}
+                >
+                  <option value="10pt">Petit (10pt)</option>
+                  <option value="11pt">Normal (11pt - recommandé)</option>
+                  <option value="12pt">Grand (12pt)</option>
+                </select>
+              </div>
+
+              {/* Font Family */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                  Police typographique
+                </label>
+                <select
+                  value={pdfFontFamily}
+                  onChange={e => setPdfFontFamily(e.target.value)}
+                  className="input-control"
+                  style={{ fontSize: '0.85rem' }}
+                >
+                  <option value="Computer Modern Serif">Computer Modern Serif (Scientifique & académique)</option>
+                  <option value="STIX Two Text">STIX Two Text (Littéraire avec empattement)</option>
+                  <option value="Times New Roman">Times New Roman (Classique d&apos;examen national)</option>
+                  <option value="Inter">Inter (Moderne, épurée et sans empattement)</option>
+                </select>
+              </div>
+
+            </div>
+
+            {/* Avoid page breaks inside cards */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem 1rem', borderRadius: 12, background: 'var(--bg-glass)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <FileText size={18} style={{ color: 'var(--violet)' }} />
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>Sauts de page intelligents</p>
+                  <p style={{ fontSize: '0.73rem', color: 'var(--text-subtle)', margin: 0 }}>Éviter de couper les énoncés et options d&apos;une question sur deux pages différentes</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPdfAvoidPageBreaks(v => !v)}
+                style={{
+                  width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+                  background: pdfAvoidPageBreaks ? 'var(--violet)' : 'var(--bg-card)',
+                  position: 'relative', transition: 'background 0.2s',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                }}
+              >
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                  position: 'absolute', top: 3, transition: 'left 0.2s',
+                  left: pdfAvoidPageBreaks ? 25 : 3,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                }} />
+              </button>
+            </div>
+
+            {/* Preserve background colors */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem 1rem', borderRadius: 12, background: 'var(--bg-glass)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <Sparkles size={18} style={{ color: 'var(--emerald)' }} />
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>Impression couleur & arrière-plans</p>
+                  <p style={{ fontSize: '0.73rem', color: 'var(--text-subtle)', margin: 0 }}>Forcer la préservation des couleurs de fond, des badges et des bulles OMR lors de la génération</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPdfForcePrintColors(v => !v)}
+                style={{
+                  width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+                  background: pdfForcePrintColors ? 'var(--emerald)' : 'var(--bg-card)',
+                  position: 'relative', transition: 'background 0.2s',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                }}
+              >
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                  position: 'absolute', top: 3, transition: 'left 0.2s',
+                  left: pdfForcePrintColors ? 25 : 3,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                }} />
+              </button>
+            </div>
+
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+            <button
+              onClick={savePdfSettings}
+              className="btn"
+              style={{
+                padding: '0.75rem 2rem',
+                background: pdfSaved ? 'linear-gradient(135deg,var(--emerald),#34d399)' : undefined,
+                boxShadow: pdfSaved ? '0 4px 16px rgba(16,185,129,0.35)' : undefined,
+                transition: 'all 0.3s'
+              }}
+            >
+              {pdfSaved ? <><CheckCircle2 size={16} /> Enregistré !</> : 'Enregistrer le style PDF'}
+            </button>
+          </div>
+        </div>
 
         {/* ── Flashcard Review Settings ── */}
         <div className="col-span-12 glass-panel" style={{ display: activeTab === 'flashcards' ? 'block' : 'none' }}>

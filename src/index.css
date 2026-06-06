@@ -1,4 +1,5 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
 
 /* ─── DESIGN TOKENS — DARK (default) ────────────────────────────── */
 :root {
@@ -712,9 +713,9 @@ body {
   border: 1.5px solid var(--border);
   border-radius: var(--radius-md);
   color: var(--text-main);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 500;
-  font-family: inherit;
+  font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: left;
@@ -776,6 +777,7 @@ body {
   flex-shrink: 0;
   margin-right: 0.5rem;
   transition: all 0.2s;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
 }
 
 .option-btn:hover .option-letter,
@@ -955,6 +957,7 @@ body {
   box-sizing: border-box;
   word-break: break-word;
   overflow-wrap: break-word;
+  font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
 }
 
 @keyframes astuceSlideIn {
@@ -2120,6 +2123,7 @@ body.light-theme .astuce-tabs {
   width: 100%;
   font-weight: 500;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
 }
 
 .flashcard-question-box {
@@ -2128,6 +2132,7 @@ body.light-theme .astuce-tabs {
   line-height: 1.7;
   font-weight: 400;
   color: var(--text-main);
+  font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
 }
 
 .flashcard-question-ref {
@@ -2136,6 +2141,7 @@ body.light-theme .astuce-tabs {
   margin-bottom: 0.8rem;
   font-weight: 500;
   line-height: 1.5;
+  font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
 }
 
 .flashcard-reveal-btn {
@@ -2251,6 +2257,7 @@ body.light-theme .astuce-tabs {
   max-width: 100%;
   box-sizing: border-box;
   animation: mfc-fade-in 0.2s ease;
+  font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
 }
 .mfc-context-body .katex-display {
   overflow-x: auto;
@@ -2270,6 +2277,7 @@ body.light-theme .astuce-tabs {
   overflow-x: hidden;
   max-width: 100%;
   box-sizing: border-box;
+  font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
 }
 .mfc-question .katex-display {
   overflow-x: auto;
@@ -2290,6 +2298,7 @@ body.light-theme .astuce-tabs {
   overflow-x: hidden;
   max-width: 100%;
   box-sizing: border-box;
+  font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
 }
 .mfc-question-ref .katex-display {
   overflow-x: auto;
@@ -2318,9 +2327,9 @@ body.light-theme .astuce-tabs {
   border: 1.5px solid var(--border);
   border-radius: 12px;
   color: var(--text-main);
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 500;
-  font-family: inherit;
+  font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
   cursor: pointer;
   text-align: left;
   transition: all 0.18s ease;
@@ -2366,6 +2375,7 @@ body.light-theme .astuce-tabs {
   font-size: 0.78rem;
   flex-shrink: 0;
   transition: all 0.18s;
+  font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
 }
 .mfc-opt.correct .mfc-opt-letter {
   background: var(--emerald) !important;
@@ -2551,6 +2561,7 @@ body.light-theme .astuce-tabs {
   max-width: 100%;
   box-sizing: border-box;
   animation: mfc-fade-in 0.22s ease;
+  font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
 }
 .mfc-astuce-body .katex-display {
   overflow-x: auto;

@@ -206,7 +206,7 @@ function ResultsScreen({ questions, answers, exam, onReturn }) {
 
 /* ─── Main Component ────────────────────────────────────────────── */
 export default function MockExamMode() {
-  const { exams, saveMockExamResult, schoolBranding, isExamLocked } = useAuth();
+  const { exams, saveMockExamResult, schoolBranding, isExamLocked, updateCardProgress } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const navigate = useNavigate();
@@ -249,7 +249,8 @@ export default function MockExamMode() {
 
       questions.forEach(q => {
         const ans = answers[q.id];
-        if (ans === q.correct_answer) {
+        const isCorrect = ans === q.correct_answer;
+        if (isCorrect) {
           pts += rules.correct;
           correctCount++;
         } else if (!ans) {
@@ -259,6 +260,9 @@ export default function MockExamMode() {
           pts += rules.wrong;
           wrongCount++;
         }
+        
+        // Push progress to Spaced Repetition (SRS)
+        updateCardProgress(q.id, isCorrect ? 4 : 0);
       });
 
       const maxPossible = questions.length * rules.correct;
@@ -277,7 +281,7 @@ export default function MockExamMode() {
         mode: 'online'
       });
     }
-  }, [isFinished, answers, currentExam, questions, saveMockExamResult, schoolBranding]);
+  }, [isFinished, answers, currentExam, questions, saveMockExamResult, schoolBranding, updateCardProgress]);
 
   const handleSelect = useCallback((optId) => {
     if (answers[questions[currentIndex]?.id]) return; // already answered in mock? allow re-select
