@@ -2207,12 +2207,13 @@ body.light-theme .astuce-tabs {
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-  height: 520px; /* Fixed height to avoid height shifts/distractions */
+  min-height: 480px; /* Dynamic height with a clean minimum baseline */
+  height: auto;
 }
 
 @media (max-height: 680px) {
   .mfc-phase {
-    height: 450px; /* scale down on short viewports like iPhone SE */
+    min-height: 400px;
   }
 }
 
