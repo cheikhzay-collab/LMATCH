@@ -1272,7 +1272,7 @@ body.light-theme .astuce-tabs {
 
 /* ─── KATEX OVERRIDES ────────────────────────────────────────────── */
 .katex {
-  color: var(--text-main) !important;
+  color: inherit !important;
   font-weight: normal !important;
 }
 
