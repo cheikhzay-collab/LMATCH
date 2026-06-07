@@ -9,6 +9,7 @@ const getPdfSettings = (settings = {}) => {
       fontSize: settings.fontSize || '11pt',
       fontFamily: settings.fontFamily || 'Computer Modern Serif',
       pageMargins: settings.pageMargins || 'standard',
+      templateStyle: settings.templateStyle || 'classic_latex',
     };
   }
 
@@ -18,6 +19,7 @@ const getPdfSettings = (settings = {}) => {
     fontSize: settings.fontSize || (localStorage.getItem('pdf_font_size') || '11pt'),
     fontFamily: settings.fontFamily || (localStorage.getItem('pdf_font_family') || 'Computer Modern Serif'),
     pageMargins: settings.pageMargins || (localStorage.getItem('pdf_page_margins') || 'standard'),
+    templateStyle: settings.templateStyle || (localStorage.getItem('pdf_template_style') || 'classic_latex'),
   };
 };
 
@@ -32,6 +34,99 @@ const getFontFamilyStyle = (font) => {
   if (font === 'STIX Two Text') return "'STIX Two Text', serif";
   if (font === 'Inter') return "'Inter', sans-serif";
   return "'Computer Modern Serif', 'STIX Two Text', 'Times New Roman', serif";
+};
+
+
+const getTemplateStyles = (style, fontFamilyCSS) => {
+  if (style === 'modern_minimalist') {
+    return `
+      /* === MODERN MINIMALIST OVERRIDES === */
+      .cover { padding: 1.5cm; }
+      .cover-frame { border: none; border-left: 5px solid #2563eb; padding: 2cm 0 2cm 2cm; align-items: flex-start; text-align: left; }
+      .cover-logo { font-family: 'Inter', sans-serif; letter-spacing: 2px; color: #2563eb; font-size: 1.8rem; }
+      .cover-divider { margin: 0 0 2rem 0; width: 60px; background: #2563eb; }
+      .cover-topic { font-family: 'Inter', sans-serif; font-size: 2.2rem; line-height: 1.2; text-align: left; }
+      .cover-desc { font-family: 'Inter', sans-serif; font-size: 0.95rem; text-align: left; }
+      .cover-stats { justify-content: flex-start; gap: 1.5rem; }
+      .cover-stat { border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; }
+      .cover-stat .num { font-family: 'Inter', sans-serif; color: #2563eb; }
+      .cover-prof { font-family: 'Inter', sans-serif; font-style: normal; color: #64748b; }
+      
+      .subj-section { border-left: 4px solid #2563eb; padding-left: 10px; margin-bottom: 25px; }
+      .section-hdr { background: none; color: #2563eb; padding: 0; font-size: 1.2rem; border-bottom: 2px solid #e2e8f0; border-radius: 0; }
+      .qcard { border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; background: #f8fafc; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.01); }
+      .qnum { background: #2563eb; color: #fff; border-radius: 6px; padding: 3px 8px; }
+      .opt { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; transition: none; }
+      .opt-badge { background: #2563eb; color: #fff; border: none; }
+    `;
+  }
+  if (style === 'premium_royal') {
+    return `
+      /* === PREMIUM ROYAL OVERRIDES === */
+      .cover { padding: 1.2cm; background: #fdfdfd; }
+      .cover-frame { border: 2px solid #7c3aed; padding: 1.5cm; background: #FAF5FF; }
+      .cover-logo { font-family: 'STIX Two Text', serif; letter-spacing: 4px; color: #7c3aed; }
+      .cover-divider { background: #7c3aed; height: 2px; }
+      .cover-topic { font-family: 'STIX Two Text', serif; color: #1e1b4b; }
+      .cover-desc { font-family: 'STIX Two Text', serif; color: #4338ca; }
+      .cover-stats { gap: 2rem; }
+      .cover-stat { border-color: #c084fc; background: #fff; box-shadow: 0 4px 10px rgba(124,58,237,0.08); }
+      .cover-stat .num { font-family: 'STIX Two Text', serif; color: #7c3aed; }
+      .cover-prof { font-family: 'STIX Two Text', serif; color: #7c3aed; }
+      
+      .subj-section { margin-bottom: 30px; }
+      .section-hdr { background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff; font-family: 'STIX Two Text', serif; letter-spacing: 1px; }
+      .qcard { border: 1.5px solid #e9d5ff; border-radius: 16px; padding: 24px; background: #ffffff; box-shadow: 0 4px 12px rgba(124,58,237,0.04); margin-bottom: 24px; }
+      .qnum { background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff; border-radius: 8px; }
+      .opt { background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px; }
+      .opt-badge { background: #7c3aed; color: #fff; border: none; }
+      .correct-opt { background: #ecfdf5 !important; border-color: #10b981 !important; color: #065f46 !important; }
+      .correct-badge { background: #10b981 !important; }
+      .rule-box { border-left: 4px solid #10b981; background: #f0fdf4; border-radius: 8px; padding: 15px; margin-top: 15px; }
+      .trick-box { border-left: 4px solid #f59e0b; background: #fffbeb; border-radius: 8px; padding: 15px; margin-top: 10px; }
+    `;
+  }
+  if (style === 'compact_eco') {
+    return `
+      /* === COMPACT ECO OVERRIDES === */
+      @page { margin: 0.5cm 0 0.7cm 0 !important; }
+      body { font-size: 9.5pt !important; line-height: 1.45 !important; }
+      .cover { display: none !important; }
+      .omr-page { display: none !important; }
+      .qcard { border: none; border-bottom: 1px dashed #cbd5e1; padding: 8px 0; margin-bottom: 12px; }
+      .qnum { background: #475569; color: #fff; border-radius: 0; padding: 2px 6px; }
+      .opts { gap: 6px 16px !important; }
+      .opt { padding: 3px 6px; }
+      .opt-badge { width: 20px; height: 20px; font-size: 7.5pt; }
+      .subj-section { margin-bottom: 15px; }
+      .section-hdr { font-size: 0.95rem; padding: 4px 8px; background: #64748b; }
+      .rule-box, .trick-box { padding: 8px 12px; margin-top: 8px; font-size: 9pt; }
+      .rule-title, .trick-title { font-size: 8pt; margin-bottom: 3px; }
+      
+      /* Compact Header layout directly on page 1 */
+      .compact-header-box {
+        margin: 0.4cm 1.3cm 0.3cm 1.3cm;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        padding: 8px 12px;
+        background: #f8fafc;
+      }
+      .ch-left .ch-school { font-size: 8pt; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+      .ch-left .ch-title { font-size: 1.25rem; font-weight: 900; color: #0f172a; margin-top: 2px; }
+      .ch-right { display: flex; gap: 8px; font-size: 8pt; }
+      .ch-pill { background: #e2e8f0; color: #334155; padding: 4px 10px; border-radius: 99px; font-weight: 600; white-space: nowrap; }
+      .compact-divider { border: 0; border-top: 1.5px solid #475569; margin: 0 1.3cm 0.4cm 1.3cm; }
+    `;
+  }
+  return `
+    /* === CLASSIC LaTeX DEFAULT === */
+    .cover-frame { border: 4px double #0f172a; }
+    .qcard { border-bottom: 1px solid #e2e8f0; padding: 15px 0; }
+    .qnum { background: #0f172a; color: #fff; border-radius: 3px; }
+  `;
 };
 
 
@@ -170,6 +265,10 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
   const startPage = settings.startPage !== undefined ? settings.startPage : 1;
   const examId = settings.examId || 'PREVIEW';
 
+  const templateStyle = pdfConf.templateStyle || 'classic_latex';
+  const templateCSS = getTemplateStyles(templateStyle, fontFamilyCSS);
+  const shouldShowCover = templateStyle === 'compact_eco' ? false : showCover;
+
   if (typeof window !== 'undefined' && window.localStorage) {
     if (!profName) profName = localStorage.getItem('profName') || '';
     if (!profPhone) profPhone = localStorage.getItem('profPhone') || '';
@@ -278,7 +377,7 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
   const dateStr = new Date().toLocaleDateString('fr-MA');
   const examDuration = `${Math.ceil(questions.length * 1.5)} minutes`;
 
-  const coverHtml = showCover ? `
+  const coverHtml = shouldShowCover ? `
 <div class="cover">
   <div class="cover-frame">
     <div class="cover-logo">L'CONQ</div>
@@ -1270,9 +1369,10 @@ html{counter-reset:page ${startPage - 1}}
   }
   ` : ''}
   .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  ${!showCover ? '.cover{display:none!important}' : ''}
+  ${!shouldShowCover ? '.cover{display:none!important}' : ''}
 }
 .katex{font-size:1.05em}.katex-display{margin:3px 0}
+${templateCSS}
 </style></head><body>
 
 <!-- PRE-PRINT INSTRUCTION BANNER -->
@@ -1432,6 +1532,25 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
   const startPage = settings.startPage !== undefined ? settings.startPage : 1;
   const showTricks = settings.showTricks !== undefined ? settings.showTricks : true;
 
+  const templateStyle = pdfConf.templateStyle || 'classic_latex';
+  const templateCSS = getTemplateStyles(templateStyle, fontFamilyCSS);
+  const shouldShowCover = templateStyle === 'compact_eco' ? false : showCover;
+
+  const compactHeaderHtml = templateStyle === 'compact_eco' ? `
+<div class="compact-header-box">
+  <div class="ch-left">
+    <div class="ch-school">${school}</div>
+    <div class="ch-title">${examTitle}</div>
+  </div>
+  <div class="ch-right">
+    <div class="ch-pill">CORRIGÉ</div>
+    ${year ? `<div class="ch-pill">${year}</div>` : ''}
+    <div class="ch-pill">${questions.length} Qs</div>
+  </div>
+</div>
+<hr class="compact-divider">
+` : '';
+
   if (typeof window !== 'undefined' && window.localStorage) {
     if (!profName) profName = localStorage.getItem('profName') || '';
     if (!profPhone) profPhone = localStorage.getItem('profPhone') || '';
@@ -1523,7 +1642,7 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
   const usedRows = Math.ceil(pCount / 2);
   const footerY = Math.max(96 + 7 + usedRows * 8.5 + 12, 258);
 
-  const coverHtml = showCover ? `
+  const coverHtml = shouldShowCover ? `
 <div class="cover">
   <div class="cover-frame">
     <div class="cover-logo">L'CONQ</div>
@@ -2502,9 +2621,10 @@ html{counter-reset:page ${startPage - 1}}
   }
   ` : ''}
   .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  ${!showCover ? '.cover{display:none!important}' : ''}
+  ${!shouldShowCover ? '.cover{display:none!important}' : ''}
 }
 .katex{font-size:.95em}.katex-display{margin:4px 0}
+${templateCSS}
 </style></head><body>
 
 <!-- PRE-PRINT INSTRUCTION BANNER -->
@@ -2594,6 +2714,7 @@ ${coverHtml}
 
 <!-- CONTENT -->
 <div class="content">
+  ${compactHeaderHtml}
   ${cardsHtml}
 </div>
 
@@ -2642,6 +2763,24 @@ export const generateEbookHTML = (topic, questionsWithSource, settings = {}) => 
     profPhone = '',
     profSite = 'www.lconq.ma',
   } = settings;
+
+  const templateStyle = pdfConf.templateStyle || 'classic_latex';
+  const templateCSS = getTemplateStyles(templateStyle, fontFamilyCSS);
+  const shouldShowCover = templateStyle === 'compact_eco' ? false : showCover;
+
+  const compactHeaderHtml = templateStyle === 'compact_eco' ? `
+<div class="compact-header-box">
+  <div class="ch-left">
+    <div class="ch-school">E-BOOK DE PRÉPARATION</div>
+    <div class="ch-title">${topic}</div>
+  </div>
+  <div class="ch-right">
+    <div class="ch-pill">GUIDE DE MAÎTRISE</div>
+    <div class="ch-pill">${questionsWithSource.length} Questions</div>
+  </div>
+</div>
+<hr class="compact-divider">
+` : '';
 
   const total = questionsWithSource.length;
   const sources = [...new Set(questionsWithSource.map(q => q._source || 'Inconnu'))];
@@ -3188,9 +3327,10 @@ html{counter-reset:page ${startPage - 1}}
   }
   ` : ''}
   .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  ${!showCover ? '.cover{display:none!important}' : ''}
+  ${!shouldShowCover ? '.cover{display:none!important}' : ''}
 }
 .katex{font-size:1.05em}.katex-display{margin:4px 0}
+${templateCSS}
 </style>
 </head><body>
 
@@ -3205,7 +3345,7 @@ html{counter-reset:page ${startPage - 1}}
   <button class="hint-badge" onclick="document.getElementById('printHint').style.display='none'">✕ Fermer</button>
 </div>
 
-${showCover ? `
+${shouldShowCover ? `
 <div class="cover">
   <div class="cover-frame">
     <div class="cover-logo">L'CONQ</div>
@@ -3244,6 +3384,7 @@ ${showCover ? `
 </div>` : ''}
 
 <div class="content">
+  ${compactHeaderHtml}
   <div class="section-hdr">📚 ${total} questions — ${topic}</div>
   ${cardsHtml}
 </div>

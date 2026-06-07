@@ -128,3 +128,38 @@ export const saveFlashcardSettingsConfig = async (settings) => {
   }
 };
 
+/**
+ * Fetch PDF styling settings from Supabase.
+ */
+export const getPdfSettingsConfig = async () => {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('config')
+    .select('value')
+    .eq('key', 'pdf_settings')
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.value;
+};
+
+/**
+ * Save PDF styling settings to Supabase.
+ */
+export const savePdfSettingsConfig = async (settings) => {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('config')
+    .upsert({
+      key: 'pdf_settings',
+      value: settings,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('[Supabase] Failed to save PDF settings config:', error);
+    throw error;
+  }
+};
+
+

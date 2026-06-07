@@ -3,10 +3,10 @@ import { renderWithMath } from '../utils/mathRenderer';
 import { Lightbulb, CheckCircle2, XCircle, Frown, Meh, Smile, BrainCircuit, Zap, Clock } from 'lucide-react';
 
 export default function Flashcard({ card, onNext }) {
-  // ── Card display settings — read once at mount (component remounts per card via key=id) ──
-  const [cardRevealMode]  = useState(() => localStorage.getItem('card_reveal_mode')    || 'flip');
-  const [cardFlipEnabled] = useState(() => localStorage.getItem('card_flip_animation') !== 'false');
-  const [cardSwipeEnabled]= useState(() => localStorage.getItem('card_swipe_gesture')  !== 'false');
+  // ── Card display settings ──
+  const cardRevealMode  = localStorage.getItem('card_reveal_mode')    || 'flip';
+  const cardFlipEnabled = localStorage.getItem('card_flip_animation') !== 'false';
+  const cardSwipeEnabled = localStorage.getItem('card_swipe_gesture')  !== 'false';
 
   const isFlipMode    = cardRevealMode === 'flip' && cardFlipEnabled;
   const isInstantMode = cardRevealMode === 'instant';

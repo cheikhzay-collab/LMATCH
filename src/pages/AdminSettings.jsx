@@ -11,7 +11,8 @@ export default function AdminSettings() {
     profPhone: initialProfPhone,
     profSite: initialProfSite,
     updateBrandingConfig,
-    updateFlashcardSettingsConfig
+    updateFlashcardSettingsConfig,
+    updatePdfSettingsConfig
   } = useAuth();
   const [newSchool, setNewSchool] = useState('');
   const [activeTab, setActiveTab] = useState('general');
@@ -115,16 +116,20 @@ export default function AdminSettings() {
   const [pdfPageMargins, setPdfPageMargins] = useState(() => localStorage.getItem('pdf_page_margins') || 'standard');
   const [pdfFontSize, setPdfFontSize] = useState(() => localStorage.getItem('pdf_font_size') || '11pt');
   const [pdfFontFamily, setPdfFontFamily] = useState(() => localStorage.getItem('pdf_font_family') || 'Computer Modern Serif');
+  const [pdfTemplateStyle, setPdfTemplateStyle] = useState(() => localStorage.getItem('pdf_template_style') || 'classic_latex');
   const [pdfAvoidPageBreaks, setPdfAvoidPageBreaks] = useState(() => localStorage.getItem('pdf_avoid_page_breaks') !== 'false');
   const [pdfForcePrintColors, setPdfForcePrintColors] = useState(() => localStorage.getItem('pdf_force_print_colors') !== 'false');
   const [pdfSaved, setPdfSaved] = useState(false);
 
-  const savePdfSettings = () => {
-    localStorage.setItem('pdf_page_margins', pdfPageMargins);
-    localStorage.setItem('pdf_font_size', pdfFontSize);
-    localStorage.setItem('pdf_font_family', pdfFontFamily);
-    localStorage.setItem('pdf_avoid_page_breaks', String(pdfAvoidPageBreaks));
-    localStorage.setItem('pdf_force_print_colors', String(pdfForcePrintColors));
+  const savePdfSettings = async () => {
+    await updatePdfSettingsConfig({
+      pdfPageMargins,
+      pdfFontSize,
+      pdfFontFamily,
+      pdfTemplateStyle,
+      pdfAvoidPageBreaks,
+      pdfForcePrintColors
+    });
     setPdfSaved(true);
     setTimeout(() => setPdfSaved(false), 2500);
   };
@@ -370,6 +375,24 @@ export default function AdminSettings() {
                   <option value="STIX Two Text">STIX Two Text (Littéraire avec empattement)</option>
                   <option value="Times New Roman">Times New Roman (Classique d&apos;examen national)</option>
                   <option value="Inter">Inter (Moderne, épurée et sans empattement)</option>
+                </select>
+              </div>
+
+              {/* Layout Template Style */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                  Modèle de mise en page (Template)
+                </label>
+                <select
+                  value={pdfTemplateStyle}
+                  onChange={e => setPdfTemplateStyle(e.target.value)}
+                  className="input-control"
+                  style={{ fontSize: '0.85rem' }}
+                >
+                  <option value="classic_latex">Classique LaTeX (Éléments structurés, sobres et académiques)</option>
+                  <option value="modern_minimalist">Moderne épuré (Design frais, aéré avec touches de couleur)</option>
+                  <option value="premium_royal">Royal Institutionnel (En-tête officiel, luxueux avec rubans)</option>
+                  <option value="compact_eco">Économique & Compact (Sans page de garde, ultra compact pour impression)</option>
                 </select>
               </div>
 

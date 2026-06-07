@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback } fr
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
 import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard } from '../services/userService';
 import { getAllExams, getActiveExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam } from '../services/examService';
-import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig } from '../services/schoolService';
+import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, getCode } from '../services/planService';
 
 
@@ -163,6 +163,22 @@ export function AuthProvider({ children }) {
     localStorage.setItem('card_reveal_mode', settings.cardRevealMode);
     localStorage.setItem('card_flip_animation', String(settings.cardFlipEnabled));
     localStorage.setItem('card_swipe_gesture', String(settings.cardSwipeEnabled));
+  };
+
+  const updatePdfSettingsConfig = async (settings) => {
+    if (SUPABASE_ENABLED) {
+      try {
+        await savePdfSettingsConfig(settings);
+      } catch (e) {
+        console.error('[Supabase] Failed to save PDF settings config:', e);
+      }
+    }
+    localStorage.setItem('pdf_page_margins', settings.pdfPageMargins);
+    localStorage.setItem('pdf_font_size', settings.pdfFontSize);
+    localStorage.setItem('pdf_font_family', settings.pdfFontFamily);
+    localStorage.setItem('pdf_template_style', settings.pdfTemplateStyle);
+    localStorage.setItem('pdf_avoid_page_breaks', String(settings.pdfAvoidPageBreaks));
+    localStorage.setItem('pdf_force_print_colors', String(settings.pdfForcePrintColors));
   };
 
   // ── Supabase Auth listener ───────────────────────────────────────────────
@@ -1288,6 +1304,33 @@ export function AuthProvider({ children }) {
           });
         }
 
+        // Fetch PDF Settings
+        const pdfConfig = await getPdfSettingsConfig();
+        if (pdfConfig) {
+          localStorage.setItem('pdf_page_margins', pdfConfig.pdfPageMargins || 'standard');
+          localStorage.setItem('pdf_font_size', pdfConfig.pdfFontSize || '11pt');
+          localStorage.setItem('pdf_font_family', pdfConfig.pdfFontFamily || 'Computer Modern Serif');
+          localStorage.setItem('pdf_template_style', pdfConfig.pdfTemplateStyle || 'classic_latex');
+          localStorage.setItem('pdf_avoid_page_breaks', String(pdfConfig.pdfAvoidPageBreaks !== false));
+          localStorage.setItem('pdf_force_print_colors', String(pdfConfig.pdfForcePrintColors !== false));
+        } else {
+          const defaultPdf = {
+            pdfPageMargins: 'standard',
+            pdfFontSize: '11pt',
+            pdfFontFamily: 'Computer Modern Serif',
+            pdfTemplateStyle: 'classic_latex',
+            pdfAvoidPageBreaks: true,
+            pdfForcePrintColors: true
+          };
+          await savePdfSettingsConfig(defaultPdf);
+          localStorage.setItem('pdf_page_margins', defaultPdf.pdfPageMargins);
+          localStorage.setItem('pdf_font_size', defaultPdf.pdfFontSize);
+          localStorage.setItem('pdf_font_family', defaultPdf.pdfFontFamily);
+          localStorage.setItem('pdf_template_style', defaultPdf.pdfTemplateStyle);
+          localStorage.setItem('pdf_avoid_page_breaks', String(defaultPdf.pdfAvoidPageBreaks));
+          localStorage.setItem('pdf_force_print_colors', String(defaultPdf.pdfForcePrintColors));
+        }
+
         // Fetch Plans
         const fbPlans = await getPlans();
         if (fbPlans && fbPlans.length > 0) {
@@ -1464,7 +1507,7 @@ export function AuthProvider({ children }) {
       supabaseEnabled: SUPABASE_ENABLED,
       refreshAdminData,
       loading,
-      profName, profPhone, profSite, updateBrandingConfig, updateFlashcardSettingsConfig,
+      profName, profPhone, profSite, updateBrandingConfig, updateFlashcardSettingsConfig, updatePdfSettingsConfig,
     }}>
       {children}
     </AuthContext.Provider>

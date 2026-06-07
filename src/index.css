@@ -1271,7 +1271,18 @@ body.light-theme .astuce-tabs {
 ::-webkit-scrollbar-thumb:hover { background: var(--navy-600); }
 
 /* ─── KATEX OVERRIDES ────────────────────────────────────────────── */
-.katex { color: var(--text-main) !important; }
+.katex {
+  color: var(--text-main) !important;
+  font-weight: normal !important;
+}
+
+/* Make sure math symbols inside flashcards/study cards match the surrounding text font-size exactly */
+.flashcard-card .katex,
+.mfc-phase .katex,
+.astuce-match-content .katex,
+.mfc-astuce-body .katex {
+  font-size: 1.15em !important;
+}
 
 /* Block math: always scrollable, never wider than container */
 .katex-display {
@@ -2121,7 +2132,7 @@ body.light-theme .astuce-tabs {
   line-height: 1.8;
   color: var(--text-main);
   width: 100%;
-  font-weight: 500;
+  font-weight: 400;
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
 }
@@ -2196,6 +2207,25 @@ body.light-theme .astuce-tabs {
   border-radius: 20px;
   overflow: hidden;
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  height: 520px; /* Fixed height to avoid height shifts/distractions */
+}
+
+@media (max-height: 680px) {
+  .mfc-phase {
+    height: 450px; /* scale down on short viewports like iPhone SE */
+  }
+}
+
+.mfc-scrollable-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  scrollbar-width: none; /* Hide scrollbars for clean card UI */
+}
+.mfc-scrollable-content::-webkit-scrollbar {
+  display: none; /* Hide scrollbars for Chrome/Safari */
 }
 
 /* ── Topic badge ─────────────────────────────────────────────────── */
@@ -2269,7 +2299,7 @@ body.light-theme .astuce-tabs {
 .mfc-question {
   padding: 1.25rem 1rem 1rem;
   font-size: 1.1rem;
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.6;
   color: var(--text-main);
   word-break: break-word;
@@ -2291,6 +2321,7 @@ body.light-theme .astuce-tabs {
   padding: 0.65rem 1rem;
   font-size: 0.88rem;
   color: var(--text-muted);
+  font-weight: 400;
   line-height: 1.5;
   border-bottom: 1px solid var(--border);
   word-break: break-word;
