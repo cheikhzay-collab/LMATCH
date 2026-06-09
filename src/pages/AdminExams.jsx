@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Unlock, Library, Eye, EyeOff, Edit, Save, X, FileText, Download, Search, BookOpen, Upload, Trash2, Image, Archive } from 'lucide-react';
+import { Lock, Unlock, Library, Eye, EyeOff, Edit, Save, X, FileText, Download, Search, BookOpen, Upload, Trash2, Image, Archive, BrainCircuit, CheckCircle2, Zap, Lightbulb } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { generateSubjectHTML, generateCorrectionHTML, generateEbookHTML, openPrintWindow } from '../utils/generateExamPDF';
+import { renderWithMath } from '../utils/mathRenderer';
 
 export default function AdminExams() {
   const { exams, toggleExamStatus, updateExamDetails, schools, deleteExam, toggleArchiveExam } = useAuth();
@@ -15,6 +16,7 @@ export default function AdminExams() {
   const [localQuestions, setLocalQuestions] = useState([]);
   const [activeTab, setActiveTab] = useState('details'); // 'details' | 'questions'
   const [selectedQuestionIdx, setSelectedQuestionIdx] = useState(0);
+  const [previewSide, setPreviewSide] = useState('front'); // 'front' | 'back'
 
   const [editName, setEditName] = useState('');
   const [editSchool, setEditSchool] = useState('');
@@ -525,10 +527,10 @@ export default function AdminExams() {
 
               {/* Tab 2: Questions and Split View Editing */}
               {activeTab === 'questions' && (
-                <div style={{ flex: 1, display: 'flex', gap: '1.5rem', overflow: 'hidden', marginBottom: '1.25rem' }}>
+                <div style={{ flex: 1, display: 'flex', gap: '1.25rem', overflow: 'hidden', marginBottom: '1.25rem' }}>
                   
                   {/* Left panel: List of Questions */}
-                  <div style={{ width: '280px', borderRight: '1px solid var(--border)', paddingRight: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto', flexShrink: 0 }}>
+                  <div style={{ width: '220px', borderRight: '1px solid var(--border)', paddingRight: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', overflowY: 'auto', flexShrink: 0 }}>
                     {localQuestions.length === 0 ? (
                       <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', textAlign: 'center', padding: '1rem' }}>Aucune question</p>
                     ) : (
@@ -541,7 +543,7 @@ export default function AdminExams() {
                             onClick={() => setSelectedQuestionIdx(idx)}
                             style={{
                               width: '100%',
-                              padding: '0.75rem 1rem',
+                              padding: '0.65rem 0.85rem',
                               borderRadius: '10px',
                               border: `1px solid ${isSelected ? 'var(--violet)' : 'var(--border)'}`,
                               background: isSelected ? 'rgba(124,58,237,0.1)' : 'rgba(255,255,255,0.02)',
@@ -556,10 +558,10 @@ export default function AdminExams() {
                             }}
                           >
                             <div style={{ minWidth: 0, flex: 1 }}>
-                              <div style={{ fontWeight: 800, fontSize: '0.82rem', color: isSelected ? 'var(--violet)' : 'var(--text-main)' }}>
+                              <div style={{ fontWeight: 800, fontSize: '0.8rem', color: isSelected ? 'var(--violet)' : 'var(--text-main)' }}>
                                 Question {idx + 1}
                               </div>
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
+                              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 2 }}>
                                 {q.topic || 'Général'} · {q.question || 'Vide'}
                               </div>
                             </div>
@@ -572,8 +574,8 @@ export default function AdminExams() {
                     )}
                   </div>
 
-                  {/* Right panel: Question Editor */}
-                  <div style={{ flex: 1, overflowY: 'auto', paddingRight: '6px', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Middle panel: Question Editor */}
+                  <div style={{ flex: '1.2', overflowY: 'auto', paddingRight: '6px', display: 'flex', flexDirection: 'column', gap: '1rem', minWidth: '320px' }}>
                     {localQuestions[selectedQuestionIdx] ? (() => {
                       const q = localQuestions[selectedQuestionIdx];
                       return (
@@ -624,7 +626,7 @@ export default function AdminExams() {
                           {/* Options Editing */}
                           <div>
                             <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>Options de réponse</label>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                               {(q.options || []).map((opt, optIdx) => {
                                 const isString = typeof opt === 'string';
                                 const optId = isString ? ['A','B','C','D','E'][optIdx] : opt.id;
@@ -663,24 +665,24 @@ export default function AdminExams() {
 
                           {/* Astuces & Tricks */}
                           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                            <div style={{ flex: '1 1 240px' }}>
+                            <div style={{ flex: '1 1 200px' }}>
                               <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>Astuce (Explication)</label>
                               <textarea
                                 value={q.astuce || ''}
                                 onChange={(e) => handleUpdateQuestionField(selectedQuestionIdx, 'astuce', e.target.value)}
                                 className="input-control"
-                                rows={3}
+                                rows={2}
                                 style={{ fontSize: '0.82rem', width: '100%', fontFamily: 'inherit', resize: 'vertical' }}
                                 placeholder="Expliquer la résolution..."
                               />
                             </div>
-                            <div style={{ flex: '1 1 240px' }}>
+                            <div style={{ flex: '1 1 200px' }}>
                               <label style={{ display: 'block', marginBottom: '0.4rem', color: 'var(--text-muted)', fontSize: '0.82rem', fontWeight: 600 }}>Trick (Raccourci rapide)</label>
                               <textarea
                                 value={q.trick || ''}
                                 onChange={(e) => handleUpdateQuestionField(selectedQuestionIdx, 'trick', e.target.value)}
                                 className="input-control"
-                                rows={3}
+                                rows={2}
                                 style={{ fontSize: '0.82rem', width: '100%', fontFamily: 'inherit', resize: 'vertical' }}
                                 placeholder="Méthode rapide..."
                               />
@@ -688,12 +690,12 @@ export default function AdminExams() {
                           </div>
 
                           {/* Figure/Image upload */}
-                          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', padding: '1rem', borderRadius: '12px' }}>
+                          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', padding: '0.75rem', borderRadius: '12px' }}>
                             <div style={{ flex: 1 }}>
-                              <div style={{ fontWeight: 700, fontSize: '0.85rem', marginBottom: '0.2rem' }}>Figure ou Graphe</div>
-                              <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>Associer un graphique ou schéma à cette question.</p>
+                              <div style={{ fontWeight: 700, fontSize: '0.82rem', marginBottom: '0.2rem' }}>Figure ou Graphe</div>
+                              <p style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-muted)' }}>Graphique pour cette question.</p>
                               
-                              <div style={{ marginTop: '0.75rem' }}>
+                              <div style={{ marginTop: '0.5rem' }}>
                                 <input 
                                   type="file" 
                                   accept="image/*"
@@ -713,25 +715,23 @@ export default function AdminExams() {
                                 <label 
                                   htmlFor={`upload-img-${q.id || selectedQuestionIdx}`}
                                   className="btn-outline"
-                                  style={{ padding: '0.4rem 0.85rem', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', margin: 0, borderRadius: '8px' }}
+                                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', margin: 0, borderRadius: '8px' }}
                                 >
-                                  <Upload size={14} /> {q.image ? "Remplacer l'image" : "Importer une figure"}
+                                  <Upload size={12} /> {q.image ? "Changer" : "Importer"}
                                 </label>
                               </div>
                             </div>
 
                             {q.image && (
-                              <div style={{ position: 'relative', width: '160px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', background: '#000', flexShrink: 0 }}>
+                              <div style={{ position: 'relative', width: '120px', height: '70px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', background: '#000', flexShrink: 0 }}>
                                 <img src={q.image} alt={`Preview Q${selectedQuestionIdx+1}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                                 <button 
                                   type="button"
                                   onClick={() => handleUpdateQuestionField(selectedQuestionIdx, 'image', null)}
-                                  style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(239,68,68,0.95)', border: 'none', color: '#fff', borderRadius: '50%', width: 22, height: 22, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', transition: 'all 0.15s' }}
+                                  style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(239,68,68,0.95)', border: 'none', color: '#fff', borderRadius: '50%', width: 20, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.3)', transition: 'all 0.15s' }}
                                   title="Supprimer la figure"
-                                  onMouseEnter={e => e.currentTarget.style.background = 'var(--danger)'}
-                                  onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.95)'}
                                 >
-                                  <Trash2 size={12} />
+                                  <Trash2 size={10} />
                                 </button>
                               </div>
                             )}
@@ -740,6 +740,206 @@ export default function AdminExams() {
                       );
                     })() : (
                       <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>Sélectionnez une question pour l'éditer.</p>
+                    )}
+                  </div>
+
+                  {/* Right panel: Live Card Preview */}
+                  <div style={{ flex: '1', borderLeft: '1px solid var(--border)', paddingLeft: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem', overflowY: 'auto', minWidth: '340px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--violet)', display: 'flex', alignItems: 'center', gap: 4 }}>
+                        👁 Aperçu en Direct
+                      </span>
+                      <div style={{ display: 'flex', gap: '4px', background: 'var(--bg-hover)', padding: '2px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewSide('front')}
+                          style={{
+                            padding: '0.3rem 0.6rem',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: previewSide === 'front' ? 'var(--violet)' : 'transparent',
+                            color: previewSide === 'front' ? '#fff' : 'var(--text-muted)',
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          Recto
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPreviewSide('back')}
+                          style={{
+                            padding: '0.3rem 0.6rem',
+                            borderRadius: '6px',
+                            border: 'none',
+                            background: previewSide === 'back' ? 'var(--violet)' : 'transparent',
+                            color: previewSide === 'back' ? '#fff' : 'var(--text-muted)',
+                            fontWeight: 700,
+                            fontSize: '0.72rem',
+                            cursor: 'pointer',
+                            transition: 'all 0.15s'
+                          }}
+                        >
+                          Verso
+                        </button>
+                      </div>
+                    </div>
+
+                    {localQuestions[selectedQuestionIdx] ? (() => {
+                      const q = localQuestions[selectedQuestionIdx];
+                      const cardFontFamily = localStorage.getItem('card_font_family') || 'Computer Modern Serif';
+                      const cardFontSize = localStorage.getItem('card_font_size') || '1rem';
+                      const cardQuestionWeight = localStorage.getItem('card_question_weight') || '400';
+                      const cardAstuceWeight = localStorage.getItem('card_astuce_weight') || '400';
+                      const cardOptionsWeight = localStorage.getItem('card_options_weight') || '500';
+
+                      const cardStyle = {
+                        '--card-font-family': cardFontFamily === 'Inter' ? "'Inter', sans-serif" : cardFontFamily === 'STIX Two Text' ? "'STIX Two Text', serif" : cardFontFamily === 'Times New Roman' ? "'Times New Roman', serif" : "'Computer Modern Serif', Georgia, serif",
+                        '--card-font-size': cardFontSize,
+                        '--card-question-weight': cardQuestionWeight,
+                        '--card-astuce-weight': cardAstuceWeight,
+                        '--card-options-weight': cardOptionsWeight,
+                      };
+
+                      return (
+                        <div 
+                          className="glass-card flashcard-card" 
+                          style={{ 
+                            ...cardStyle, 
+                            padding: '1.25rem',
+                            borderRadius: '16px',
+                            border: '1px solid var(--border)',
+                            background: 'var(--bg-card)',
+                            flexDirection: 'column',
+                            minHeight: '300px',
+                            display: 'flex',
+                            boxSizing: 'border-box'
+                          }}
+                        >
+                          {/* Card Front Side */}
+                          {previewSide === 'front' ? (
+                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                              {/* Topic Badge */}
+                              <div style={{ display: 'flex', marginBottom: '0.8rem' }}>
+                                <span style={{
+                                  padding: '0.25rem 0.6rem',
+                                  fontSize: '0.65rem',
+                                  background: 'var(--violet-soft)',
+                                  color: 'var(--violet)',
+                                  fontWeight: 800,
+                                  borderRadius: '6px',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4
+                                }}>
+                                  <BrainCircuit size={10} />
+                                  {q.topic || q.subject || 'Général'}
+                                </span>
+                              </div>
+
+                              {/* Question */}
+                              <div className="flashcard-question-box" style={{ margin: 0, padding: 0, fontSize: 'calc(1.15 * var(--card-font-size, 1rem))', fontFamily: 'var(--card-font-family)' }}>
+                                {renderWithMath(q.question || 'Saisissez la question...')}
+                              </div>
+
+                              {/* Optional Figure inside preview */}
+                              {q.image && (
+                                <div style={{ margin: '0.75rem 0', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border)', maxHeight: '110px', background: '#000' }}>
+                                  <img src={q.image} alt="Figure" style={{ width: '100%', height: '110px', objectFit: 'contain' }} />
+                                </div>
+                              )}
+
+                              {/* Options */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '1rem' }}>
+                                {(q.options || []).map((opt, optIdx) => {
+                                  const isString = typeof opt === 'string';
+                                  const optId = isString ? ['A','B','C','D','E'][optIdx] : opt.id;
+                                  const optText = isString ? opt : (opt.text || '');
+                                  const isCorrect = q.correct_answer === optId;
+                                  return (
+                                    <div 
+                                      key={optId} 
+                                      className={`option-btn ${isCorrect ? 'correct' : ''}`}
+                                      style={{ 
+                                        pointerEvents: 'none', 
+                                        margin: 0, 
+                                        padding: '0.45rem 0.65rem', 
+                                        minHeight: 'auto',
+                                        borderRadius: '8px',
+                                        fontSize: 'calc(0.9 * var(--card-font-size, 1rem))',
+                                      }}
+                                    >
+                                      <div className="option-letter" style={{ width: 22, height: 22, fontSize: '0.7rem', borderRadius: '6px' }}>
+                                        {optId}
+                                      </div>
+                                      <div style={{ flex: 1, minWidth: 0, color: isCorrect ? 'var(--emerald)' : 'var(--text-main)', fontWeight: isCorrect ? 'bold' : 'normal' }}>
+                                        {renderWithMath(optText || '...')}
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          ) : (
+                            /* Card Back Side */
+                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                              {/* Correct Option banner */}
+                              <div 
+                                className="flashcard-banner correct" 
+                                style={{ 
+                                  padding: '0.5rem 0.8rem', 
+                                  borderRadius: '8px', 
+                                  fontSize: '0.8rem', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  gap: 6, 
+                                  marginBottom: '0.75rem',
+                                  background: 'rgba(16,185,129,0.08)',
+                                  border: '1px solid var(--emerald)',
+                                  color: 'var(--emerald)'
+                                }}
+                              >
+                                <CheckCircle2 size={14} />
+                                <span>Option correcte : <strong>{q.correct_answer || '—'}</strong></span>
+                              </div>
+
+                              {/* Question reference */}
+                              <div className="flashcard-question-ref" style={{ marginBottom: '0.75rem', fontSize: 'calc(0.85 * var(--card-font-size, 1rem))', fontFamily: 'var(--card-font-family)' }}>
+                                {renderWithMath(q.question || '')}
+                              </div>
+
+                              {/* Astuce tab simulation */}
+                              <div style={{ marginTop: 'auto' }}>
+                                {q.astuce && (
+                                  <div style={{ marginBottom: '0.75rem' }}>
+                                    <div style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--violet)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <Lightbulb size={12} /> Astuce / Explication
+                                    </div>
+                                    <div className="astuce-match-content" style={{ fontSize: 'calc(0.88 * var(--card-font-size, 1rem))', padding: '0.5rem 0.65rem', borderLeft: '2px solid var(--violet)', background: 'rgba(255,255,255,0.015)' }}>
+                                      {renderWithMath(q.astuce)}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {q.trick && (
+                                  <div>
+                                    <div style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--emerald)', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                      <Zap size={12} /> Trick (Raccourci)
+                                    </div>
+                                    <div className="astuce-match-content" style={{ fontSize: 'calc(0.88 * var(--card-font-size, 1rem))', padding: '0.5rem 0.65rem', borderLeft: '2px solid var(--emerald)', background: 'rgba(255,255,255,0.015)' }}>
+                                      {renderWithMath(q.trick)}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })() : (
+                      <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>Sélectionnez une question pour voir l'aperçu.</p>
                     )}
                   </div>
 
