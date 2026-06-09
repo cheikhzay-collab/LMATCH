@@ -2077,20 +2077,28 @@ body.light-theme .astuce-tabs {
 
 .flashcard-card .flashcard-question-box {
   font-weight: var(--card-question-weight, 400) !important;
+  font-size: calc(1.25 * var(--card-font-size, 1rem)) !important;
 }
 
 .flashcard-card .flashcard-context-text {
   font-weight: var(--card-question-weight, 400) !important;
+  font-size: calc(1.35 * var(--card-font-size, 1rem)) !important;
+}
+
+.flashcard-card .flashcard-question-ref {
+  font-size: calc(0.95 * var(--card-font-size, 1rem)) !important;
 }
 
 .flashcard-card .option-btn {
   font-weight: var(--card-options-weight, 500) !important;
   font-family: var(--card-font-family, 'Computer Modern Serif', 'STIX Two Text', Georgia, serif) !important;
+  font-size: calc(0.95 * var(--card-font-size, 1rem)) !important;
 }
 
 .flashcard-card .astuce-match-content {
   font-weight: var(--card-astuce-weight, 400) !important;
   font-family: var(--card-font-family, 'Computer Modern Serif', 'STIX Two Text', Georgia, serif) !important;
+  font-size: var(--card-font-size, 1rem) !important;
 }
 
 .flashcard-main-layout {
@@ -2231,22 +2239,31 @@ body.light-theme .astuce-tabs {
   font-family: var(--card-font-family, 'Computer Modern Serif', 'STIX Two Text', Georgia, serif) !important;
 }
 
-.mfc-phase .mfc-question, .mfc-phase .mfc-question-ref {
+.mfc-phase .mfc-question {
   font-weight: var(--card-question-weight, 400) !important;
+  font-size: calc(1.1 * var(--card-font-size, 1rem)) !important;
+}
+
+.mfc-phase .mfc-question-ref {
+  font-weight: var(--card-question-weight, 400) !important;
+  font-size: calc(0.88 * var(--card-font-size, 1rem)) !important;
 }
 
 .mfc-phase .mfc-context-body {
   font-weight: var(--card-question-weight, 400) !important;
+  font-size: calc(0.9 * var(--card-font-size, 1rem)) !important;
 }
 
 .mfc-phase .mfc-opt {
   font-weight: var(--card-options-weight, 500) !important;
   font-family: var(--card-font-family, 'Computer Modern Serif', 'STIX Two Text', Georgia, serif) !important;
+  font-size: calc(0.95 * var(--card-font-size, 1rem)) !important;
 }
 
 .mfc-phase .mfc-astuce-body {
   font-weight: var(--card-astuce-weight, 400) !important;
   font-family: var(--card-font-family, 'Computer Modern Serif', 'STIX Two Text', Georgia, serif) !important;
+  font-size: calc(0.96 * var(--card-font-size, 1rem)) !important;
 }
 
 @media (max-height: 680px) {

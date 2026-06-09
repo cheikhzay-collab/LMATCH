@@ -77,6 +77,7 @@ export default function AdminSettings() {
   const [cardReveal, setCardReveal] = useState(() => localStorage.getItem('card_reveal_mode') || 'flip');
   const [cardSwipe,  setCardSwipe]  = useState(() => localStorage.getItem('card_swipe_gesture') !== 'false');
   const [cardFontFamily, setCardFontFamily] = useState(() => localStorage.getItem('card_font_family') || 'Computer Modern Serif');
+  const [cardFontSize, setCardFontSize] = useState(() => localStorage.getItem('card_font_size') || '1rem');
   const [cardQuestionWeight, setCardQuestionWeight] = useState(() => localStorage.getItem('card_question_weight') || '400');
   const [cardAstuceWeight, setCardAstuceWeight] = useState(() => localStorage.getItem('card_astuce_weight') || '400');
   const [cardOptionsWeight, setCardOptionsWeight] = useState(() => localStorage.getItem('card_options_weight') || '400');
@@ -88,6 +89,7 @@ export default function AdminSettings() {
       cardFlipEnabled: cardFlip,
       cardSwipeEnabled: cardSwipe,
       cardFontFamily,
+      cardFontSize,
       cardQuestionWeight,
       cardAstuceWeight,
       cardOptionsWeight
@@ -600,6 +602,25 @@ export default function AdminSettings() {
                     <option value="STIX Two Text">STIX Two Text (Littéraire Serif)</option>
                     <option value="Times New Roman">Times New Roman (Classique)</option>
                     <option value="Inter">Inter (Moderne Sans-Serif)</option>
+                  </select>
+                </div>
+
+                {/* Font Size */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-subtle)' }}>
+                    Taille de la police
+                  </label>
+                  <select
+                    value={cardFontSize}
+                    onChange={e => setCardFontSize(e.target.value)}
+                    className="input-control"
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    <option value="0.82rem">Petite (0.82rem)</option>
+                    <option value="0.9rem">Compacte (0.9rem)</option>
+                    <option value="1rem">Normale (1rem — défaut)</option>
+                    <option value="1.08rem">Grande (1.08rem)</option>
+                    <option value="1.18rem">Très grande (1.18rem)</option>
                   </select>
                 </div>
 

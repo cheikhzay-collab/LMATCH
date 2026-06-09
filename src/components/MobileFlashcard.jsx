@@ -36,6 +36,7 @@ export default function MobileFlashcard({ card, onNext }) {
   const cardFlipEnabled = localStorage.getItem('card_flip_animation') !== 'false';
   const cardSwipeEnabled = localStorage.getItem('card_swipe_gesture')  !== 'false';
   const cardFontFamily = localStorage.getItem('card_font_family') || 'Computer Modern Serif';
+  const cardFontSize = localStorage.getItem('card_font_size') || '1rem';
   const cardQuestionWeight = localStorage.getItem('card_question_weight') || '400';
   const cardAstuceWeight = localStorage.getItem('card_astuce_weight') || '400';
   const cardOptionsWeight = localStorage.getItem('card_options_weight') || '500';
@@ -154,6 +155,7 @@ export default function MobileFlashcard({ card, onNext }) {
     transformStyle: isFlipMode ? 'preserve-3d' : 'flat',
     perspective: isFlipMode ? '1200px' : 'none',
     '--card-font-family': cardFontFamily === 'Inter' ? "'Inter', sans-serif" : cardFontFamily === 'STIX Two Text' ? "'STIX Two Text', serif" : cardFontFamily === 'Times New Roman' ? "'Times New Roman', serif" : "'Computer Modern Serif', Georgia, serif",
+    '--card-font-size': cardFontSize,
     '--card-question-weight': cardQuestionWeight,
     '--card-astuce-weight': cardAstuceWeight,
     '--card-options-weight': cardOptionsWeight,
