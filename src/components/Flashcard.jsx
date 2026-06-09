@@ -7,6 +7,10 @@ export default function Flashcard({ card, onNext }) {
   const cardRevealMode  = localStorage.getItem('card_reveal_mode')    || 'flip';
   const cardFlipEnabled = localStorage.getItem('card_flip_animation') !== 'false';
   const cardSwipeEnabled = localStorage.getItem('card_swipe_gesture')  !== 'false';
+  const cardFontFamily = localStorage.getItem('card_font_family') || 'Computer Modern Serif';
+  const cardQuestionWeight = localStorage.getItem('card_question_weight') || '400';
+  const cardAstuceWeight = localStorage.getItem('card_astuce_weight') || '400';
+  const cardOptionsWeight = localStorage.getItem('card_options_weight') || '500';
 
   const isFlipMode    = cardRevealMode === 'flip' && cardFlipEnabled;
   const isInstantMode = cardRevealMode === 'instant';
@@ -153,6 +157,10 @@ export default function Flashcard({ card, onNext }) {
     const base = {
       transformStyle: isFlipMode ? 'preserve-3d' : 'flat',
       cursor: isShowingBack && cardSwipeEnabled ? (isDragging ? 'grabbing' : 'grab') : 'default',
+      '--card-font-family': cardFontFamily === 'Inter' ? "'Inter', sans-serif" : cardFontFamily === 'STIX Two Text' ? "'STIX Two Text', serif" : cardFontFamily === 'Times New Roman' ? "'Times New Roman', serif" : "'Computer Modern Serif', Georgia, serif",
+      '--card-question-weight': cardQuestionWeight,
+      '--card-astuce-weight': cardAstuceWeight,
+      '--card-options-weight': cardOptionsWeight,
     };
 
     // ── Swipe-exit animation (inline for non-flip modes to bypass CSS !important) ──

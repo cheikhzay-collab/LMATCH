@@ -163,6 +163,10 @@ export function AuthProvider({ children }) {
     localStorage.setItem('card_reveal_mode', settings.cardRevealMode);
     localStorage.setItem('card_flip_animation', String(settings.cardFlipEnabled));
     localStorage.setItem('card_swipe_gesture', String(settings.cardSwipeEnabled));
+    localStorage.setItem('card_font_family', settings.cardFontFamily || 'Computer Modern Serif');
+    localStorage.setItem('card_question_weight', settings.cardQuestionWeight || '400');
+    localStorage.setItem('card_astuce_weight', settings.cardAstuceWeight || '400');
+    localStorage.setItem('card_options_weight', settings.cardOptionsWeight || '400');
   };
 
   const updatePdfSettingsConfig = async (settings) => {
@@ -1295,13 +1299,29 @@ export function AuthProvider({ children }) {
           localStorage.setItem('card_reveal_mode', flashcardConfig.cardRevealMode || 'flip');
           localStorage.setItem('card_flip_animation', String(flashcardConfig.cardFlipEnabled !== false));
           localStorage.setItem('card_swipe_gesture', String(flashcardConfig.cardSwipeEnabled !== false));
+          localStorage.setItem('card_font_family', flashcardConfig.cardFontFamily || 'Computer Modern Serif');
+          localStorage.setItem('card_question_weight', flashcardConfig.cardQuestionWeight || '400');
+          localStorage.setItem('card_astuce_weight', flashcardConfig.cardAstuceWeight || '400');
+          localStorage.setItem('card_options_weight', flashcardConfig.cardOptionsWeight || '400');
         } else {
           // Seed default settings if not exists in DB
-          await saveFlashcardSettingsConfig({
+          const defaultFlashcard = {
             cardRevealMode: 'flip',
             cardFlipEnabled: true,
-            cardSwipeEnabled: true
-          });
+            cardSwipeEnabled: true,
+            cardFontFamily: 'Computer Modern Serif',
+            cardQuestionWeight: '400',
+            cardAstuceWeight: '400',
+            cardOptionsWeight: '400'
+          };
+          await saveFlashcardSettingsConfig(defaultFlashcard);
+          localStorage.setItem('card_reveal_mode', defaultFlashcard.cardRevealMode);
+          localStorage.setItem('card_flip_animation', String(defaultFlashcard.cardFlipEnabled));
+          localStorage.setItem('card_swipe_gesture', String(defaultFlashcard.cardSwipeEnabled));
+          localStorage.setItem('card_font_family', defaultFlashcard.cardFontFamily);
+          localStorage.setItem('card_question_weight', defaultFlashcard.cardQuestionWeight);
+          localStorage.setItem('card_astuce_weight', defaultFlashcard.cardAstuceWeight);
+          localStorage.setItem('card_options_weight', defaultFlashcard.cardOptionsWeight);
         }
 
         // Fetch PDF Settings

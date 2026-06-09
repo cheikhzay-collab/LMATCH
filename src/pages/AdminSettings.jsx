@@ -76,13 +76,21 @@ export default function AdminSettings() {
   const [cardFlip,   setCardFlip]   = useState(() => localStorage.getItem('card_flip_animation') !== 'false');
   const [cardReveal, setCardReveal] = useState(() => localStorage.getItem('card_reveal_mode') || 'flip');
   const [cardSwipe,  setCardSwipe]  = useState(() => localStorage.getItem('card_swipe_gesture') !== 'false');
+  const [cardFontFamily, setCardFontFamily] = useState(() => localStorage.getItem('card_font_family') || 'Computer Modern Serif');
+  const [cardQuestionWeight, setCardQuestionWeight] = useState(() => localStorage.getItem('card_question_weight') || '400');
+  const [cardAstuceWeight, setCardAstuceWeight] = useState(() => localStorage.getItem('card_astuce_weight') || '400');
+  const [cardOptionsWeight, setCardOptionsWeight] = useState(() => localStorage.getItem('card_options_weight') || '400');
   const [cardSaved,  setCardSaved]  = useState(false);
 
   const saveCardSettings = async () => {
     await updateFlashcardSettingsConfig({
       cardRevealMode: cardReveal,
       cardFlipEnabled: cardFlip,
-      cardSwipeEnabled: cardSwipe
+      cardSwipeEnabled: cardSwipe,
+      cardFontFamily,
+      cardQuestionWeight,
+      cardAstuceWeight,
+      cardOptionsWeight
     });
     setCardSaved(true);
     setTimeout(() => setCardSaved(false), 2500);
@@ -568,6 +576,88 @@ export default function AdminSettings() {
                   boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                 }} />
               </button>
+            </div>
+
+            {/* Card Typography Configurations */}
+            <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+              <p style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <Sliders size={15} /> Personnalisation de la typographie des cartes
+              </p>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                {/* Font Family */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-subtle)' }}>
+                    Police typographique des cartes
+                  </label>
+                  <select
+                    value={cardFontFamily}
+                    onChange={e => setCardFontFamily(e.target.value)}
+                    className="input-control"
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    <option value="Computer Modern Serif">Computer Modern Serif (Scientifique)</option>
+                    <option value="STIX Two Text">STIX Two Text (Littéraire Serif)</option>
+                    <option value="Times New Roman">Times New Roman (Classique)</option>
+                    <option value="Inter">Inter (Moderne Sans-Serif)</option>
+                  </select>
+                </div>
+
+                {/* Question Weight */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-subtle)' }}>
+                    Épaisseur du texte des Questions
+                  </label>
+                  <select
+                    value={cardQuestionWeight}
+                    onChange={e => setCardQuestionWeight(e.target.value)}
+                    className="input-control"
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    <option value="400">Normal (400)</option>
+                    <option value="500">Moyen (500)</option>
+                    <option value="600">Demi-gras (600)</option>
+                    <option value="700">Gras (700)</option>
+                  </select>
+                </div>
+
+                {/* Options Weight */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-subtle)' }}>
+                    Épaisseur du texte des Options
+                  </label>
+                  <select
+                    value={cardOptionsWeight}
+                    onChange={e => setCardOptionsWeight(e.target.value)}
+                    className="input-control"
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    <option value="400">Normal (400)</option>
+                    <option value="500">Moyen (500)</option>
+                    <option value="600">Demi-gras (600)</option>
+                    <option value="700">Gras (700)</option>
+                  </select>
+                </div>
+
+                {/* Astuce Weight */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-subtle)' }}>
+                    Épaisseur du texte des Astuces / Solutions
+                  </label>
+                  <select
+                    value={cardAstuceWeight}
+                    onChange={e => setCardAstuceWeight(e.target.value)}
+                    className="input-control"
+                    style={{ fontSize: '0.85rem' }}
+                  >
+                    <option value="400">Normal (400)</option>
+                    <option value="500">Moyen (500)</option>
+                    <option value="600">Demi-gras (600)</option>
+                    <option value="700">Gras (700)</option>
+                  </select>
+                </div>
+
+              </div>
             </div>
 
           </div>

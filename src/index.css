@@ -2072,6 +2072,25 @@ body.light-theme .astuce-tabs {
   display: flex;
   overflow: hidden;
   align-items: stretch;
+  font-family: var(--card-font-family, 'Computer Modern Serif', 'STIX Two Text', Georgia, serif) !important;
+}
+
+.flashcard-card .flashcard-question-box {
+  font-weight: var(--card-question-weight, 400) !important;
+}
+
+.flashcard-card .flashcard-context-text {
+  font-weight: var(--card-question-weight, 400) !important;
+}
+
+.flashcard-card .option-btn {
+  font-weight: var(--card-options-weight, 500) !important;
+  font-family: var(--card-font-family, 'Computer Modern Serif', 'STIX Two Text', Georgia, serif) !important;
+}
+
+.flashcard-card .astuce-match-content {
+  font-weight: var(--card-astuce-weight, 400) !important;
+  font-family: var(--card-font-family, 'Computer Modern Serif', 'STIX Two Text', Georgia, serif) !important;
 }
 
 .flashcard-main-layout {
@@ -2209,6 +2228,25 @@ body.light-theme .astuce-tabs {
   box-shadow: 0 8px 32px rgba(0,0,0,0.18);
   min-height: 480px; /* Dynamic height with a clean minimum baseline */
   height: auto;
+  font-family: var(--card-font-family, 'Computer Modern Serif', 'STIX Two Text', Georgia, serif) !important;
+}
+
+.mfc-phase .mfc-question, .mfc-phase .mfc-question-ref {
+  font-weight: var(--card-question-weight, 400) !important;
+}
+
+.mfc-phase .mfc-context-body {
+  font-weight: var(--card-question-weight, 400) !important;
+}
+
+.mfc-phase .mfc-opt {
+  font-weight: var(--card-options-weight, 500) !important;
+  font-family: var(--card-font-family, 'Computer Modern Serif', 'STIX Two Text', Georgia, serif) !important;
+}
+
+.mfc-phase .mfc-astuce-body {
+  font-weight: var(--card-astuce-weight, 400) !important;
+  font-family: var(--card-font-family, 'Computer Modern Serif', 'STIX Two Text', Georgia, serif) !important;
 }
 
 @media (max-height: 680px) {
