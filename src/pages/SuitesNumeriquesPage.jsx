@@ -475,7 +475,9 @@ export default function SuitesNumeriquesPage() {
         @media print {
           body {
             background: #ffffff !important;
-            color: #000000 !important;
+            color: #1a202c !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
           }
           .suites-page-container {
             padding: 0 !important;
@@ -486,32 +488,61 @@ export default function SuitesNumeriquesPage() {
             display: none !important;
           }
           .sheet-container {
-            border: none !important;
+            border: 1px solid #005086 !important;
+            border-radius: 12px !important;
             box-shadow: none !important;
             background: #ffffff !important;
-            color: #000000 !important;
+            display: flex !important;
+            min-height: auto !important;
+            overflow: visible !important;
           }
           .sheet-sidebar {
-            display: none !important;
+            display: flex !important;
+            width: 80px !important;
+            background: rgba(0, 80, 134, 0.03) !important;
+            border-right: 1.5px solid rgba(0, 80, 134, 0.15) !important;
+            padding: 2rem 0 !important;
+            gap: 1.5rem !important;
+            flex-shrink: 0 !important;
+          }
+          .vertical-tab {
+            display: block !important;
+            width: 44px !important;
+            padding: 1.5rem 0.5rem !important;
+            border-radius: 8px !important;
+            font-size: 0.8rem !important;
+            font-weight: 800 !important;
+            writing-mode: vertical-rl !important;
+            text-orientation: mixed !important;
+            text-align: center !important;
+          }
+          .vertical-tab.active-tab {
+            background: #005086 !important;
+            color: #ffffff !important;
+            border-color: #005086 !important;
           }
           .sheet-body {
-            padding: 0 !important;
+            padding: 2.5rem !important;
             background: #ffffff !important;
-            font-family: 'Times New Roman', Times, serif !important;
+            flex: 1 !important;
           }
           .exercise-body-box {
-            background: #ffffff !important;
-            border: 1px solid #000000 !important;
-            border-left: 4px solid #000000 !important;
+            background: rgba(0, 80, 134, 0.02) !important;
+            border: 1px solid rgba(0, 80, 134, 0.1) !important;
+            border-left: 4px solid #005086 !important;
           }
           .sheet-table {
-            border: 1px solid #000000 !important;
+            border: 1px solid rgba(0, 80, 134, 0.2) !important;
           }
           .sheet-table th, .sheet-table td {
-            border: 1px solid #000000 !important;
+            border: 1px solid rgba(0, 80, 134, 0.2) !important;
           }
           .subsection-card {
-            border: 1px solid #000000 !important;
+            border: 1.5px solid #005086 !important;
+            background: rgba(0, 80, 134, 0.01) !important;
+          }
+          .interactive-form {
+            display: none !important;
           }
         }
       `}</style>
