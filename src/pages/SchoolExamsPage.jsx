@@ -351,7 +351,8 @@ export default function SchoolExamsPage() {
                               window.open(exam.pdfUrl, '_blank');
                             } else {
                               import('../utils/generateExamPDF').then(({ generateSubjectHTML, openPrintWindow }) => {
-                                const html = generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id });
+                                const schoolsList = Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
+                                const html = generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
                                 openPrintWindow(html);
                               });
                             }
@@ -373,7 +374,8 @@ export default function SchoolExamsPage() {
                           className="btn-outline"
                           onClick={() => {
                             import('../utils/generateExamPDF').then(({ generateCorrectionHTML, openPrintWindow }) => {
-                              const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id });
+                              const schoolsList = Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
+                              const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
                               openPrintWindow(html);
                             });
                           }}

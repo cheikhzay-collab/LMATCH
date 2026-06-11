@@ -296,6 +296,19 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
   const templateCSS = getTemplateStyles(templateStyle, fontFamilyCSS);
   const shouldShowCover = templateStyle === 'compact_eco' ? false : showCover;
 
+  let schools = settings.schoolsList || ['ENSA', 'ENSAM', 'ENCG', 'Médecine / Pharmacie', 'INPT', 'INSEA'];
+  if (school && !schools.some(s => s.toLowerCase() === school.toLowerCase())) {
+    schools = [school, ...schools];
+  }
+  const sidebarTabsHtml = schools.map(sch => {
+    const isActive = sch.toLowerCase() === school.toLowerCase();
+    const activeClass = isActive ? ' active-tab' : '';
+    let displayName = sch;
+    if (sch === 'Médecine / Pharmacie') displayName = 'Médecine';
+    if (displayName.includes('Général')) displayName = 'Prépa';
+    return `<div class="print-vertical-tab${activeClass}">${displayName}</div>`;
+  }).join('');
+
   if (typeof window !== 'undefined' && window.localStorage) {
     if (!profName) profName = localStorage.getItem('profName') || '';
     if (!profPhone) profPhone = localStorage.getItem('profPhone') || '';
@@ -1530,7 +1543,7 @@ ${templateCSS}
 .omr-page .print-sidebar {
   display: none !important;
 }
-</style></head><body><div class="print-sidebar"><div class="print-vertical-tab">${school}</div></div>
+</style></head><body><div class="print-sidebar">${sidebarTabsHtml}</div>
 
 <!-- PRE-PRINT INSTRUCTION BANNER -->
 <div class="print-hint" id="printHint">
@@ -1692,6 +1705,19 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
   const templateStyle = pdfConf.templateStyle || 'classic_latex';
   const templateCSS = getTemplateStyles(templateStyle, fontFamilyCSS);
   const shouldShowCover = templateStyle === 'compact_eco' ? false : showCover;
+
+  let schools = settings.schoolsList || ['ENSA', 'ENSAM', 'ENCG', 'Médecine / Pharmacie', 'INPT', 'INSEA'];
+  if (school && !schools.some(s => s.toLowerCase() === school.toLowerCase())) {
+    schools = [school, ...schools];
+  }
+  const sidebarTabsHtml = schools.map(sch => {
+    const isActive = sch.toLowerCase() === school.toLowerCase();
+    const activeClass = isActive ? ' active-tab' : '';
+    let displayName = sch;
+    if (sch === 'Médecine / Pharmacie') displayName = 'Médecine';
+    if (displayName.includes('Général')) displayName = 'Prépa';
+    return `<div class="print-vertical-tab${activeClass}">${displayName}</div>`;
+  }).join('');
 
   const compactHeaderHtml = templateStyle === 'compact_eco' ? `
 <div class="compact-header-box">
@@ -2907,7 +2933,7 @@ ${templateCSS}
 .omr-page .print-sidebar {
   display: none !important;
 }
-</style></head><body><div class="print-sidebar"><div class="print-vertical-tab">${school}</div></div>
+</style></head><body><div class="print-sidebar">${sidebarTabsHtml}</div>
 
 <!-- PRE-PRINT INSTRUCTION BANNER -->
 <div class="print-hint" id="printHint">
