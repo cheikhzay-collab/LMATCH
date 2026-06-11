@@ -502,50 +502,89 @@ export default function MockExamMode() {
 
             {/* Scrollable Question and Options Area */}
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', paddingRight: '4px', marginBottom: '0.5rem' }}>
-              <div className="question-box" style={{ 
-                fontSize: '1.15rem', 
-                fontWeight: 700, 
-                marginBottom: '1.5rem', 
-                lineHeight: '1.6', 
-                color: 'var(--text-main)',
-                letterSpacing: '-0.01em',
-                flexShrink: 0 
-              }}>
-                {renderWithMath(currentQuestion.question)}
-              </div>
+              {(() => {
+                const pos = currentQuestion.imagePosition || 'below_statement';
+                const sizeH = {
+                  small: '90px',
+                  medium: '150px',
+                  large: '220px',
+                  xlarge: '320px'
+                }[currentQuestion.imageSize || 'medium'];
 
-              {currentQuestion.image && (
-                <div style={{ 
-                  borderRadius: '10px', 
-                  overflow: 'hidden', 
-                  border: '1px solid var(--border)', 
-                  background: 'rgba(0,0,0,0.15)', 
-                  padding: '0.4rem', 
-                  marginBottom: '1rem',
-                  maxWidth: '100%', 
-                  display: 'flex', 
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  flexShrink: 0
-                }}>
-                  <img 
-                    src={currentQuestion.image} 
-                    alt="Question diagram" 
-                    style={{ 
-                      maxHeight: '140px', 
-                      maxWidth: '100%', 
-                      borderRadius: '6px', 
-                      objectFit: 'contain',
-                      cursor: 'pointer',
-                      transition: 'transform 0.2s'
-                    }} 
-                    onClick={() => setSelectedImageZoom(currentQuestion.image)}
-                    title="Cliquez pour agrandir"
-                    onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                    onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
-                  />
-                </div>
-              )}
+                const imageEl = currentQuestion.image && (
+                  <div style={{ 
+                    borderRadius: '10px', 
+                    overflow: 'hidden', 
+                    border: {
+                      transparent: 'none',
+                      white: '1px solid #e2e8f0',
+                      dark: '1px solid rgba(255,255,255,0.08)'
+                    }[currentQuestion.imageBg || 'transparent'],
+                    background: {
+                      transparent: 'transparent',
+                      white: '#ffffff',
+                      dark: '#121214'
+                    }[currentQuestion.imageBg || 'transparent'],
+                    padding: currentQuestion.imageBg === 'transparent' ? 0 : '0.4rem', 
+                    maxWidth: '100%', 
+                    display: 'flex', 
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    flexShrink: 0,
+                    height: sizeH,
+                    width: pos === 'side_by_side' ? '40%' : '100%',
+                    marginBottom: pos === 'side_by_side' ? 0 : '1.25rem',
+                    marginTop: pos === 'below_statement' ? '1.25rem' : 0
+                  }}>
+                    <img 
+                      src={currentQuestion.image} 
+                      alt="Question diagram" 
+                      style={{ 
+                        height: '100%', 
+                        maxWidth: '100%', 
+                        borderRadius: '6px', 
+                        objectFit: 'contain',
+                        cursor: 'pointer',
+                        transition: 'transform 0.2s'
+                      }} 
+                      onClick={() => setSelectedImageZoom(currentQuestion.image)}
+                      title="Cliquez pour agrandir"
+                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                      onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+                    />
+                  </div>
+                );
+
+                const statementEl = (
+                  <div className="question-box" style={{ 
+                    fontSize: '1.15rem', 
+                    fontWeight: 700, 
+                    lineHeight: '1.6', 
+                    color: 'var(--text-main)',
+                    letterSpacing: '-0.01em',
+                    flex: 1
+                  }}>
+                    {renderWithMath(currentQuestion.question)}
+                  </div>
+                );
+
+                if (pos === 'side_by_side' && currentQuestion.image) {
+                  return (
+                    <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', marginBottom: '1.5rem', flexShrink: 0 }}>
+                      {statementEl}
+                      {imageEl}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', flexShrink: 0, marginBottom: '1.5rem' }}>
+                    {pos === 'above_statement' && imageEl}
+                    {statementEl}
+                    {pos === 'below_statement' && imageEl}
+                  </div>
+                );
+              })()}
 
               <div className="options-grid" style={{ gap: '0.5rem' }}>
                 {currentQuestion.options.map((opt) => {

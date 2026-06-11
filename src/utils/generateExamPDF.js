@@ -210,6 +210,33 @@ const groupBySubject = (questions) => {
   return groups;
 };
 
+const renderQuestionImageHTML = (q, placement) => {
+  if (!q.image) return '';
+  const pos = q.imagePosition || 'below_statement';
+  if (placement === 'side' && pos !== 'side_by_side') return '';
+  if (placement === 'above' && pos !== 'above_statement') return '';
+  if (placement === 'below' && pos !== 'below_statement' && pos !== 'top' && pos !== 'bottom') return '';
+
+  const sizeH = {
+    small: '90px',
+    medium: '110px',
+    large: '180px',
+    xlarge: '260px'
+  }[q.imageSize || 'medium'];
+
+  let bgCSS = '';
+  if (q.imageBg === 'white') {
+    bgCSS = 'background-color: #ffffff; padding: 6px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box;';
+  } else if (q.imageBg === 'dark') {
+    bgCSS = 'background-color: #0f172a; padding: 6px; border-radius: 8px; border: 1px solid #334155; box-sizing: border-box;';
+  }
+
+  if (pos === 'side_by_side') {
+    return `<div style="float: right; margin-left: 15px; margin-bottom: 10px; max-width: 35%; display: block; text-align: center; ${bgCSS}"><img src="${q.image}" style="max-height: ${sizeH}; max-width: 100%; display: inline-block; object-fit: contain;" /></div>`;
+  }
+  return `<div style="margin: 8px 0 10px 0; display: block; text-align: center; clear: both; ${bgCSS}"><img src="${q.image}" style="max-height: ${sizeH}; max-width: 100%; display: inline-block; object-fit: contain;" /></div>`;
+};
+
 /* ── Normalize option text ── */
 const optText = (opt) => {
   const raw = typeof opt === 'string' ? opt : (opt?.text || '');
@@ -442,8 +469,9 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
             <span class="qnum">Q${num}</span>
             <span class="src-tag">${subject.toUpperCase()}</span>
           </div>
-          <div class="qtext">${renderMath(q.question || '')}</div>
-          ${q.image ? `<div style="margin: 6px 0 8px 0; display: block; text-align: center;"><img src="${q.image}" style="max-height: 110px; max-width: 100%; display: inline-block; object-fit: contain;" /></div>` : ''}
+          ${renderQuestionImageHTML(q, 'above')}
+          <div class="qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
+          ${renderQuestionImageHTML(q, 'below')}
           <div class="opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
         </div>`;
       }).join('')}
@@ -1707,9 +1735,10 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
         <span class="src-tag">${subject.toUpperCase()}</span>
         <span class="ans-badge">Réponse : <b>${q.correct_answer || '?'}</b></span>
       </div>
-      <div class="qtext">${renderMath(q.question)}</div>
-      ${q.context ? `<div class="ctx-box">📋 ${renderMath(q.context)}</div>` : ''}
-      ${q.image ? `<div style="margin: 6px 0 8px 0; display: block; text-align: center;"><img src="${q.image}" style="max-height: 110px; max-width: 100%; display: inline-block; object-fit: contain;" /></div>` : ''}
+      ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)}</div>` : ''}
+      ${renderQuestionImageHTML(q, 'above')}
+      <div class="qtext" style="margin-top: 4px;">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
+      ${renderQuestionImageHTML(q, 'below')}
       <div class="opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
       ${q.astuce ? `<div class="rule-box">
         <div class="rule-title">⭐ RÈGLE DE L'ART</div>
@@ -2814,8 +2843,9 @@ export const generateEbookHTML = (topic, questionsWithSource, settings = {}) => 
         ${sourceTag}
         <span class="ans-badge">Réponse : ${q.correct_answer || '?'}</span>
       </div>
-      <div class="qtext">${renderMath(q.question || '')}</div>
-      ${q.image ? `<div style="margin: 6px 0 8px 0; display: block; text-align: center;"><img src="${q.image}" style="max-height: 110px; max-width: 100%; display: inline-block; object-fit: contain;" /></div>` : ''}
+      ${renderQuestionImageHTML(q, 'above')}
+      <div class="qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
+      ${renderQuestionImageHTML(q, 'below')}
       <div class="opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
       ${q.astuce ? `<div class="rule-box">
         <div class="rule-title">⭐ RÈGLE DE L'ART</div>

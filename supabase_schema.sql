@@ -42,10 +42,10 @@ END;
 $$;
 
 -- Profiles policies (secure, no deprecated auth.role())
-DROP POLICY IF EXISTS "Users can view their own profile." ON public.profiles;
-DROP POLICY IF EXISTS "Users can update their own profile." ON public.profiles;
-DROP POLICY IF EXISTS "Users can insert their own profile." ON public.profiles;
-DROP POLICY IF EXISTS "Authenticated users can view all profiles." ON public.profiles;
+DROP POLICY IF EXISTS "Users can view their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Admins can do everything on profiles." ON public.profiles;
 
 CREATE POLICY "Users can view their own profile"
   ON public.profiles FOR SELECT
@@ -121,6 +121,9 @@ CREATE TABLE IF NOT EXISTS public.config (
 
 ALTER TABLE public.config ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can read configs." ON public.config;
+DROP POLICY IF EXISTS "Admins can write configs." ON public.config;
+
 CREATE POLICY "Anyone can read configs." ON public.config
   FOR SELECT USING (true);
 
@@ -144,6 +147,9 @@ CREATE TABLE IF NOT EXISTS public.exams (
 
 ALTER TABLE public.exams ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Anyone can view active and non-archived exams." ON public.exams;
+DROP POLICY IF EXISTS "Admins can manage exams." ON public.exams;
+
 CREATE POLICY "Anyone can view active and non-archived exams." ON public.exams
   FOR SELECT USING (true);
 
@@ -163,8 +169,9 @@ CREATE TABLE IF NOT EXISTS public.activation_codes (
 
 ALTER TABLE public.activation_codes ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Authenticated users can select activation codes." ON public.activation_codes;
-DROP POLICY IF EXISTS "Authenticated users can update activation codes." ON public.activation_codes;
+DROP POLICY IF EXISTS "Authenticated users can select activation codes" ON public.activation_codes;
+DROP POLICY IF EXISTS "Authenticated users can update activation codes" ON public.activation_codes;
+DROP POLICY IF EXISTS "Admins can manage activation codes." ON public.activation_codes;
 
 CREATE POLICY "Authenticated users can select activation codes"
   ON public.activation_codes FOR SELECT
@@ -197,6 +204,8 @@ CREATE TABLE IF NOT EXISTS public.progress (
 
 ALTER TABLE public.progress ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage their own progress." ON public.progress;
+
 CREATE POLICY "Users can manage their own progress." ON public.progress
   FOR ALL USING (auth.uid() = user_id);
 
@@ -219,6 +228,8 @@ CREATE TABLE IF NOT EXISTS public.mock_history (
 
 ALTER TABLE public.mock_history ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Users can manage their own mock history." ON public.mock_history;
+
 CREATE POLICY "Users can manage their own mock history." ON public.mock_history
   FOR ALL USING (auth.uid() = user_id);
 
@@ -232,6 +243,8 @@ CREATE TABLE IF NOT EXISTS public.activity (
 );
 
 ALTER TABLE public.activity ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage their own activity." ON public.activity;
 
 CREATE POLICY "Users can manage their own activity." ON public.activity
   FOR ALL USING (auth.uid() = user_id);

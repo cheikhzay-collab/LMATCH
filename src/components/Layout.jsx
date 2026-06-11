@@ -32,11 +32,11 @@ export default function Layout() {
     return <Navigate to="/login" replace />;
   }
 
-  const isFocusMode = FOCUS_ROUTES.some(r => location.pathname.startsWith(r));
+  const isFocusMode = FOCUS_ROUTES.some(r => location.pathname.startsWith(r)) || location.pathname.endsWith('/edit');
 
   if (isFocusMode) {
     return (
-      <div className="focus-layout">
+      <div className="focus-layout" style={{ minHeight: '100vh', width: '100vw', background: 'var(--bg-base)', color: 'var(--text-main)', transition: 'background 0.3s, color 0.3s' }}>
         <Outlet />
       </div>
     );

@@ -11,6 +11,14 @@ import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, ge
 // the app falls back gracefully to localStorage-only mode.
 const SUPABASE_ENABLED = !!import.meta.env.VITE_SUPABASE_URL;
 
+const safeSetItem = (key, value) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (e) {
+    console.warn(`[Storage] Failed to save '${key}' to localStorage:`, e.message || e);
+  }
+};
+
 const AuthContext = createContext();
 
 /* ─── Data Schema Version ────────────────────────────────────────────────────
@@ -276,18 +284,18 @@ export function AuthProvider({ children }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     if (needsSave) {
-      localStorage.setItem('exams', JSON.stringify(initialExams));
-      localStorage.setItem('examsSchemaVersion', String(SCHEMA_VERSION));
+      safeSetItem('exams', JSON.stringify(initialExams));
+      safeSetItem('examsSchemaVersion', String(SCHEMA_VERSION));
     }
   }, []); // run once on mount
 
   useEffect(() => {
-    localStorage.setItem('user', JSON.stringify(user));
+    safeSetItem('user', JSON.stringify(user));
   }, [user]);
 
   useEffect(() => {
-    localStorage.setItem('exams', JSON.stringify(exams));
-    localStorage.setItem('examsSchemaVersion', String(SCHEMA_VERSION));
+    safeSetItem('exams', JSON.stringify(exams));
+    safeSetItem('examsSchemaVersion', String(SCHEMA_VERSION));
   }, [exams]);
 
 
@@ -344,7 +352,7 @@ export function AuthProvider({ children }) {
         }
       });
       if (migrated) {
-        localStorage.setItem('progress', JSON.stringify(migratedProgress));
+        safeSetItem('progress', JSON.stringify(migratedProgress));
       }
       return migratedProgress;
     } catch (e) {
@@ -353,7 +361,7 @@ export function AuthProvider({ children }) {
   });
 
   useEffect(() => {
-    localStorage.setItem('progress', JSON.stringify(progress));
+    safeSetItem('progress', JSON.stringify(progress));
   }, [progress]);
 
   // Mock Exam History state: [ { id, date, examId, examName, school, score, maxScore, pct, correctCount, wrongCount, emptyCount, mode } ]
@@ -363,7 +371,7 @@ export function AuthProvider({ children }) {
   });
 
   useEffect(() => {
-    localStorage.setItem('mockExamHistory', JSON.stringify(mockExamHistory));
+    safeSetItem('mockExamHistory', JSON.stringify(mockExamHistory));
   }, [mockExamHistory]);
 
   const [leaderboard, setLeaderboard] = useState([]);
@@ -730,7 +738,7 @@ export function AuthProvider({ children }) {
   });
 
   useEffect(() => {
-    localStorage.setItem('plans', JSON.stringify(plans));
+    safeSetItem('plans', JSON.stringify(plans));
   }, [plans]);
 
   const addPlan = async (name, price, durationDays, allowedSchools, description = '', isRecommended = false, features = []) => {
@@ -893,7 +901,7 @@ export function AuthProvider({ children }) {
   });
 
   useEffect(() => {
-    localStorage.setItem('activationCodes', JSON.stringify(activationCodes));
+    safeSetItem('activationCodes', JSON.stringify(activationCodes));
   }, [activationCodes]);
 
   const generateActivationCodes = async (planId, count, batchName) => {
@@ -1085,12 +1093,12 @@ export function AuthProvider({ children }) {
     const storedDates = JSON.parse(localStorage.getItem('reviewDates') || '[]');
     if (!storedDates.includes(todayStr)) {
       const updated = [...storedDates, todayStr].slice(-90); // keep last 90 days
-      localStorage.setItem('reviewDates', JSON.stringify(updated));
+      safeSetItem('reviewDates', JSON.stringify(updated));
     }
     // dailyActivity: { 'YYYY-MM-DD': count }
     const dailyActivity = JSON.parse(localStorage.getItem('dailyActivity') || '{}');
     dailyActivity[todayStr] = (dailyActivity[todayStr] || 0) + 1;
-    localStorage.setItem('dailyActivity', JSON.stringify(dailyActivity));
+    safeSetItem('dailyActivity', JSON.stringify(dailyActivity));
 
     if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
       incrementDailyActivity(user.uid || user.id).catch(e =>
@@ -1251,7 +1259,7 @@ export function AuthProvider({ children }) {
   });
 
   useEffect(() => {
-    localStorage.setItem('schools', JSON.stringify(schools));
+    safeSetItem('schools', JSON.stringify(schools));
   }, [schools]);
 
   // Custom branding per school (emoji overrides)
@@ -1261,7 +1269,7 @@ export function AuthProvider({ children }) {
   });
 
   useEffect(() => {
-    localStorage.setItem('schoolBranding', JSON.stringify(schoolBranding));
+    safeSetItem('schoolBranding', JSON.stringify(schoolBranding));
   }, [schoolBranding]);
 
   // ── Supabase Database Syncing ──────────────────────────────────────────────

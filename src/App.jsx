@@ -19,6 +19,7 @@ import AdminStudentDetail from './pages/AdminStudentDetail';
 import AdminAIImport from './pages/AdminAIImport';
 import AdminEbooks from './pages/AdminEbooks';
 import AdminMarketing from './pages/AdminMarketing';
+import AdminExamEdit from './pages/AdminExamEdit';
 
 import OMRScannerPage from './pages/OMRScannerPage';
 import SubscriptionPage from './pages/SubscriptionPage';
@@ -97,6 +98,8 @@ function AppContent() {
       title = "Admin : Vue d'ensemble — L'CONQ";
     } else if (path === '/admin/exams') {
       title = "Admin : Bibliothèque Concours — L'CONQ";
+    } else if (path.startsWith('/admin/exams/') && path.endsWith('/edit')) {
+      title = "Admin : Édition du Concours — L'CONQ";
     } else if (path === '/admin/users') {
       title = "Admin : Gestion des Élèves — L'CONQ";
     } else if (path.startsWith('/admin/users/')) {
@@ -140,6 +143,7 @@ function AppContent() {
           {/* Admin Routes */}
           <Route path="/admin/dashboard" element={<AdminOverview />} />
           <Route path="/admin/exams" element={<AdminExams />} />
+          <Route path="/admin/exams/:id/edit" element={<AdminExamEdit />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/users/:id" element={<AdminStudentDetail />} />
           <Route path="/admin/upload" element={<AdminUpload />} />

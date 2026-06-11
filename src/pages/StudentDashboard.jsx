@@ -20,7 +20,7 @@ function ChartTooltip({ active, payload }) {
         borderRadius: 'var(--radius-md)', 
         boxShadow: '0 8px 32px rgba(0,0,0,0.2)' 
       }}>
-        <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: 'var(--violet)' }}>
+        <p style={{ margin: 0, fontWeight: 800, fontSize: '0.9rem', color: '#818cf8' }}>
           {`${payload[0].value} révisions`}
         </p>
       </div>
@@ -50,32 +50,31 @@ function ProgressTooltip({ active, payload }) {
     const data = payload[0].payload;
     return (
       <div style={{ 
-        background: 'rgba(15, 23, 42, 0.9)', 
+        background: 'rgba(15, 23, 42, 0.95)', 
         backdropFilter: 'blur(12px)', 
-        border: '1px solid rgba(255,255,255,0.1)', 
+        border: '1px solid rgba(255,255,255,0.15)', 
         padding: '0.75rem 1.25rem', 
         borderRadius: 'var(--radius-md)', 
-        boxShadow: '0 8px 32px rgba(0,0,0,0.25)' 
+        boxShadow: '0 8px 32px rgba(0,0,0,0.3)' 
       }}>
-        <p style={{ margin: '0 0 0.25rem 0', fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+        <p style={{ margin: '0 0 0.25rem 0', fontWeight: 600, fontSize: '0.82rem', color: '#94a3b8' }}>
           {data.date}
         </p>
-        <p style={{ margin: '0 0 0.25rem 0', fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)' }}>
+        <p style={{ margin: '0 0 0.4rem 0', fontWeight: 700, fontSize: '0.92rem', color: '#f8fafc' }}>
           {data.name}
         </p>
-        <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.4rem', fontSize: '0.85rem' }}>
-          <span style={{ color: 'var(--violet)', fontWeight: 800 }}>{data.pct}% de réussite</span>
-          <span style={{ color: 'var(--text-subtle)' }}>({data.score}/{data.maxScore})</span>
+        <div style={{ display: 'flex', gap: '0.75rem', marginBottom: '0.5rem', fontSize: '0.85rem', alignItems: 'center' }}>
+          <span style={{ color: '#818cf8', fontWeight: 800 }}>{data.pct}% de réussite</span>
+          <span style={{ color: '#94a3b8' }}>({data.score}/{data.maxScore})</span>
         </div>
         <span style={{ 
           display: 'inline-block', 
-          marginTop: '0.4rem', 
-          fontSize: '0.72rem', 
-          fontWeight: 900, 
+          fontSize: '0.7rem', 
+          fontWeight: 800, 
           padding: '0.15rem 0.5rem', 
           borderRadius: '4px', 
-          background: data.mode === 'En ligne' ? 'var(--violet-soft)' : 'rgba(16, 185, 129, 0.08)', 
-          color: data.mode === 'En ligne' ? 'var(--violet)' : 'var(--emerald)' 
+          background: data.mode === 'En ligne' ? 'rgba(99, 102, 241, 0.2)' : 'rgba(16, 185, 129, 0.2)', 
+          color: data.mode === 'En ligne' ? '#a5b4fc' : '#34d399' 
         }}>
           {data.mode}
         </span>
@@ -502,8 +501,8 @@ export default function StudentDashboard() {
                 {/* Progression Chart */}
                 <div>
                   <h4 style={{ 
-                    fontSize: '0.75rem', fontWeight: 900, color: 'var(--text-muted)', 
-                    textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' 
+                    fontSize: '0.73rem', fontWeight: 700, color: 'var(--text-subtle)', 
+                    textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '0.5rem' 
                   }}>
                     Évolution des Scores
                   </h4>
@@ -551,8 +550,8 @@ export default function StudentDashboard() {
                 {/* Historical list */}
                 <div style={{ marginTop: '1.5rem' }}>
                   <h4 style={{ 
-                    fontSize: '0.75rem', fontWeight: 900, color: 'var(--text-muted)', 
-                    textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '1rem' 
+                    fontSize: '0.73rem', fontWeight: 700, color: 'var(--text-subtle)', 
+                    textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '1rem' 
                   }}>
                     Historique des Tentatives
                   </h4>
@@ -725,36 +724,39 @@ export default function StudentDashboard() {
             </div>
             {/* Custom PDF Workbook Generator */}
             <button
-              className="btn"
               onClick={handleGenerateWeaknessPDF}
               disabled={stats.weakTopics.length === 0}
               style={{
                 marginTop: '1.25rem',
                 width: '100%',
-                background: stats.weakTopics.length === 0 ? 'var(--bg-glass)' : 'linear-gradient(135deg, var(--warning), #ea580c)',
-                border: stats.weakTopics.length === 0 ? '1px solid var(--border)' : 'none',
+                background: stats.weakTopics.length === 0 ? 'var(--bg-glass)' : 'var(--violet-soft)',
+                border: stats.weakTopics.length === 0 ? '1px solid var(--border)' : '1px solid rgba(99, 102, 241, 0.25)',
                 fontWeight: 800,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '0.5rem',
                 padding: '0.75rem 1.25rem',
-                boxShadow: stats.weakTopics.length === 0 ? 'none' : '0 10px 20px rgba(234, 88, 12, 0.15)',
-                transform: 'translateY(0)',
+                borderRadius: 'var(--radius-lg)',
+                color: stats.weakTopics.length === 0 ? 'var(--text-subtle)' : 'var(--violet)',
+                cursor: stats.weakTopics.length === 0 ? 'not-allowed' : 'pointer',
                 transition: 'all 0.2s ease',
-                color: stats.weakTopics.length === 0 ? 'var(--text-muted)' : '#fff',
-                cursor: stats.weakTopics.length === 0 ? 'not-allowed' : 'pointer'
+                boxShadow: 'none'
               }}
               onMouseEnter={e => { 
                 if (stats.weakTopics.length > 0) {
                   e.currentTarget.style.transform = 'translateY(-2px)'; 
-                  e.currentTarget.style.boxShadow = '0 12px 25px rgba(234, 88, 12, 0.25)'; 
+                  e.currentTarget.style.background = 'var(--violet)';
+                  e.currentTarget.style.color = '#fff';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(99, 102, 241, 0.15)';
                 }
               }}
               onMouseLeave={e => { 
                 if (stats.weakTopics.length > 0) {
                   e.currentTarget.style.transform = 'translateY(0)'; 
-                  e.currentTarget.style.boxShadow = '0 10px 20px rgba(234, 88, 12, 0.15)'; 
+                  e.currentTarget.style.background = 'var(--violet-soft)';
+                  e.currentTarget.style.color = 'var(--violet)';
+                  e.currentTarget.style.boxShadow = 'none';
                 }
               }}
             >
