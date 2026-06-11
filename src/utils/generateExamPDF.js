@@ -449,11 +449,16 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
 </div>` : '';
 
   /* Questions HTML */
+  let sectionIndex = 0;
   const questionsHtml = Object.entries(groups).map(([subject, qs]) => {
+    sectionIndex++;
     const themeClass = getThemeClass(subject);
     return `
     <div class="subj-section ${themeClass}">
-      <div class="section-hdr">${subject.toUpperCase()}</div>
+      <div class="section-hdr-row">
+        <div class="section-badge-circle">${sectionIndex}</div>
+        <div class="section-title-pill">${subject}</div>
+      </div>
       ${qs.map((q, idx) => {
         const num = q.question_number || (idx + 1);
         const optionsHtml = (q.options || []).map((opt, oi) => {
@@ -466,7 +471,10 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
 
         return `<div class="qcard">
           <div class="card-hdr">
-            <span class="qnum">Q${num}</span>
+            <div class="exercise-pill">
+              <span>Question N°</span>
+              <span class="qnum-circle">${num}</span>
+            </div>
             <span class="src-tag">${subject.toUpperCase()}</span>
           </div>
           ${renderQuestionImageHTML(q, 'above')}
@@ -1401,7 +1409,128 @@ html{counter-reset:page ${startPage - 1}}
 }
 .katex{font-size:1.05em}.katex-display{margin:3px 0}
 ${templateCSS}
-</style></head><body>
+
+/* === L'CONQ CUSTOM SHEET LOOK override === */
+.print-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0.6cm;
+  width: 50px;
+  height: 100%;
+  background: #ffffff;
+  border-right: 2px solid #005086;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 2.5cm;
+  box-sizing: border-box;
+  z-index: 1000;
+}
+.print-vertical-tab {
+  background: #005086;
+  color: #ffffff;
+  padding: 1.5cm 0.45cm;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  border-radius: 0 10px 10px 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 80, 134, 0.15);
+  margin-top: 0.5cm;
+  font-family: 'Inter', sans-serif;
+  line-height: 1;
+}
+.subj-section, .qcard, .compact-header-box, .compact-divider {
+  margin-left: 65px !important;
+}
+.section-hdr-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 2px solid rgba(0, 80, 134, 0.15);
+  padding-bottom: 0.4rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+.section-badge-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #005086;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  font-family: 'Inter', sans-serif;
+}
+.section-title-pill {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #005086;
+  border: 1.5px solid #005086;
+  border-radius: 99px;
+  padding: 0.2rem 1.1rem;
+  display: inline-flex;
+  font-family: 'Inter', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.qcard {
+  border: 1.5px solid #005086 !important;
+  border-left: 5px solid #005086 !important;
+  border-radius: 6px !important;
+  padding: 18px 22px !important;
+  background: #ffffff !important;
+  margin-bottom: 24px !important;
+  box-shadow: none !important;
+  page-break-inside: avoid;
+}
+.card-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px dashed rgba(0, 80, 134, 0.15) !important;
+  padding-bottom: 8px !important;
+  margin-bottom: 12px !important;
+}
+.exercise-pill {
+  background: #005086 !important;
+  color: #ffffff !important;
+  padding: 0.25rem 1rem !important;
+  border-radius: 99px !important;
+  font-weight: 800 !important;
+  font-size: 0.82rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+  font-family: 'Inter', sans-serif !important;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.qnum-circle {
+  background: #ffffff !important;
+  color: #005086 !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+}
+.cover .print-sidebar, 
+.omr-page .print-sidebar {
+  display: none !important;
+}
+</style></head><body><div class="print-sidebar"><div class="print-vertical-tab">${school}</div></div>
 
 <!-- PRE-PRINT INSTRUCTION BANNER -->
 <div class="print-hint" id="printHint">
@@ -1731,7 +1860,10 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
     return `
     <div class="qcard ${themeClass}">
       <div class="card-hdr">
-        <span class="qnum">Q${num}</span>
+        <div class="exercise-pill">
+          <span>Question N°</span>
+          <span class="qnum-circle">${num}</span>
+        </div>
         <span class="src-tag">${subject.toUpperCase()}</span>
         <span class="ans-badge">Réponse : <b>${q.correct_answer || '?'}</b></span>
       </div>
@@ -2654,7 +2786,128 @@ html{counter-reset:page ${startPage - 1}}
 }
 .katex{font-size:.95em}.katex-display{margin:4px 0}
 ${templateCSS}
-</style></head><body>
+
+/* === L'CONQ CUSTOM SHEET LOOK override === */
+.print-sidebar {
+  position: fixed;
+  top: 0;
+  left: 0.6cm;
+  width: 50px;
+  height: 100%;
+  background: #ffffff;
+  border-right: 2px solid #005086;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 2.5cm;
+  box-sizing: border-box;
+  z-index: 1000;
+}
+.print-vertical-tab {
+  background: #005086;
+  color: #ffffff;
+  padding: 1.5cm 0.45cm;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-weight: 800;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  border-radius: 0 10px 10px 0;
+  text-transform: uppercase;
+  white-space: nowrap;
+  text-align: center;
+  box-shadow: 0 4px 10px rgba(0, 80, 134, 0.15);
+  margin-top: 0.5cm;
+  font-family: 'Inter', sans-serif;
+  line-height: 1;
+}
+.subj-section, .qcard, .compact-header-box, .compact-divider {
+  margin-left: 65px !important;
+}
+.section-hdr-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  border-bottom: 2px solid rgba(0, 80, 134, 0.15);
+  padding-bottom: 0.4rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1rem;
+}
+.section-badge-circle {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #005086;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+  font-family: 'Inter', sans-serif;
+}
+.section-title-pill {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #005086;
+  border: 1.5px solid #005086;
+  border-radius: 99px;
+  padding: 0.2rem 1.1rem;
+  display: inline-flex;
+  font-family: 'Inter', sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+.qcard {
+  border: 1.5px solid #005086 !important;
+  border-left: 5px solid #005086 !important;
+  border-radius: 6px !important;
+  padding: 18px 22px !important;
+  background: #ffffff !important;
+  margin-bottom: 24px !important;
+  box-shadow: none !important;
+  page-break-inside: avoid;
+}
+.card-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px dashed rgba(0, 80, 134, 0.15) !important;
+  padding-bottom: 8px !important;
+  margin-bottom: 12px !important;
+}
+.exercise-pill {
+  background: #005086 !important;
+  color: #ffffff !important;
+  padding: 0.25rem 1rem !important;
+  border-radius: 99px !important;
+  font-weight: 800 !important;
+  font-size: 0.82rem !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 0.4rem !important;
+  font-family: 'Inter', sans-serif !important;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.qnum-circle {
+  background: #ffffff !important;
+  color: #005086 !important;
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+}
+.cover .print-sidebar, 
+.omr-page .print-sidebar {
+  display: none !important;
+}
+</style></head><body><div class="print-sidebar"><div class="print-vertical-tab">${school}</div></div>
 
 <!-- PRE-PRINT INSTRUCTION BANNER -->
 <div class="print-hint" id="printHint">
