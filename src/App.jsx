@@ -20,6 +20,7 @@ import AdminAIImport from './pages/AdminAIImport';
 import AdminEbooks from './pages/AdminEbooks';
 import AdminMarketing from './pages/AdminMarketing';
 import AdminExamEdit from './pages/AdminExamEdit';
+import SuitesNumeriquesPage from './pages/SuitesNumeriquesPage';
 
 import OMRScannerPage from './pages/OMRScannerPage';
 import SubscriptionPage from './pages/SubscriptionPage';
@@ -86,6 +87,8 @@ function AppContent() {
     } else if (path.startsWith('/schools/')) {
       const school = decodeURIComponent(path.split('/')[2] || '');
       title = school ? `${school} — L'CONQ` : "Concours — L'CONQ";
+    } else if (path === '/study/suites-numeriques') {
+      title = "Fiche Interactive : Suites Numériques — L'CONQ";
     } else if (path === '/study') {
       title = "Mode Révision (SRS) — L'CONQ";
     } else if (path === '/exam') {
@@ -136,6 +139,7 @@ function AppContent() {
           <Route path="/schools" element={<SchoolsPage />} />
           <Route path="/schools/:schoolName" element={<SchoolExamsPage />} />
           <Route path="/study" element={<StudyMode />} />
+          <Route path="/study/suites-numeriques" element={<SuitesNumeriquesPage />} />
           <Route path="/exam" element={<MockExamMode />} />
           <Route path="/scanner" element={<OMRScannerPage />} />
           <Route path="/ranking" element={<RankingPage />} />
