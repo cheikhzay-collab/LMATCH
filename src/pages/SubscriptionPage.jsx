@@ -5,6 +5,7 @@ import {
   Crown, CheckCircle2, Zap, AlertCircle, Key, CreditCard, 
   ChevronRight, Sparkles, X, ShieldCheck, HelpCircle 
 } from 'lucide-react';
+import { sanitizeInputString } from '../utils/security';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
@@ -18,7 +19,7 @@ function useIsMobile() {
 }
 
 export default function SubscriptionPage() {
-  const { user, plans, activateSubscription, activationCodes, redeemActivationCode } = useAuth();
+  const { user, plans, activateSubscription, activationCodes, redeemActivationCode, profPhone } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -46,10 +47,11 @@ export default function SubscriptionPage() {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
-    if (!voucherCode.trim()) return;
+    const codeClean = sanitizeInputString(voucherCode.trim());
+    if (!codeClean) return;
 
     try {
-      const plan = await redeemActivationCode(voucherCode.trim());
+      const plan = await redeemActivationCode(codeClean);
       setSuccessMsg(`Félicitations ! Votre code a été validé. Le pack "${plan.name}" est désormais actif pour une durée de ${plan.durationDays} jours.`);
       setVoucherCode('');
       // Clear message after 5 seconds
@@ -66,6 +68,11 @@ export default function SubscriptionPage() {
     setIsProcessing(true);
     setErrorMsg('');
     setSuccessMsg('');
+
+    const cleanCardName = sanitizeInputString(cardName);
+    const cleanCardNumber = sanitizeInputString(cardNumber);
+    const cleanCardExpiry = sanitizeInputString(cardExpiry);
+    const cleanCardCvc = sanitizeInputString(cardCvc);
 
     // Simulate standard credit card processing lag
     setTimeout(async () => {
@@ -303,12 +310,40 @@ export default function SubscriptionPage() {
             </div>
           </div>
           
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: '12px', padding: '0.875rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8rem', color: 'var(--text-muted)', background: 'rgba(16,185,129,0.04)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: '12px', padding: '0.875rem', marginBottom: '0.5rem' }}>
             <ShieldCheck size={18} color="var(--emerald)" style={{ flexShrink: 0 }} />
             <span>
-              Après votre virement, vous pouvez contacter directement le support WhatsApp au <strong style={{ color: 'var(--emerald)' }}>+212 600 000 000</strong> pour envoyer votre reçu et recevoir immédiatement un code Voucher.
+              Après votre virement, vous pouvez contacter directement le support WhatsApp au <strong style={{ color: 'var(--emerald)' }}>{profPhone || '+212 6 00 00 00 00'}</strong> pour envoyer votre reçu et recevoir immédiatement un code Voucher.
             </span>
           </div>
+
+          {/* WhatsApp direct support action */}
+          <a
+            href={`https://wa.me/${(profPhone || '212600000000').replace(/[^0-9]/g, '')}?text=${encodeURIComponent("Bonjour Monsieur le Directeur, je viens d'effectuer un virement bancaire pour recharger mon abonnement sur l'application GIMA L'CONQ. Voici mon reçu.")}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn"
+            style={{
+              width: '100%',
+              background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+              color: '#fff',
+              fontWeight: 800,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.6rem',
+              padding: '0.85rem 1.5rem',
+              borderRadius: '12px',
+              boxShadow: '0 8px 20px rgba(37, 211, 102, 0.2)',
+              textDecoration: 'none',
+              fontSize: '0.95rem',
+            }}
+          >
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.457L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.625 1.451 5.403.002 9.803-4.394 9.806-9.799.002-2.597-1.01-5.038-2.85-6.88-1.84-1.84-4.283-2.85-6.882-2.852-5.41 0-9.81 4.402-9.813 9.807-.001 1.517.417 3.01 1.21 4.341L1.87 20.35l4.777-1.196zm12.383-6.425c-.27-.135-1.602-.79-1.85-.88-.25-.09-.432-.135-.612.135-.18.27-.7.88-.857 1.06-.157.18-.315.2-.585.065-.27-.135-1.14-.42-2.17-1.34-.8-.713-1.34-1.594-1.498-1.864-.157-.27-.017-.417.118-.552.122-.122.27-.315.405-.473.135-.157.18-.27.27-.45.09-.18.045-.337-.022-.473-.068-.135-.612-1.474-.838-2.02-.22-.53-.442-.457-.612-.466-.157-.008-.337-.01-.517-.01-.18 0-.473.067-.72.337-.247.27-.945.923-.945 2.25s.967 2.61 1.102 2.793c.135.18 1.902 2.904 4.607 4.07 2.705 1.167 2.705.778 3.2.73.495-.047 1.602-.656 1.83-1.29.227-.635.227-1.18.158-1.29-.068-.11-.248-.195-.518-.33z"/>
+            </svg>
+            Contacter le Directeur sur WhatsApp
+          </a>
         </div>
       </div>
 
