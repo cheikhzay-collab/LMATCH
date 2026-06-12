@@ -279,147 +279,192 @@ export default function SchoolExamsPage() {
                   </div>
                 </div>
 
-                {/* Stacked Actions Container (Optimized for Thumb-Zone and touch targets) */}
+                {/* Cohesive, Premium Actions Grid */}
                 <div style={{
-                  display: 'flex',
-                  flexDirection: isMobile ? 'column' : 'row',
+                  display: isMobile ? 'grid' : 'flex',
+                  gridTemplateColumns: isMobile ? 'repeat(6, 1fr)' : 'none',
+                  flexDirection: isMobile ? 'none' : 'row',
                   alignItems: isMobile ? 'stretch' : 'center',
-                  gap: isMobile ? '0.875rem' : '1rem',
+                  gap: '0.5rem',
                   width: isMobile ? '100%' : 'auto',
                   justifyContent: isMobile ? 'stretch' : 'flex-end',
                 }}>
                   {/* 1. Primary Actions (SRS & Blanc Exam) */}
-                  <div style={{ 
-                    display: 'flex', 
-                    gap: '0.5rem', 
-                    width: isMobile ? '100%' : 'auto',
-                    flex: isMobile ? 'none' : 'none',
-                    justifyContent: 'stretch',
-                  }}>
-                    <button
-                      className="btn"
-                      onClick={() => navigate(`/study?exam=${exam.id}`)}
-                      title="Mode révision SRS"
-                      style={{ 
-                        flex: 1, 
-                        padding: '0.75rem 1rem', 
-                        fontSize: '0.88rem', 
-                        minHeight: '44px', // Touch Target 44px
-                        borderRadius: '10px',
-                        fontWeight: 800,
-                      }}
-                    >
-                      <BrainCircuit size={16} /> SRS
-                    </button>
-                    <button
-                      className="btn-outline"
-                      onClick={() => navigate(`/exam?exam=${exam.id}`)}
-                      title="Concours blanc chronométré"
-                      style={{ 
-                        flex: 1, 
-                        padding: '0.75rem 1rem', 
-                        fontSize: '0.88rem', 
-                        minHeight: '44px', // Touch Target 44px
-                        borderRadius: '10px',
-                        fontWeight: 700,
-                      }}
-                    >
-                      <Play size={16} /> Blanc
-                    </button>
-                  </div>
+                  <button
+                    className="btn"
+                    onClick={() => navigate(`/study?exam=${exam.id}`)}
+                    title="Mode révision SRS"
+                    style={{ 
+                      gridColumn: isMobile ? 'span 3' : 'none',
+                      flex: isMobile ? 'none' : 'none',
+                      padding: '0.65rem 1rem', 
+                      fontSize: '0.82rem', 
+                      minHeight: '42px', 
+                      borderRadius: '10px',
+                      fontWeight: 800,
+                      background: brand.accent, // Dynamic Brand Coloring
+                      boxShadow: `0 4px 12px ${brand.accent}20`,
+                      border: 'none',
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.95)'}
+                    onMouseLeave={e => e.currentTarget.style.filter = 'none'}
+                  >
+                    <BrainCircuit size={15} /> SRS
+                  </button>
+                  
+                  <button
+                    className="btn-outline"
+                    onClick={() => navigate(`/exam?exam=${exam.id}`)}
+                    title="Concours blanc chronométré"
+                    style={{ 
+                      gridColumn: isMobile ? 'span 3' : 'none',
+                      flex: isMobile ? 'none' : 'none',
+                      padding: '0.65rem 1rem', 
+                      fontSize: '0.82rem', 
+                      minHeight: '42px', 
+                      borderRadius: '10px',
+                      fontWeight: 700,
+                      border: '1.5px solid var(--border)',
+                      color: 'var(--text-main)',
+                      background: 'transparent',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = brand.accent;
+                      e.currentTarget.style.color = brand.accent;
+                      e.currentTarget.style.background = `${brand.accent}0a`;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.color = 'var(--text-main)';
+                      e.currentTarget.style.background = 'transparent';
+                    }}
+                  >
+                    <Play size={15} /> Blanc
+                  </button>
 
                   {/* Vertical Divider (Desktop Only) */}
                   {!isMobile && (
                     <div style={{ 
                       width: '1px', 
-                      height: '28px', 
+                      height: '24px', 
                       background: 'var(--border)', 
-                      margin: '0 0.15rem',
+                      margin: '0 0.25rem',
                       alignSelf: 'center' 
                     }} />
                   )}
 
                   {/* 2. Secondary Utility Actions (Sujet, Corrigé, Grille) */}
-                  <div style={{ 
-                    display: isMobile ? 'grid' : 'flex',
-                    gridTemplateColumns: isMobile ? '1fr 1fr 1fr' : 'none', 
-                    gap: '0.5rem', 
-                    width: isMobile ? '100%' : 'auto',
-                    justifyContent: isMobile ? 'stretch' : 'flex-end',
-                  }}>
-                    <button
-                      className="btn-outline"
-                      onClick={() => {
-                        if (exam.pdfUrl) {
-                          window.open(exam.pdfUrl, '_blank');
-                        } else {
-                          import('../utils/generateExamPDF').then(async ({ generateSubjectHTML, openPrintWindow }) => {
-                            const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
-                            const html = await generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
-                            openPrintWindow(html);
-                          });
-                        }
-                      }}
-                      title="Voir le sujet de l'examen"
-                      style={{ 
-                        padding: '0.65rem 0.5rem', 
-                        fontSize: '0.78rem', 
-                        minHeight: '44px', // Touch Target 44px
-                        color: 'var(--text-muted)',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.3rem'
-                      }}
-                    >
-                      <FileDown size={13} /> Sujet
-                    </button>
-
-                    <button
-                      className="btn-outline"
-                      onClick={() => {
-                        import('../utils/generateExamPDF').then(({ generateCorrectionHTML, openPrintWindow }) => {
+                  <button
+                    className="btn-outline"
+                    onClick={() => {
+                      if (exam.pdfUrl) {
+                        window.open(exam.pdfUrl, '_blank');
+                      } else {
+                        import('../utils/generateExamPDF').then(async ({ generateSubjectHTML, openPrintWindow }) => {
                           const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
-                          const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
+                          const html = await generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
                           openPrintWindow(html);
                         });
-                      }}
-                      title="Voir le corrigé de l'examen"
-                      style={{ 
-                        padding: '0.65rem 0.5rem', 
-                        fontSize: '0.78rem', 
-                        minHeight: '44px', // Touch Target 44px
-                        color: 'var(--text-muted)',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.3rem'
-                      }}
-                    >
-                      <FileDown size={13} /> Corrigé
-                    </button>
+                      }
+                    }}
+                    title="Voir le sujet de l'examen"
+                    style={{ 
+                      gridColumn: isMobile ? 'span 2' : 'none',
+                      flex: isMobile ? 'none' : 'none',
+                      padding: '0.65rem 0.5rem', 
+                      fontSize: '0.8rem', 
+                      minHeight: '42px', 
+                      color: 'var(--text-muted)',
+                      borderRadius: '10px',
+                      fontWeight: 600,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-glass)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.3rem',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = brand.accent;
+                      e.currentTarget.style.color = brand.accent;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.color = 'var(--text-muted)';
+                    }}
+                  >
+                    <FileDown size={14} /> Sujet
+                  </button>
 
-                    <button
-                      className="btn-outline"
-                      onClick={() => handleDownloadPDF(exam)}
-                      title="Télécharger la grille de réponse OMR"
-                      style={{ 
-                        padding: '0.65rem 0.5rem', 
-                        fontSize: '0.78rem', 
-                        minHeight: '44px', // Touch Target 44px
-                        color: 'var(--text-muted)',
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.3rem'
-                      }}
-                    >
-                      <FileDown size={13} /> Grille
-                    </button>
-                  </div>
+                  <button
+                    className="btn-outline"
+                    onClick={() => {
+                      import('../utils/generateExamPDF').then(({ generateCorrectionHTML, openPrintWindow }) => {
+                        const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
+                        const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
+                        openPrintWindow(html);
+                      });
+                    }}
+                    title="Voir le corrigé de l'examen"
+                    style={{ 
+                      gridColumn: isMobile ? 'span 2' : 'none',
+                      flex: isMobile ? 'none' : 'none',
+                      padding: '0.65rem 0.5rem', 
+                      fontSize: '0.8rem', 
+                      minHeight: '42px', 
+                      color: 'var(--text-muted)',
+                      borderRadius: '10px',
+                      fontWeight: 600,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-glass)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.3rem',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = brand.accent;
+                      e.currentTarget.style.color = brand.accent;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.color = 'var(--text-muted)';
+                    }}
+                  >
+                    <FileDown size={14} /> Corrigé
+                  </button>
+
+                  <button
+                    className="btn-outline"
+                    onClick={() => handleDownloadPDF(exam)}
+                    title="Télécharger la grille de réponse OMR"
+                    style={{ 
+                      gridColumn: isMobile ? 'span 2' : 'none',
+                      flex: isMobile ? 'none' : 'none',
+                      padding: '0.65rem 0.5rem', 
+                      fontSize: '0.8rem', 
+                      minHeight: '42px', 
+                      color: 'var(--text-muted)',
+                      borderRadius: '10px',
+                      fontWeight: 600,
+                      border: '1px solid var(--border)',
+                      background: 'var(--bg-glass)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.3rem',
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.borderColor = brand.accent;
+                      e.currentTarget.style.color = brand.accent;
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.color = 'var(--text-muted)';
+                    }}
+                  >
+                    <FileDown size={14} /> Grille
+                  </button>
                 </div>
               </div>
             );
