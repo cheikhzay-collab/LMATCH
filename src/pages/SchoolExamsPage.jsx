@@ -339,10 +339,10 @@ export default function SchoolExamsPage() {
                     }} />
                   )}
 
-                  {/* 2. Secondary Utility Actions (Sujet, Corrigé, Grille, Scanner) */}
+                  {/* 2. Secondary Utility Actions (Sujet, Corrigé, Grille) */}
                   <div style={{ 
                     display: isMobile ? 'grid' : 'flex',
-                    gridTemplateColumns: isMobile ? '1fr 1fr' : 'none', 
+                    gridTemplateColumns: isMobile ? '1fr 1fr 1fr' : 'none', 
                     gap: '0.5rem', 
                     width: isMobile ? '100%' : 'auto',
                     justifyContent: isMobile ? 'stretch' : 'flex-end',
@@ -362,18 +362,18 @@ export default function SchoolExamsPage() {
                       }}
                       title="Voir le sujet de l'examen"
                       style={{ 
-                        padding: '0.65rem 0.85rem', 
-                        fontSize: '0.8rem', 
+                        padding: '0.65rem 0.5rem', 
+                        fontSize: '0.78rem', 
                         minHeight: '44px', // Touch Target 44px
                         color: 'var(--text-muted)',
                         borderRadius: '8px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '0.4rem'
+                        gap: '0.3rem'
                       }}
                     >
-                      <FileDown size={14} /> Sujet
+                      <FileDown size={13} /> Sujet
                     </button>
 
                     <button
@@ -387,18 +387,18 @@ export default function SchoolExamsPage() {
                       }}
                       title="Voir le corrigé de l'examen"
                       style={{ 
-                        padding: '0.65rem 0.85rem', 
-                        fontSize: '0.8rem', 
+                        padding: '0.65rem 0.5rem', 
+                        fontSize: '0.78rem', 
                         minHeight: '44px', // Touch Target 44px
                         color: 'var(--text-muted)',
                         borderRadius: '8px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '0.4rem'
+                        gap: '0.3rem'
                       }}
                     >
-                      <FileDown size={14} /> Corrigé
+                      <FileDown size={13} /> Corrigé
                     </button>
 
                     <button
@@ -406,39 +406,18 @@ export default function SchoolExamsPage() {
                       onClick={() => handleDownloadPDF(exam)}
                       title="Télécharger la grille de réponse OMR"
                       style={{ 
-                        padding: '0.65rem 0.85rem', 
-                        fontSize: '0.8rem', 
+                        padding: '0.65rem 0.5rem', 
+                        fontSize: '0.78rem', 
                         minHeight: '44px', // Touch Target 44px
                         color: 'var(--text-muted)',
                         borderRadius: '8px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        gap: '0.4rem'
+                        gap: '0.3rem'
                       }}
                     >
-                      <FileDown size={14} /> Grille
-                    </button>
-
-                    <button
-                      className="btn-outline"
-                      onClick={() => setScanExam(exam)}
-                      title="Scanner ma feuille remplie"
-                      style={{ 
-                        padding: '0.65rem 0.85rem', 
-                        fontSize: '0.8rem', 
-                        minHeight: '44px', // Touch Target 44px
-                        color: 'var(--violet)', 
-                        borderColor: 'rgba(113, 109, 242, 0.25)', 
-                        background: 'var(--violet-soft)', 
-                        borderRadius: '8px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.4rem'
-                      }}
-                    >
-                      <ScanLine size={14} /> Scanner
+                      <FileDown size={13} /> Grille
                     </button>
                   </div>
                 </div>
