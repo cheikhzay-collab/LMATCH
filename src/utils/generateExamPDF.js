@@ -1,4 +1,5 @@
 import katex from 'katex';
+import QRCode from 'qrcode';
 
 /* ── PDF Template Settings configuration (book design expert options) ── */
 const getPdfSettings = (settings = {}) => {
@@ -278,7 +279,7 @@ const getOptionsLayoutClass = (options) => {
 /* ═══════════════════════════════════════════════
    1. SUJET BLANC — Exam Paper
    ═══════════════════════════════════════════════ */
-export const generateSubjectHTML = (examTitle, school, year, questions, settings = {}) => {
+export const generateSubjectHTML = async (examTitle, school, year, questions, settings = {}) => {
   const pdfConf = getPdfSettings(settings);
   const marginCSS = getMarginStyle(pdfConf.pageMargins);
   const fontFamilyCSS = getFontFamilyStyle(pdfConf.fontFamily);
@@ -323,17 +324,19 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
     ? `© ${new Date().getFullYear()} L'CONQ × ${profName}. Tous droits réservés.`
     : `© ${new Date().getFullYear()} L'CONQ. Tous droits réservés.`;
 
-  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`lconq://exam/${examTitle}`)}`;
-  
-  const premiumQrPayload = JSON.stringify({
-    examId: examId,
-    examName: examTitle,
-    school: school,
-    studentId: 'anonymous',
-    qCount: questions.length,
-    generated: new Date().toISOString()
-  });
-  const premiumQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(premiumQrPayload)}`;
+  const premiumQrPayload = `LCQ:${examId.slice(0, 8)}`;
+  let premiumQrUrl = '';
+  try {
+    premiumQrUrl = await QRCode.toDataURL(premiumQrPayload, {
+      errorCorrectionLevel: 'H',
+      width: 250,
+      margin: 4,
+      color: { dark: '#000000', light: '#FFFFFF' }
+    });
+  } catch (err) {
+    console.error('Failed to generate local QR Code:', err);
+    premiumQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(premiumQrPayload)}&ecc=H&margin=4`;
+  }
 
   const groups = groupBySubject(questions);
 
@@ -835,8 +838,8 @@ html{counter-reset:page ${startPage - 1}}
   position: absolute;
   right: 4mm;
   top: 4mm;
-  width: 26mm;
-  height: 26mm;
+  width: 28mm;
+  height: 28mm;
   background: #fff;
   border-radius: 1mm;
   padding: 1mm;

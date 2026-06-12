@@ -265,7 +265,10 @@ export default function AdminExams() {
                         </button>
 
                         {/* Sujet PDF */}
-                        <button onClick={() => openPrintWindow(generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions || [], { examId: exam.id, schoolsList: schools }), 'sujet')}
+                        <button onClick={async () => {
+                          const html = await generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions || [], { examId: exam.id, schoolsList: schools });
+                          openPrintWindow(html, 'sujet');
+                        }}
                           title="Sujet Blanc PDF"
                           style={{ padding: '0.3rem 0.55rem', borderRadius: 6, border: '1px solid rgba(30,86,219,0.3)', background: 'rgba(30,86,219,0.08)', color: '#1a56db', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.72rem', fontWeight: 700 }}>
                           <FileText size={12} /> Sujet

@@ -7,9 +7,57 @@ import jsQR from 'jsqr';
  */
 
 /**
+ * Helper to parse QR data with backward compatibility
+ */
+function parseQRData(dataStr) {
+  if (!dataStr) return null;
+  const trimmed = dataStr.trim();
+  if (trimmed.startsWith('LCQ:')) {
+    return { examId: trimmed.slice(4) };
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch (e) {
+    // Graceful fallback for plain IDs
+    if (trimmed.length >= 8 && /^[a-fA-F0-9-]+$/.test(trimmed)) {
+      return { examId: trimmed };
+    }
+    return null;
+  }
+}
+
+/**
+ * Helper to binarize/enhance contrast of image data for reliable QR decoding
+ */
+function enhanceContrastData(imgData) {
+  const data = imgData.data;
+  const len = data.length;
+  const output = new Uint8ClampedArray(len);
+  
+  // Calculate average brightness
+  let sum = 0;
+  for (let i = 0; i < len; i += 4) {
+    sum += (data[i] + data[i+1] + data[i+2]) / 3;
+  }
+  const avg = sum / (len / 4);
+  const threshold = avg * 0.92; // Slight bias towards black modules
+  
+  for (let i = 0; i < len; i += 4) {
+    const val = (data[i] + data[i+1] + data[i+2]) / 3;
+    const bin = val < threshold ? 0 : 255;
+    output[i] = bin;
+    output[i+1] = bin;
+    output[i+2] = bin;
+    output[i+3] = 255;
+  }
+  return output;
+}
+
+/**
  * Reads QR Code payload from the uploaded image file.
+ * Uses multi-pass scanning (different resolutions) and contrast pre-processing.
  * @param {File|Blob} imageFile 
- * @returns {Promise<Object|null>} Decoded QR payload containing { examId, studentId, qCount, ... } or null
+ * @returns {Promise<Object|null>} Decoded QR payload containing { examId } or null
  */
 export function readQRCodeFromImage(imageFile) {
   return new Promise((resolve) => {
@@ -18,29 +66,45 @@ export function readQRCodeFromImage(imageFile) {
     img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
     img.onload = () => {
       URL.revokeObjectURL(url);
+      
       const canvas = document.createElement('canvas');
-      // For fast and accurate QR reading, cap natural width at 1000px
-      const scale = Math.min(1, 1000 / img.naturalWidth);
-      canvas.width = Math.round(img.naturalWidth * scale);
-      canvas.height = Math.round(img.naturalHeight * scale);
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-      const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const code = jsQR(imgData.data, imgData.width, imgData.height, {
-        inversionAttempts: "dontInvert",
-      });
-
-      if (code) {
-        try {
-          const payload = JSON.parse(code.data);
-          resolve(payload);
-        } catch (e) {
-          resolve(null);
+      
+      // Multi-pass scanning resolutions to try: 1000px, 1500px, 600px, and original
+      const targetSizes = [1000, 1500, 600, img.naturalWidth];
+      
+      for (const targetSize of targetSizes) {
+        if (targetSize > img.naturalWidth && targetSize !== img.naturalWidth) continue;
+        
+        const scale = targetSize / img.naturalWidth;
+        canvas.width = Math.round(img.naturalWidth * scale);
+        canvas.height = Math.round(img.naturalHeight * scale);
+        
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        
+        // Pass A: Try raw image first
+        let code = jsQR(imgData.data, imgData.width, imgData.height, {
+          inversionAttempts: "dontInvert",
+        });
+        
+        // Pass B: If raw failed, try with contrast enhancement
+        if (!code) {
+          const enhancedData = enhanceContrastData(imgData);
+          code = jsQR(enhancedData, imgData.width, imgData.height, {
+            inversionAttempts: "dontInvert",
+          });
         }
-      } else {
-        resolve(null);
+        
+        if (code) {
+          const payload = parseQRData(code.data);
+          if (payload) {
+            resolve(payload);
+            return;
+          }
+        }
       }
+      resolve(null);
     };
     img.src = url;
   });

@@ -169,7 +169,11 @@ export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
           throw new Error("Impossible de lire le code QR L'Match. Veuillez cadrer correctement toute la feuille et assurer une bonne luminosité.");
         }
         
-        const found = exams.find(e => e.id === qrPayload.examId);
+        const found = exams.find(e => 
+          qrPayload.examId.length === 8 
+            ? e.id.toLowerCase().startsWith(qrPayload.examId.toLowerCase()) 
+            : e.id === qrPayload.examId
+        );
         if (!found) {
           throw new Error(`Examen introuvable dans la bibliothèque (ID: ${qrPayload.examId.slice(0, 8)})`);
         }

@@ -767,8 +767,9 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
   };
 
   // Memoised PDF handlers — avoid heavy HTML generation on every render
-  const handleSubjectPDF = useCallback(() => {
-    openPrintWindow(generateSubjectHTML(examName || 'Examen', school, year, questions, { examId: 'PREVIEW', schoolsList: schools }), 'sujet');
+  const handleSubjectPDF = useCallback(async () => {
+    const html = await generateSubjectHTML(examName || 'Examen', school, year, questions, { examId: 'PREVIEW', schoolsList: schools });
+    openPrintWindow(html, 'sujet');
   }, [examName, school, year, questions, schools]);
 
   const handleCorrectionPDF = useCallback(() => {

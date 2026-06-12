@@ -32,18 +32,15 @@ export async function generateAnswerSheet(exam, user) {
   drawSolidAnchorSquare(W - 8 - 7, H - 8 - 7); // Bottom-Right
 
   // ── QR Code Payload ──────────────────────────────────────────────
-  const payload = JSON.stringify({
-    examId:    exam.id,
-    examName:  exam.name,
-    school:    exam.school,
-    studentId: user?.email || 'anonymous',
-    qCount:    exam.questions.length,
-    generated: new Date().toISOString(),
-  });
+  // Compact payload to ensure minimal QR version (Version 1, 21x21 modules)
+  // for maximum readability on low-end cameras.
+  const payload = `LCQ:${exam.id.slice(0, 8)}`;
 
   const qrDataUrl = await QRCode.toDataURL(payload, {
-    width: 180, margin: 1,
-    color: { dark: '#1A1A2E', light: '#FFFFFF' },
+    errorCorrectionLevel: 'H',
+    width: 200,
+    margin: 4,
+    color: { dark: '#000000', light: '#FFFFFF' },
   });
 
   // ── Header Band ──────────────────────────────────────────────────
@@ -73,8 +70,8 @@ export async function generateAnswerSheet(exam, user) {
   const examLabel = `${exam.school} — ${exam.name} ${exam.year || ''}`.trim();
   doc.text(examLabel, headerMargin + 6, 41, { maxWidth: 130 });
 
-  // QR Code Image in Header
-  doc.addImage(qrDataUrl, 'PNG', W - headerMargin - 28, 19, 24, 24);
+  // QR Code Image in Header (larger size 28x28mm for easier camera scanning)
+  doc.addImage(qrDataUrl, 'PNG', W - headerMargin - 30, 17, 28, 28);
 
   // ── Student Info Cards (Rounded border panels) ───────────────────
   const drawCard = (x, y, w, h, title, val) => {

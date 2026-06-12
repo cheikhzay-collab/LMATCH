@@ -353,9 +353,9 @@ export default function SchoolExamsPage() {
                         if (exam.pdfUrl) {
                           window.open(exam.pdfUrl, '_blank');
                         } else {
-                          import('../utils/generateExamPDF').then(({ generateSubjectHTML, openPrintWindow }) => {
+                          import('../utils/generateExamPDF').then(async ({ generateSubjectHTML, openPrintWindow }) => {
                             const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
-                            const html = generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
+                            const html = await generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
                             openPrintWindow(html);
                           });
                         }

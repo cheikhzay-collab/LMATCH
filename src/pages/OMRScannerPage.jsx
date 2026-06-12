@@ -190,8 +190,12 @@ export default function OMRScannerPage() {
         throw new Error("Code QR L'Match introuvable. Veuillez cadrer correctement le haut de la feuille avec une bonne luminosité.");
       }
 
-      // 2. Lookup exam metadata
-      const found = exams.find(e => e.id === qrPayload.examId);
+      // 2. Lookup exam metadata (supports starts-with for 8-char prefixes)
+      const found = exams.find(e => 
+        qrPayload.examId.length === 8 
+          ? e.id.toLowerCase().startsWith(qrPayload.examId.toLowerCase()) 
+          : e.id === qrPayload.examId
+      );
       if (!found) {
         throw new Error(`Examen introuvable dans la bibliothèque (ID : ${qrPayload.examId.slice(0, 8)})`);
       }

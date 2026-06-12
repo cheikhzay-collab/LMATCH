@@ -2,6 +2,47 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Camera, Zap, ZapOff, Upload, RotateCw, AlertCircle, X, ShieldAlert } from 'lucide-react';
 import jsQR from 'jsqr';
 
+// Helper to parse QR data with backward compatibility
+function parseQRData(dataStr) {
+  if (!dataStr) return null;
+  const trimmed = dataStr.trim();
+  if (trimmed.startsWith('LCQ:')) {
+    return { examId: trimmed.slice(4) };
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch (e) {
+    if (trimmed.length >= 8 && /^[a-fA-F0-9-]+$/.test(trimmed)) {
+      return { examId: trimmed };
+    }
+    return null;
+  }
+}
+
+// Helper to binarize/enhance contrast for QR detection on live camera frames
+function enhanceContrastData(imgData) {
+  const data = imgData.data;
+  const len = data.length;
+  const output = new Uint8ClampedArray(len);
+  
+  let sum = 0;
+  for (let i = 0; i < len; i += 4) {
+    sum += (data[i] + data[i+1] + data[i+2]) / 3;
+  }
+  const avg = sum / (len / 4);
+  const threshold = avg * 0.92;
+  
+  for (let i = 0; i < len; i += 4) {
+    const val = (data[i] + data[i+1] + data[i+2]) / 3;
+    const bin = val < threshold ? 0 : 255;
+    output[i] = bin;
+    output[i+1] = bin;
+    output[i+2] = bin;
+    output[i+3] = 255;
+  }
+  return output;
+}
+
 export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) {
   const [hasPermission, setHasPermission] = useState(null);
   const [errorMessage, setErrorMessage] = useState('');
@@ -150,39 +191,49 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
         const avgBrightness = count > 0 ? brightnessSum / count : 128;
         setLowLight(avgBrightness < 75);
 
-        const code = jsQR(imgData.data, analysisWidth, analysisHeight, {
+        let code = jsQR(imgData.data, analysisWidth, analysisHeight, {
           inversionAttempts: "dontInvert",
         });
 
-        if (code) {
-          try {
-            const payload = JSON.parse(code.data);
-            
-            // Check if it's a valid exam QR code
-            if (payload && payload.examId) {
-              // If activeExam is specified, verify it's the correct sheet
-              if (activeExam && payload.examId !== activeExam.id) {
-                // Wrong exam paper detected
-                setScannerStatus('detected');
-                setErrorMessage(`Attention : Ce QR Code correspond à un autre examen.`);
-              } else {
-                setErrorMessage('');
-                stabilityCount.current += 1;
-                
-                const progress = Math.min(100, Math.round((stabilityCount.current / STABILITY_THRESHOLD) * 100));
-                setStabilityProgress(progress);
+        // Fast contrast enhancement pre-processing fallback
+        if (!code) {
+          const enhanced = enhanceContrastData(imgData);
+          code = jsQR(enhanced, analysisWidth, analysisHeight, {
+            inversionAttempts: "dontInvert",
+          });
+        }
 
-                if (stabilityCount.current >= STABILITY_THRESHOLD) {
-                  // Stable QR code detected! Trigger auto-capture
-                  captureHighRes();
-                  return; // Stop the loop
-                } else {
-                  setScannerStatus('detected');
-                }
+        if (code) {
+          const payload = parseQRData(code.data);
+          
+          // Check if it's a valid exam QR code
+          if (payload && payload.examId) {
+            // Verify if correct exam paper (starts-with match for 8-char prefixes)
+            const isMatch = activeExam 
+              ? (payload.examId.length === 8 
+                  ? activeExam.id.toLowerCase().startsWith(payload.examId.toLowerCase())
+                  : activeExam.id === payload.examId)
+              : true;
+
+            if (activeExam && !isMatch) {
+              // Wrong exam paper detected
+              setScannerStatus('detected');
+              setErrorMessage(`Attention : Ce QR Code correspond à un autre examen.`);
+            } else {
+              setErrorMessage('');
+              stabilityCount.current += 1;
+              
+              const progress = Math.min(100, Math.round((stabilityCount.current / STABILITY_THRESHOLD) * 100));
+              setStabilityProgress(progress);
+
+              if (stabilityCount.current >= STABILITY_THRESHOLD) {
+                // Stable QR code detected! Trigger auto-capture
+                captureHighRes();
+                return; // Stop the loop
+              } else {
+                setScannerStatus('detected');
               }
             }
-          } catch (e) {
-            // Non-JSON QR code or unrelated QR code
           }
         } else {
           // Decrement stability counter slowly so a brief glitch doesn't reset it
