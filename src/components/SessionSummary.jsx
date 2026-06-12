@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   CheckCircle2, AlertTriangle, Zap, Award, BookOpen, 
   ArrowRight, RefreshCw, LayoutDashboard, Brain 
@@ -10,6 +10,13 @@ export default function SessionSummary({
   onForceReview, 
   onBackToDashboard 
 }) {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 600);
+  useEffect(() => {
+    const handler = () => setIsMobile(window.innerWidth <= 600);
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
   const totalCards = sessionHistory.length;
   const masteredCards = sessionHistory.filter(h => h.quality >= 3).length;
   const revoirCards = totalCards - masteredCards;
@@ -58,13 +65,13 @@ export default function SessionSummary({
   return (
     <div className="animate-fade-in" style={{
       maxWidth: '650px',
-      margin: '2rem auto',
+      margin: isMobile ? '0.75rem auto' : '2rem auto',
       width: '100%',
-      padding: '0 1rem'
+      padding: '0 0.75rem'
     }}>
       <div className="glass-panel" style={{
-        padding: '2.5rem',
-        borderRadius: 'var(--radius-2xl)',
+        padding: isMobile ? '1.25rem' : '2.5rem',
+        borderRadius: isMobile ? 'var(--radius-xl)' : 'var(--radius-2xl)',
         boxShadow: 'var(--shadow-lg)',
         border: '1px solid var(--border)',
         background: 'var(--bg-glass)',
@@ -97,24 +104,24 @@ export default function SessionSummary({
 
         <div style={{ position: 'relative', zIndex: 1 }}>
           {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{ textAlign: 'center', marginBottom: isMobile ? '1.5rem' : '2.5rem' }}>
             <div style={{
-              width: '72px',
-              height: '72px',
+              width: isMobile ? '60px' : '72px',
+              height: isMobile ? '60px' : '72px',
               background: 'rgba(99, 102, 241, 0.1)',
-              borderRadius: '24px',
+              borderRadius: isMobile ? '18px' : '24px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto 1.25rem',
+              margin: '0 auto 1rem',
               border: '1px solid rgba(99, 102, 241, 0.2)'
             }}>
-              <Brain size={36} color="var(--primary)" />
+              <Brain size={isMobile ? 30 : 36} color="var(--primary)" />
             </div>
-            <h2 className="text-gradient" style={{ fontSize: '2.25rem', fontWeight: 900, marginBottom: '0.5rem' }}>
+            <h2 className="text-gradient" style={{ fontSize: isMobile ? '1.75rem' : '2.25rem', fontWeight: 900, marginBottom: '0.5rem', letterSpacing: '-0.02em' }}>
               Session Terminée !
             </h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: isMobile ? '0.85rem' : '0.95rem', lineHeight: 1.4 }}>
               Bilan de révision pour le module <strong>{examName}</strong>
             </p>
           </div>
@@ -123,61 +130,61 @@ export default function SessionSummary({
           <div style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(3, 1fr)',
-            gap: '1rem',
-            marginBottom: '2rem'
+            gap: isMobile ? '0.5rem' : '1rem',
+            marginBottom: '1.5rem'
           }}>
             {/* Mastered */}
             <div style={{
               background: 'rgba(16, 185, 129, 0.05)',
               border: '1px solid rgba(16, 185, 129, 0.15)',
-              borderRadius: 'var(--radius-xl)',
-              padding: '1.25rem 0.75rem',
+              borderRadius: isMobile ? '12px' : 'var(--radius-xl)',
+              padding: isMobile ? '0.875rem 0.4rem' : '1.25rem 0.75rem',
               textAlign: 'center'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--emerald)', marginBottom: '0.4rem' }}>
-                <CheckCircle2 size={16} />
-                <span style={{ fontSize: '1.5rem', fontWeight: 900 }}>{masteredCards}</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', color: 'var(--emerald)', marginBottom: '0.2rem' }}>
+                <CheckCircle2 size={isMobile ? 13 : 16} />
+                <span style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 900 }}>{masteredCards}</span>
               </div>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>Maîtrisées</p>
+              <p style={{ fontSize: isMobile ? '0.7rem' : '0.78rem', color: 'var(--text-muted)', fontWeight: 600, margin: 0 }}>Maîtrisées</p>
             </div>
 
             {/* Revoir */}
             <div style={{
               background: 'rgba(239, 68, 68, 0.05)',
               border: '1px solid rgba(239, 68, 68, 0.15)',
-              borderRadius: 'var(--radius-xl)',
-              padding: '1.25rem 0.75rem',
+              borderRadius: isMobile ? '12px' : 'var(--radius-xl)',
+              padding: isMobile ? '0.875rem 0.4rem' : '1.25rem 0.75rem',
               textAlign: 'center'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--danger)', marginBottom: '0.4rem' }}>
-                <AlertTriangle size={16} />
-                <span style={{ fontSize: '1.5rem', fontWeight: 900 }}>{revoirCards}</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', color: 'var(--danger)', marginBottom: '0.2rem' }}>
+                <AlertTriangle size={isMobile ? 13 : 16} />
+                <span style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 900 }}>{revoirCards}</span>
               </div>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>À Revoir</p>
+              <p style={{ fontSize: isMobile ? '0.7rem' : '0.78rem', color: 'var(--text-muted)', fontWeight: 600, margin: 0 }}>À Revoir</p>
             </div>
 
             {/* XP Gained */}
             <div style={{
               background: 'rgba(245, 158, 11, 0.05)',
               border: '1px solid rgba(245, 158, 11, 0.15)',
-              borderRadius: 'var(--radius-xl)',
-              padding: '1.25rem 0.75rem',
+              borderRadius: isMobile ? '12px' : 'var(--radius-xl)',
+              padding: isMobile ? '0.875rem 0.4rem' : '1.25rem 0.75rem',
               textAlign: 'center'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: 'var(--warning)', marginBottom: '0.4rem' }}>
-                <Award size={16} />
-                <span style={{ fontSize: '1.5rem', fontWeight: 900 }}>+{xpGained}</span>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.25rem', color: 'var(--warning)', marginBottom: '0.2rem' }}>
+                <Award size={isMobile ? 13 : 16} />
+                <span style={{ fontSize: isMobile ? '1.2rem' : '1.5rem', fontWeight: 900 }}>+{xpGained}</span>
               </div>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>XP Gagnés</p>
+              <p style={{ fontSize: isMobile ? '0.7rem' : '0.78rem', color: 'var(--text-muted)', fontWeight: 600, margin: 0 }}>XP Gagnés</p>
             </div>
           </div>
 
-          <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: '1.75rem 0' }} />
+          <hr style={{ border: 'none', borderTop: '1px solid var(--border)', margin: isMobile ? '1.25rem 0' : '1.75rem 0' }} />
 
           {/* Topics Strengths / Weaknesses */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem', marginBottom: '1.5rem' }}>
             {strengths.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
                 <div style={{
                   background: 'rgba(16, 185, 129, 0.1)',
                   borderRadius: '50%',
@@ -185,15 +192,16 @@ export default function SessionSummary({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginTop: '0.1rem'
+                  marginTop: '0.1rem',
+                  flexShrink: 0
                 }}>
-                  <Zap size={14} color="var(--emerald)" />
+                  <Zap size={13} color="var(--emerald)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-main)' }}>
                     Points forts aujourd'hui
                   </h4>
-                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  <p style={{ margin: '0.15rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                     {strengths.join(', ')}
                   </p>
                 </div>
@@ -201,7 +209,7 @@ export default function SessionSummary({
             )}
 
             {weaknesses.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.6rem' }}>
                 <div style={{
                   background: 'rgba(239, 68, 68, 0.1)',
                   borderRadius: '50%',
@@ -209,15 +217,16 @@ export default function SessionSummary({
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginTop: '0.1rem'
+                  marginTop: '0.1rem',
+                  flexShrink: 0
                 }}>
-                  <AlertTriangle size={14} color="var(--danger)" />
+                  <AlertTriangle size={13} color="var(--danger)" />
                 </div>
                 <div>
-                  <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)' }}>
+                  <h4 style={{ margin: 0, fontSize: '0.82rem', fontWeight: 800, color: 'var(--text-main)' }}>
                     À renforcer
                   </h4>
-                  <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  <p style={{ margin: '0.15rem 0 0', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                     {weaknesses.join(', ')}
                   </p>
                 </div>
@@ -229,19 +238,19 @@ export default function SessionSummary({
           <div style={{
             background: 'var(--violet-soft)',
             border: '1px solid var(--violet)33',
-            borderRadius: 'var(--radius-xl)',
-            padding: '1.25rem 1.5rem',
-            marginBottom: '1.75rem',
+            borderRadius: isMobile ? '12px' : 'var(--radius-xl)',
+            padding: isMobile ? '1rem' : '1.25rem 1.5rem',
+            marginBottom: '1.5rem',
             display: 'flex',
             alignItems: 'flex-start',
-            gap: '0.875rem'
+            gap: '0.75rem'
           }}>
-            <BookOpen size={20} color="var(--violet)" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+            <BookOpen size={isMobile ? 18 : 20} color="var(--violet)" style={{ flexShrink: 0, marginTop: '0.1rem' }} />
             <div>
-              <h4 style={{ margin: 0, fontSize: '0.88rem', fontWeight: 800, color: 'var(--violet)', marginBottom: '0.3rem' }}>
+              <h4 style={{ margin: 0, fontSize: isMobile ? '0.82rem' : '0.88rem', fontWeight: 800, color: 'var(--violet)', marginBottom: '0.25rem' }}>
                 Conseil pédagogique personnalisé
               </h4>
-              <p style={{ margin: 0, fontSize: '0.82rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                 {advice}
               </p>
             </div>
@@ -251,21 +260,21 @@ export default function SessionSummary({
           <div style={{
             background: 'var(--bg-card)',
             border: '1px solid var(--border)',
-            borderRadius: 'var(--radius-xl)',
-            padding: '1rem 1.25rem',
-            marginBottom: '2.5rem',
+            borderRadius: isMobile ? '12px' : 'var(--radius-xl)',
+            padding: isMobile ? '0.875rem' : '1rem 1.25rem',
+            marginBottom: isMobile ? '1.5rem' : '2.5rem',
             display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'between',
-            gap: '1rem'
+            alignItems: isMobile ? 'flex-start' : 'center',
+            flexDirection: isMobile ? 'column' : 'row',
+            gap: isMobile ? '0.5rem' : '1rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
-              <Zap size={18} color="var(--warning)" />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', width: '100%' }}>
+              <Zap size={18} color="var(--warning)" style={{ flexShrink: 0 }} />
               <div>
-                <h5 style={{ margin: 0, fontSize: '0.75rem', color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                <h5 style={{ margin: 0, fontSize: '0.7rem', color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                   Prochaine session recommandée
                 </h5>
-                <p style={{ margin: 0, fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>
+                <p style={{ margin: '0.15rem 0 0', fontSize: isMobile ? '0.78rem' : '0.85rem', fontWeight: 700, color: 'var(--text-main)' }}>
                   {nextSessionText}
                 </p>
               </div>
@@ -273,7 +282,7 @@ export default function SessionSummary({
           </div>
 
           {/* CTA Actions */}
-          <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', flexDirection: 'column' }}>
             {onForceReview ? (
               <>
                 <button 
@@ -285,10 +294,12 @@ export default function SessionSummary({
                     alignItems: 'center', 
                     justifyContent: 'center', 
                     gap: '0.5rem',
-                    padding: '0.9rem'
+                    padding: isMobile ? '0.75rem' : '0.9rem',
+                    fontSize: isMobile ? '0.85rem' : '0.9rem',
+                    minHeight: '44px'
                   }}
                 >
-                  <RefreshCw size={16} /> Continuer à réviser (10 fiches)
+                  <RefreshCw size={15} /> Continuer à réviser (10 fiches)
                 </button>
                 <button 
                   className="btn-outline" 
@@ -301,10 +312,12 @@ export default function SessionSummary({
                     gap: '0.5rem',
                     borderColor: 'var(--border)',
                     color: 'var(--text-main)',
-                    padding: '0.9rem'
+                    padding: isMobile ? '0.75rem' : '0.9rem',
+                    fontSize: isMobile ? '0.85rem' : '0.9rem',
+                    minHeight: '44px'
                   }}
                 >
-                  <LayoutDashboard size={16} /> Retour au tableau de bord
+                  <LayoutDashboard size={15} /> Retour au tableau de bord
                 </button>
               </>
             ) : (
@@ -317,10 +330,12 @@ export default function SessionSummary({
                   alignItems: 'center', 
                   justifyContent: 'center', 
                   gap: '0.5rem',
-                  padding: '0.9rem'
+                  padding: isMobile ? '0.75rem' : '0.9rem',
+                  fontSize: isMobile ? '0.85rem' : '0.9rem',
+                  minHeight: '44px'
                 }}
               >
-                <LayoutDashboard size={16} /> Retour au tableau de bord
+                <LayoutDashboard size={15} /> Retour au tableau de bord
               </button>
             )}
           </div>
