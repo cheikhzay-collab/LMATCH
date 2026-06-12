@@ -438,7 +438,13 @@ export default function StudyMode() {
                       <div 
                         key={topic.name} 
                         className="exam-card-premium"
-                        style={{ padding: '0.85rem 1.25rem' }}
+                        style={{ 
+                          padding: isMobile ? '0.75rem 1rem' : '0.85rem 1.25rem',
+                          display: 'flex',
+                          flexDirection: isMobile ? 'column' : 'row',
+                          alignItems: isMobile ? 'stretch' : 'center',
+                          gap: isMobile ? '0.75rem' : '1.25rem',
+                        }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0, flex: 1 }}>
                           <div style={{ 
@@ -459,37 +465,64 @@ export default function StudyMode() {
                           </div>
                         </div>
                         
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexShrink: 0 }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '0.6rem', 
+                          flexShrink: 0,
+                          width: isMobile ? '100%' : 'auto',
+                          justifyContent: isMobile ? 'space-between' : 'flex-end'
+                        }}>
                           {!isCompleted ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
                               <div style={{ 
                                 background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', 
                                 padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
-                                display: 'inline-flex', alignItems: 'center', gap: '0.2rem', border: '1px solid rgba(239, 68, 68, 0.1)'
+                                display: 'inline-flex', alignItems: 'center', gap: '0.2rem', border: '1px solid rgba(239, 68, 68, 0.1)',
+                                flexShrink: 0
                               }}>
                                 {topic.due} À RÉVISER
                               </div>
                               <button 
                                 className="btn" 
                                 onClick={() => navigate(`/study?topic=${encodeURIComponent(topic.name)}`)}
-                                style={{ padding: '0.45rem 1rem', fontSize: '0.72rem', fontWeight: 800 }}
+                                style={{ 
+                                  padding: '0.45rem 1rem', 
+                                  fontSize: '0.72rem', 
+                                  fontWeight: 800,
+                                  minHeight: '38px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flex: isMobile ? 1 : 'none'
+                                }}
                               >
                                 Réviser (Max 10)
                               </button>
                             </div>
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
                               <div style={{ 
                                 background: 'rgba(16, 185, 129, 0.05)', color: 'var(--emerald)', 
                                 padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
-                                display: 'inline-flex', alignItems: 'center', gap: '0.2rem', border: '1px solid rgba(16, 185, 129, 0.1)'
+                                display: 'inline-flex', alignItems: 'center', gap: '0.2rem', border: '1px solid rgba(16, 185, 129, 0.1)',
+                                flexShrink: 0
                               }}>
                                 COMPLÉTÉ ✨
                               </div>
                               <button 
                                 className="btn-outline"
                                 onClick={() => navigate(`/study?topic=${encodeURIComponent(topic.name)}`)}
-                                style={{ padding: '0.45rem 0.85rem', fontSize: '0.72rem', fontWeight: 800 }}
+                                style={{ 
+                                  padding: '0.45rem 0.85rem', 
+                                  fontSize: '0.72rem', 
+                                  fontWeight: 800,
+                                  minHeight: '38px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  flex: isMobile ? 1 : 'none'
+                                }}
                               >
                                 Entraînement
                               </button>
