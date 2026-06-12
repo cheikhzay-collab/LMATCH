@@ -292,7 +292,7 @@ export default function SchoolExamsPage() {
                   <div style={{ 
                     display: 'flex', 
                     gap: '0.5rem', 
-                    width: '100%',
+                    width: isMobile ? '100%' : 'auto',
                     flex: isMobile ? 'none' : 'none',
                     justifyContent: 'stretch',
                   }}>
