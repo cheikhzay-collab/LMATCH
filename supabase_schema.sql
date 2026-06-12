@@ -98,6 +98,11 @@ RETURNS trigger
 SECURITY DEFINER SET search_path = public
 LANGUAGE plpgsql AS $$
 BEGIN
+  -- Allow updates to role/tier if app.bypass_tier_trigger session setting is 'true'
+  IF current_setting('app.bypass_tier_trigger', true) = 'true' THEN
+    RETURN new;
+  END IF;
+
   IF (old.role IS DISTINCT FROM new.role OR old.tier IS DISTINCT FROM new.tier) THEN
     IF NOT public.is_admin() THEN
       new.role := old.role;
@@ -172,17 +177,6 @@ ALTER TABLE public.activation_codes ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Authenticated users can select activation codes" ON public.activation_codes;
 DROP POLICY IF EXISTS "Authenticated users can update activation codes" ON public.activation_codes;
 DROP POLICY IF EXISTS "Admins can manage activation codes." ON public.activation_codes;
-
-CREATE POLICY "Authenticated users can select activation codes"
-  ON public.activation_codes FOR SELECT
-  TO authenticated
-  USING (true);
-
-CREATE POLICY "Authenticated users can update activation codes"
-  ON public.activation_codes FOR UPDATE
-  TO authenticated
-  USING (true)
-  WITH CHECK (true);
 
 CREATE POLICY "Admins can manage activation codes." ON public.activation_codes
   FOR ALL USING (public.is_admin());
@@ -313,4 +307,111 @@ $$;
 
 REVOKE EXECUTE ON FUNCTION public.get_leaderboard() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_leaderboard() TO authenticated;
+
+
+-- ─── 9. Code Redemption RPC (Atomic & Secure) ─────────────────────────────────
+CREATE OR REPLACE FUNCTION public.redeem_code(input_code text, user_name_or_email text, user_id uuid)
+RETURNS jsonb
+SECURITY DEFINER
+SET search_path = public
+LANGUAGE plpgsql AS $$
+DECLARE
+  code_row record;
+  plans_json jsonb;
+  plan_item jsonb;
+  plan_found boolean := false;
+  plan_duration integer;
+  sub_end_date timestamp with time zone;
+BEGIN
+  -- 1. Get the activation code
+  SELECT * INTO code_row FROM public.activation_codes WHERE upper(code) = upper(input_code);
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Code d''activation invalide. Veuillez vérifier la saisie.';
+  END IF;
+
+  -- 2. Check if code is already used
+  IF code_row.is_used THEN
+    RAISE EXCEPTION 'Ce code a déjà été utilisé.';
+  END IF;
+
+  -- 3. Get plans from config table
+  SELECT value INTO plans_json FROM public.config WHERE key = 'plans';
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Configuration des plans introuvable.';
+  END IF;
+
+  -- Find the plan matching the code's plan_id in the JSON array
+  FOR plan_item IN SELECT jsonb_array_elements(plans_json->'plans') LOOP
+    IF plan_item->>'id' = code_row.plan_id THEN
+      plan_found := true;
+      plan_duration := (plan_item->>'durationDays')::integer;
+    END IF;
+  END LOOP;
+
+  IF NOT plan_found THEN
+    RAISE EXCEPTION 'Plan d''abonnement introuvable pour ce code.';
+  END IF;
+
+  -- 4. Mark code as used
+  UPDATE public.activation_codes
+  SET is_used = true,
+      used_by = user_name_or_email,
+      used_at = now()
+  WHERE upper(code) = upper(input_code);
+
+  -- 5. Calculate subscription end date
+  sub_end_date := now() + (plan_duration || ' days')::interval;
+
+  -- 6. Enable trigger bypass for setting the user subscription & tier to premium
+  PERFORM set_config('app.bypass_tier_trigger', 'true', true);
+
+  -- 7. Update user profile to premium tier
+  UPDATE public.profiles
+  SET tier = 'premium',
+      subscription = jsonb_build_object(
+        'planId', code_row.plan_id,
+        'status', 'active',
+        'startDate', now(),
+        'endDate', sub_end_date
+      )
+  WHERE id = user_id;
+
+  RETURN jsonb_build_object(
+    'success', true,
+    'planId', code_row.plan_id,
+    'durationDays', plan_duration
+  );
+END;
+$$;
+
+REVOKE EXECUTE ON FUNCTION public.redeem_code(text, text, uuid) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.redeem_code(text, text, uuid) TO authenticated;
+
+
+-- ─── 10. Performance Indexes ──────────────────────────────────────────────────
+CREATE INDEX IF NOT EXISTS idx_progress_user_id ON public.progress(user_id);
+CREATE INDEX IF NOT EXISTS idx_mock_history_user_id ON public.mock_history(user_id);
+CREATE INDEX IF NOT EXISTS idx_activity_user_id ON public.activity(user_id);
+
+
+-- ─── 11. Storage Bucket and Policies ──────────────────────────────────────────
+-- Insert public bucket named 'gima-assets' if it doesn't exist
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('gima-assets', 'gima-assets', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Set up RLS policies for storage objects in the 'gima-assets' bucket
+DROP POLICY IF EXISTS "Public Select" ON storage.objects;
+DROP POLICY IF EXISTS "Admin Manage" ON storage.objects;
+
+-- Allow public read access to all objects in gima-assets
+CREATE POLICY "Public Select" ON storage.objects
+  FOR SELECT TO public
+  USING (bucket_id = 'gima-assets');
+
+-- Allow admins to perform all operations on gima-assets
+CREATE POLICY "Admin Manage" ON storage.objects
+  FOR ALL TO authenticated
+  USING (bucket_id = 'gima-assets' AND public.is_admin())
+  WITH CHECK (bucket_id = 'gima-assets' AND public.is_admin());
 

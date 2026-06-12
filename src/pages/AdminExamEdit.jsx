@@ -9,6 +9,7 @@ import {
   ChevronUp, ChevronDown
 } from 'lucide-react';
 import { renderWithMath } from '../utils/mathRenderer';
+import { uploadAsset } from '../services/storageService';
 
 /* ─────────────────────────────────────────────────────────────
    Tiny LaTeX toolbar
@@ -242,6 +243,7 @@ export default function AdminExamEdit() {
   const [previewSide, setPreviewSide] = useState('front');
   const [saved, setSaved] = useState(false);
   const [hasUnsaved, setHasUnsaved] = useState(false);
+  const [isUploadingImg, setIsUploadingImg] = useState(false);
 
   const [editName, setEditName] = useState('');
   const [editSchool, setEditSchool] = useState('');
@@ -979,23 +981,29 @@ export default function AdminExamEdit() {
                               type="file" accept="image/*"
                               id={`img-upload-${q.id || selectedIdx}`}
                               style={{ display: 'none' }}
-                              onChange={e => {
+                              disabled={isUploadingImg}
+                              onChange={async (e) => {
                                 const file = e.target.files?.[0];
                                 if (file) {
-                                  const reader = new FileReader();
-                                  reader.onloadend = () => {
-                                    updateQField(selectedIdx, 'image', reader.result);
+                                  setIsUploadingImg(true);
+                                  try {
+                                    const pathName = `questions/${exam.id}/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+                                    const publicUrl = await uploadAsset(file, pathName);
+                                    updateQField(selectedIdx, 'image', publicUrl);
                                     updateQField(selectedIdx, 'imagePosition', 'below_statement');
                                     updateQField(selectedIdx, 'imageSize', 'medium');
                                     updateQField(selectedIdx, 'imageBg', 'transparent');
-                                  };
-                                  reader.readAsDataURL(file);
+                                  } catch (err) {
+                                    alert("Erreur lors du téléversement de l'image : " + err.message);
+                                  } finally {
+                                    setIsUploadingImg(false);
+                                  }
                                 }
                               }}
                             />
                             <label htmlFor={`img-upload-${q.id || selectedIdx}`} className="btn-outline"
-                              style={{ padding: '0.38rem 0.85rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: 5, cursor: 'pointer', margin: 0, borderRadius: 8 }}>
-                              <Upload size={12} /> {q.image ? 'Remplacer' : "Importer"}
+                              style={{ padding: '0.38rem 0.85rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: 5, cursor: isUploadingImg ? 'not-allowed' : 'pointer', margin: 0, borderRadius: 8, opacity: isUploadingImg ? 0.6 : 1 }}>
+                              <Upload size={12} /> {isUploadingImg ? 'Envoi...' : q.image ? 'Remplacer' : "Importer"}
                             </label>
                             {q.image && (
                               <button type="button" onClick={() => { 

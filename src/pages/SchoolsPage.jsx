@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { uploadAsset } from '../services/storageService';
 import {
   GraduationCap, BookOpen, ChevronRight, Search,
   Plus, Pencil, Trash2, X, Check, AlertTriangle, Upload,
@@ -118,14 +119,22 @@ function EditModal({ school, brand, onSave, onClose }) {
   const [tag,      setTag]      = useState(brand.tag);
   const [logoUrl,  setLogoUrl]  = useState(brand.logoUrl || null);
   const [scoring,  setScoring]  = useState(brand.scoring || { correct: 1, wrong: -0.25, empty: 0 });
+  const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file || !file.type.startsWith('image/')) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => setLogoUrl(ev.target.result);
-    reader.readAsDataURL(file);
+    setIsUploading(true);
+    try {
+      const fileName = `logos/${Date.now()}_${file.name.replace(/\s+/g, '_')}`;
+      const publicUrl = await uploadAsset(file, fileName);
+      setLogoUrl(publicUrl);
+    } catch (err) {
+      alert("Erreur lors du téléversement du logo : " + err.message);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const PreviewIcon = ICON_MAP[iconKey] || GraduationCap;
@@ -203,8 +212,8 @@ function EditModal({ school, brand, onSave, onClose }) {
           <div style={{ marginBottom:'2.5rem' }}>
              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'1rem' }}>
                 <h5 style={{ fontWeight:800, fontSize:'0.88rem', margin: 0 }}>🎨 Identité Visuelle</h5>
-                <button type="button" onClick={() => fileInputRef.current?.click()} className="btn" style={{ fontSize:'0.75rem', padding:'0.4rem 0.8rem' }}>
-                   <Upload size={13} style={{ marginRight:'0.3rem' }} /> {logoUrl ? 'Changer logo' : 'Uploader logo'}
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="btn" style={{ fontSize:'0.75rem', padding:'0.4rem 0.8rem' }} disabled={isUploading}>
+                   <Upload size={13} style={{ marginRight:'0.3rem' }} /> {isUploading ? 'Téléchargement...' : logoUrl ? 'Changer logo' : 'Uploader logo'}
                 </button>
              </div>
              <input ref={fileInputRef} type="file" accept="image/*" onChange={handleImageUpload} style={{ display:'none' }} />

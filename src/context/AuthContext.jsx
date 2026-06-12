@@ -3,7 +3,7 @@ import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoo
 import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard } from '../services/userService';
 import { getAllExams, getActiveExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam } from '../services/examService';
 import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig } from '../services/schoolService';
-import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, getCode } from '../services/planService';
+import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, getCode, redeemCodeViaRPC } from '../services/planService';
 import { sanitizeInputString, validatePhoneNumber } from '../utils/security';
 
 
@@ -956,46 +956,51 @@ export function AuthProvider({ children }) {
   const redeemActivationCode = async (codeStr) => {
     const cleanCode = codeStr.trim().toUpperCase();
     
-    let codeObj = null;
-    let foundIdx = -1;
-    
-    if (SUPABASE_ENABLED) {
-      codeObj = await getCode(cleanCode);
-    } else {
-      foundIdx = activationCodes.findIndex(c => c.code.toUpperCase() === cleanCode);
-      if (foundIdx !== -1) {
-        codeObj = activationCodes[foundIdx];
-      }
-    }
-    
-    if (!codeObj) {
-      throw new Error("Code d'activation invalide. Veuillez vérifier la saisie.");
-    }
-    
-    if (codeObj.isUsed) {
-      throw new Error(`Ce code a déjà été utilisé par ${codeObj.usedBy} le ${new Date(codeObj.usedAt).toLocaleDateString('fr-FR')}.`);
-    }
-    
-    const plan = plans.find(p => p.id === codeObj.planId);
-    if (!plan) {
-      throw new Error("Plan d'abonnement introuvable pour ce code.");
-    }
-    
     if (!user) {
       throw new Error("Seuls les élèves connectés peuvent activer un abonnement.");
     }
     
     if (SUPABASE_ENABLED) {
       try {
-        await markCodeUsed(cleanCode, user.name || user.email);
+        // Call the secure atomic database function (handles RLS and trigger bypass)
+        const result = await redeemCodeViaRPC(cleanCode, user.name || user.email, user.uid || user.id);
+        
+        const plan = plans.find(p => p.id === result.planId);
+        if (!plan) {
+          throw new Error("Plan d'abonnement introuvable pour ce code.");
+        }
+        
+        // Update local activation codes state if cached locally
         setActivationCodes(prev => prev.map(c => c.code.toUpperCase() === cleanCode ? { ...c, isUsed: true, usedBy: user.name || user.email, usedAt: new Date().toISOString() } : c));
-        await activateSubscription(user.uid || user.id, plan.id, plan.durationDays);
+        
+        // Update user profile tier and subscription locally
+        const subscription = {
+          planId: result.planId,
+          status: 'active',
+          startDate: new Date().toISOString(),
+          endDate: new Date(new Date().getTime() + result.durationDays * 24 * 3600 * 1000).toISOString()
+        };
+        setUser(u => ({ ...u, tier: 'premium', subscription }));
+        
+        return plan;
       } catch (e) {
         console.error('[Supabase] Failed to redeem code:', e);
         throw e;
       }
     } else {
-      // Mark code as used locally
+      const foundIdx = activationCodes.findIndex(c => c.code.toUpperCase() === cleanCode);
+      if (foundIdx === -1) {
+        throw new Error("Code d'activation invalide. Veuillez vérifier la saisie.");
+      }
+      const codeObj = activationCodes[foundIdx];
+      if (codeObj.isUsed) {
+        throw new Error(`Ce code a déjà été utilisé par ${codeObj.usedBy} le ${new Date(codeObj.usedAt).toLocaleDateString('fr-FR')}.`);
+      }
+      const plan = plans.find(p => p.id === codeObj.planId);
+      if (!plan) {
+        throw new Error("Plan d'abonnement introuvable pour ce code.");
+      }
+      
       const updatedCodes = [...activationCodes];
       updatedCodes[foundIdx] = {
         ...codeObj,
@@ -1005,9 +1010,8 @@ export function AuthProvider({ children }) {
       };
       setActivationCodes(updatedCodes);
       activateSubscription(user.id, plan.id, plan.durationDays);
+      return plan;
     }
-    
-    return plan;
   };
 
   // FSRS (Free Spaced Repetition Scheduler) Algorithm Implementation
@@ -1148,11 +1152,8 @@ export function AuthProvider({ children }) {
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const activeExams = exams.filter(e => e.isActive !== false && e.isArchived !== true);
-    const allQuestions = activeExams.flatMap(e =>
-      (e.questions || []).map(q => ({ ...q, examName: e.name }))
-    );
-    const totalCards = allQuestions.length;
 
+    let totalCards = 0;
     let masteredCards = 0;
     let learningCards = 0;
     let dueToday = 0;
@@ -1160,44 +1161,49 @@ export function AuthProvider({ children }) {
     let studiedQuestionsCount = 0;
     const topicMap = {}; // topic -> { totalEF, count, weightedMasterySum, total }
 
-    allQuestions.forEach(q => {
-      const p = progress[q.id];
-      const topic = q.topic || 'Général';
-      if (!topicMap[topic]) topicMap[topic] = { totalEF: 0, count: 0, weightedMasterySum: 0, total: 0 };
-      topicMap[topic].total++;
-      if (!p) return;
-      const { repetitions, easeFactor, nextReviewDate, stability } = p;
-      
-      // Calculate question mastery weight
-      let weight = 0;
-      
-      // Fallback stability calculation for older card records
-      const cardStability = stability !== undefined && stability !== null
-        ? stability
-        : (repetitions > 0 ? Math.max(1.0, 2.0 * Math.pow(3, repetitions - 1)) : 2.0);
+    activeExams.forEach(e => {
+      if (!e.questions) return;
+      totalCards += e.questions.length;
 
-      if (repetitions >= 3) {
-        weight = 1.0;
-        masteredCards++;
-      } else if (repetitions === 2) {
-        weight = 0.7;
-        learningCards++;
-      } else if (repetitions === 1) {
-        if (cardStability > 1.0) {
-          weight = 0.4;
-        } else {
-          weight = 0.0;
+      e.questions.forEach(q => {
+        const p = progress[q.id];
+        const topic = q.topic || 'Général';
+        if (!topicMap[topic]) topicMap[topic] = { totalEF: 0, count: 0, weightedMasterySum: 0, total: 0 };
+        topicMap[topic].total++;
+        if (!p) return;
+        const { repetitions, easeFactor, nextReviewDate, stability } = p;
+        
+        // Calculate question mastery weight
+        let weight = 0;
+        
+        // Fallback stability calculation for older card records
+        const cardStability = stability !== undefined && stability !== null
+          ? stability
+          : (repetitions > 0 ? Math.max(1.0, 2.0 * Math.pow(3, repetitions - 1)) : 2.0);
+
+        if (repetitions >= 3) {
+          weight = 1.0;
+          masteredCards++;
+        } else if (repetitions === 2) {
+          weight = 0.7;
+          learningCards++;
+        } else if (repetitions === 1) {
+          if (cardStability > 1.0) {
+            weight = 0.4;
+          } else {
+            weight = 0.0;
+          }
+          learningCards++;
         }
-        learningCards++;
-      }
 
-      topicMap[topic].weightedMasterySum += weight;
-      totalWeightedMasterySum += weight;
-      studiedQuestionsCount++;
+        topicMap[topic].weightedMasterySum += weight;
+        totalWeightedMasterySum += weight;
+        studiedQuestionsCount++;
 
-      topicMap[topic].totalEF += easeFactor;
-      topicMap[topic].count++;
-      if (new Date(nextReviewDate) <= now) dueToday++;
+        topicMap[topic].totalEF += easeFactor;
+        topicMap[topic].count++;
+        if (new Date(nextReviewDate) <= now) dueToday++;
+      });
     });
 
     // Topics sorted by mastery (weakest first)
@@ -1305,8 +1311,24 @@ export function AuthProvider({ children }) {
 
     const loadConfigAndExams = async () => {
       try {
-        // Fetch Schools
-        const schoolsConfig = await getSchoolsConfig();
+        // Fetch all config documents and exams in parallel to avoid sequential blocking awaits
+        const [
+          schoolsConfig,
+          brandConfig,
+          flashcardConfig,
+          pdfConfig,
+          fbPlans,
+          fbExams
+        ] = await Promise.all([
+          getSchoolsConfig(),
+          getBrandingConfig(),
+          getFlashcardSettingsConfig(),
+          getPdfSettingsConfig(),
+          getPlans(),
+          getAllExams()
+        ]);
+
+        // Process Schools Config
         if (schoolsConfig && schoolsConfig.schools && schoolsConfig.schools.length > 0) {
           setSchools(schoolsConfig.schools);
           setSchoolBranding(schoolsConfig.branding || {});
@@ -1315,8 +1337,7 @@ export function AuthProvider({ children }) {
           await saveSchoolsConfig(schools, schoolBranding);
         }
 
-        // Fetch General Branding
-        const brandConfig = await getBrandingConfig();
+        // Process General Branding
         if (brandConfig) {
           setProfName(brandConfig.profName || '');
           setProfPhone(brandConfig.profPhone || '');
@@ -1329,8 +1350,7 @@ export function AuthProvider({ children }) {
           await saveBrandingConfig({ profName, profPhone, profSite });
         }
 
-        // Fetch Flashcard Settings
-        const flashcardConfig = await getFlashcardSettingsConfig();
+        // Process Flashcard Settings
         if (flashcardConfig) {
           localStorage.setItem('card_reveal_mode', flashcardConfig.cardRevealMode || 'flip');
           localStorage.setItem('card_flip_animation', String(flashcardConfig.cardFlipEnabled !== false));
@@ -1363,8 +1383,7 @@ export function AuthProvider({ children }) {
           localStorage.setItem('card_options_weight', defaultFlashcard.cardOptionsWeight);
         }
 
-        // Fetch PDF Settings
-        const pdfConfig = await getPdfSettingsConfig();
+        // Process PDF Settings
         if (pdfConfig) {
           localStorage.setItem('pdf_page_margins', pdfConfig.pdfPageMargins || 'standard');
           localStorage.setItem('pdf_font_size', pdfConfig.pdfFontSize || '11pt');
@@ -1390,8 +1409,7 @@ export function AuthProvider({ children }) {
           localStorage.setItem('pdf_force_print_colors', String(defaultPdf.pdfForcePrintColors));
         }
 
-        // Fetch Plans
-        const fbPlans = await getPlans();
+        // Process Plans
         if (fbPlans && fbPlans.length > 0) {
           setPlans(fbPlans);
         } else {
@@ -1399,8 +1417,7 @@ export function AuthProvider({ children }) {
           await savePlans(plans);
         }
 
-        // Fetch Exams
-        const fbExams = await getAllExams();
+        // Process Exams
         if (fbExams && fbExams.length > 0) {
           setExams(fbExams);
         } else {

@@ -24,7 +24,8 @@ export default function StudentDashboard() {
     profName, 
     profPhone, 
     profSite, 
-    updateProfile 
+    updateProfile,
+    loading: authLoading
   } = useAuth();
   
   const navigate = useNavigate();
@@ -33,15 +34,6 @@ export default function StudentDashboard() {
   const stats = useMemo(() => getStudentStats(), [getStudentStats]);
   const [toastMessage, setToastMessage] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [loadingData, setLoadingData] = useState(true);
-
-  // Micro skeleton delay to allow smooth cascade entry
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoadingData(false);
-    }, 600);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Auto-trigger onboarding if fields are empty
   useEffect(() => {
@@ -196,7 +188,7 @@ export default function StudentDashboard() {
   const onNavigateToSchools = useCallback(() => navigate('/schools'), [navigate]);
   const onNavigateToScanner = useCallback(() => navigate('/scanner'), [navigate]);
 
-  if (loadingData) {
+  if (authLoading && !user) {
     return <DashboardSkeleton />;
   }
 

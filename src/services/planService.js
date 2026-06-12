@@ -143,3 +143,26 @@ export const getCode = async (code) => {
   if (error || !data) return null;
   return mapDBToCode(data);
 };
+
+/**
+ * Redeem an activation code via secure Supabase RPC function.
+ * Runs atomically on the database side.
+ * @param {string} code
+ * @param {string} usedBy — user name or email
+ * @param {string} userId — user UID
+ * @returns {Promise<Object>} — planId and durationDays
+ */
+export const redeemCodeViaRPC = async (code, usedBy, userId) => {
+  if (!supabase) throw new Error("Supabase is not configured.");
+  const { data, error } = await supabase.rpc('redeem_code', {
+    input_code: code,
+    user_name_or_email: usedBy,
+    user_id: userId
+  });
+
+  if (error) {
+    console.error('[Supabase] Failed to redeem code via RPC:', error);
+    throw new Error(error.message || "Erreur lors de la validation du code.");
+  }
+  return data;
+};
