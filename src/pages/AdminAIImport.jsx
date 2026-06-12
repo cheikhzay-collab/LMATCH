@@ -768,12 +768,12 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
 
   // Memoised PDF handlers — avoid heavy HTML generation on every render
   const handleSubjectPDF = useCallback(() => {
-    openPrintWindow(generateSubjectHTML(examName || 'Examen', school, year, questions, { examId: 'PREVIEW' }), 'sujet');
-  }, [examName, school, year, questions]);
+    openPrintWindow(generateSubjectHTML(examName || 'Examen', school, year, questions, { examId: 'PREVIEW', schoolsList: schools }), 'sujet');
+  }, [examName, school, year, questions, schools]);
 
   const handleCorrectionPDF = useCallback(() => {
-    openPrintWindow(generateCorrectionHTML(examName || 'Examen', school, year, questions), 'corrigé');
-  }, [examName, school, year, questions]);
+    openPrintWindow(generateCorrectionHTML(examName || 'Examen', school, year, questions, { schoolsList: schools }), 'corrigé');
+  }, [examName, school, year, questions, schools]);
 
   const handlePublish = () => {
     if (!examName.trim()) { setError('Entrez un titre pour cet examen.'); return; }

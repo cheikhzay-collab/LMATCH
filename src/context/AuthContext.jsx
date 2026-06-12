@@ -4,6 +4,7 @@ import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMo
 import { getAllExams, getActiveExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam } from '../services/examService';
 import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, getCode } from '../services/planService';
+import { sanitizeInputString, validatePhoneNumber } from '../utils/security';
 
 
 // ── Supabase availability guard ───────────────────────────────────────────────
@@ -139,9 +140,13 @@ export function AuthProvider({ children }) {
   const [profSite, setProfSite] = useState(() => localStorage.getItem('profSite') || 'www.lconq.ma');
 
   const updateBrandingConfig = async (branding) => {
-    const name = (branding.profName || '').trim();
-    const phone = (branding.profPhone || '').trim();
-    const site = (branding.profSite || '').trim() || 'www.lconq.ma';
+    const name = sanitizeInputString(branding.profName || '').trim();
+    const phone = sanitizeInputString(branding.profPhone || '').trim();
+    const site = sanitizeInputString(branding.profSite || '').trim() || 'www.lconq.ma';
+
+    if (phone && !validatePhoneNumber(phone)) {
+      console.warn('[Security] Invalid phone format in updateBrandingConfig.');
+    }
 
     setProfName(name);
     setProfPhone(phone);
@@ -643,11 +648,22 @@ export function AuthProvider({ children }) {
   };
 
   const updateProfile = async (updates) => {
+    // Sanitize string properties and validate phone formats before DB operations
+    const sanitizedUpdates = { ...updates };
+    if (updates.name !== undefined) sanitizedUpdates.name = sanitizeInputString(updates.name);
+    if (updates.phone !== undefined) {
+      if (updates.phone && !validatePhoneNumber(updates.phone)) {
+        throw new Error('Format de numéro de téléphone invalide.');
+      }
+      sanitizedUpdates.phone = sanitizeInputString(updates.phone);
+    }
+    if (updates.city !== undefined) sanitizedUpdates.city = sanitizeInputString(updates.city);
+
     if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
       const userId = user.uid || user.id;
       try {
-        await updateUserDoc(userId, updates);
-        setUser(u => ({ ...u, ...updates }));
+        await updateUserDoc(userId, sanitizedUpdates);
+        setUser(u => ({ ...u, ...sanitizedUpdates }));
       } catch (dbErr) {
         console.warn("[Auth] Failed to update profiles table, falling back to auth metadata:", dbErr.message);
         try {
@@ -655,20 +671,20 @@ export function AuthProvider({ children }) {
           const { supabase } = await import('../lib/supabase');
           if (supabase) {
             await supabase.auth.updateUser({
-              data: { phone: updates.phone, city: updates.city }
+              data: { phone: sanitizedUpdates.phone, city: sanitizedUpdates.city }
             });
           }
         } catch (authErr) {
           console.warn("[Auth] Failed to update auth metadata:", authErr.message);
         }
         // Enforce state update locally so the student is not blocked
-        setUser(u => ({ ...u, ...updates }));
+        setUser(u => ({ ...u, ...sanitizedUpdates }));
       }
     } else {
       if (user) {
-        const updated = { ...user, ...updates };
+        const updated = { ...user, ...sanitizedUpdates };
         setUser(updated);
-        setUsers(prev => prev.map(u => (u.id === user.id || u.uid === user.uid) ? { ...u, ...updates } : u));
+        setUsers(prev => prev.map(u => (u.id === user.id || u.uid === user.uid) ? { ...u, ...sanitizedUpdates } : u));
       }
     }
   };

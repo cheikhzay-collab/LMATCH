@@ -256,22 +256,22 @@ const getThemeClass = (subj) => {
 };
 
 const getOptionsLayoutClass = (options) => {
-  if (!options || options.length === 0) return 'opts-1col';
+  if (!options || options.length === 0) return 'ws-opts-1col';
   let maxLength = 0;
   options.forEach(opt => {
     const raw = typeof opt === 'string' ? opt : (opt?.text || '');
-    const clean = raw.replace(/^[A-E][).]\s*/i, '');
+    const clean = raw.replace(/^[A-E][).\s]*/i, '');
     if (clean.length > maxLength) {
       maxLength = clean.length;
     }
   });
 
   if (maxLength < 15) {
-    return options.length === 5 ? 'opts-5col' : 'opts-4col';
+    return options.length === 5 ? 'ws-opts-5col' : 'ws-opts-4col';
   } else if (maxLength < 40) {
-    return 'opts-2col';
+    return 'ws-opts-2col';
   } else {
-    return 'opts-1col';
+    return 'ws-opts-1col';
   }
 };
 
@@ -302,11 +302,14 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
   }
   const sidebarTabsHtml = schools.map(sch => {
     const isActive = sch.toLowerCase() === school.toLowerCase();
-    const activeClass = isActive ? ' active-tab' : '';
     let displayName = sch;
     if (sch === 'Médecine / Pharmacie') displayName = 'Médecine';
     if (displayName.includes('Général')) displayName = 'Prépa';
-    return `<div class="print-vertical-tab${activeClass}">${displayName}</div>`;
+    if (displayName.length > 20) displayName = displayName.substring(0, 18) + '…';
+    return `<div class="ws-vtab${isActive ? ' ws-vtab-active' : ''}">
+      <span class="ws-vtab-dot"></span>
+      ${displayName}
+    </div>`;
   }).join('');
 
   if (typeof window !== 'undefined' && window.localStorage) {
@@ -320,11 +323,8 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
     ? `© ${new Date().getFullYear()} L'CONQ × ${profName}. Tous droits réservés.`
     : `© ${new Date().getFullYear()} L'CONQ. Tous droits réservés.`;
 
-  // QR URLs:
-  // Compact grid QR code:
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(`lconq://exam/${examTitle}`)}`;
   
-  // Premium OMR sheet QR code JSON payload:
   const premiumQrPayload = JSON.stringify({
     examId: examId,
     examName: examTitle,
@@ -337,7 +337,7 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
 
   const groups = groupBySubject(questions);
 
-  /* Compact OMR Grid rows (4 options: A, B, C, D) */
+  /* Compact OMR Grid rows */
   const cHalf = Math.ceil(questions.length / 2);
   const cCol1 = questions.slice(0, cHalf);
   const cCol2 = questions.slice(cHalf);
@@ -353,14 +353,13 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
     </tr>`;
   }).join('');
 
-  /* Premium OMR Sheet rows (5 options: A, B, C, D, E) */
+  /* Premium OMR Sheet rows */
   const pCount = questions.length;
   const pHalf = Math.ceil(pCount / 2);
   const pOpts = ['A', 'B', 'C', 'D', 'E'];
 
   let premiumOmrHtml = '';
   
-  // Left Column
   premiumOmrHtml += '<div class="omr-column col-1">';
   premiumOmrHtml += `
     <div class="omr-col-header">
@@ -383,11 +382,8 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
     `;
   }
   premiumOmrHtml += '</div>';
-
-  // Divider
   premiumOmrHtml += '<div class="omr-column-divider"></div>';
 
-  // Right Column
   premiumOmrHtml += '<div class="omr-column col-2">';
   premiumOmrHtml += `
     <div class="omr-col-header">
@@ -413,9 +409,10 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
 
   const usedRows = Math.ceil(pCount / 2);
   const footerY = Math.max(96 + 7 + usedRows * 8.5 + 12, 258);
-
   const dateStr = new Date().toLocaleDateString('fr-MA');
   const examDuration = `${Math.ceil(questions.length * 1.5)} minutes`;
+
+  const LETTERS = ['A', 'B', 'C', 'D', 'E'];
 
   const coverHtml = shouldShowCover ? `
 <div class="cover">
@@ -467,33 +464,32 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
     sectionIndex++;
     const themeClass = getThemeClass(subject);
     return `
-    <div class="subj-section ${themeClass}">
-      <div class="section-hdr-row">
-        <div class="section-badge-circle">${sectionIndex}</div>
-        <div class="section-title-pill">${subject}</div>
-      </div>
+    <div class="ws-section ${themeClass}">
       ${qs.map((q, idx) => {
         const num = q.question_number || (idx + 1);
         const optionsHtml = (q.options || []).map((opt, oi) => {
           const letter = LETTERS[oi] || String(oi + 1);
-          return `<div class="opt">
-            <span class="opt-badge">${letter}</span>
-            <span>${renderMath(optText(opt))}</span>
+          return `<div class="ws-opt">
+            <span class="ws-opt-letter">${letter}</span>
+            <span class="ws-opt-text">${renderMath(optText(opt))}</span>
           </div>`;
         }).join('');
 
-        return `<div class="qcard">
-          <div class="card-hdr">
-            <div class="exercise-pill">
-              <span>Question N°</span>
-              <span class="qnum-circle">${num}</span>
+        return `<div class="ws-exercise">
+          <div class="ws-ex-header">
+            <div class="ws-ex-pill">
+              <span class="ws-ex-pill-label">Question N°</span>
+              <span class="ws-ex-num">${num}</span>
             </div>
-            <span class="src-tag">${subject.toUpperCase()}</span>
+            <span class="ws-ans-tag">${subject.toUpperCase()}</span>
           </div>
-          ${renderQuestionImageHTML(q, 'above')}
-          <div class="qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
-          ${renderQuestionImageHTML(q, 'below')}
-          <div class="opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
+          <div class="ws-ex-body">
+            ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)}</div>` : ''}
+            ${renderQuestionImageHTML(q, 'above')}
+            <div class="ws-qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
+            ${renderQuestionImageHTML(q, 'below')}
+            <div class="ws-opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
+          </div>
         </div>`;
       }).join('')}
     </div>`;
@@ -504,12 +500,12 @@ export const generateSubjectHTML = (examTitle, school, year, questions, settings
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
 <style>
 *{box-decoration-break:clone;-webkit-box-decoration-break:clone;box-sizing:border-box;margin:0;padding:0}
 body{
-  font-family:${fontFamilyCSS};
-  color:#111;background:#fff;font-size:${fontSizeCSS};line-height:1.65;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color:#1e293b;background:#f8fafc;font-size:${fontSizeCSS};line-height:1.65;
   padding-bottom:1.2cm;
   print-color-adjust:exact;-webkit-print-color-adjust:exact;
   font-feature-settings:'liga' 1,'kern' 1;
@@ -520,19 +516,19 @@ body{
   ${showPageNumbers ? `
   @bottom-left {
     content: "⚡ L'CONQ   |   ${examTitle}   |   ${copyrightLine}";
-    font-family: 'Inter', sans-serif;
-    font-size: 7pt;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 7.5pt;
     font-weight: 500;
-    color: #6b7280;
+    color: #64748b;
     margin-left: 1.3cm;
     margin-bottom: 0.35cm;
   }
   @bottom-right {
     content: "${profPhone ? profPhone + '   ·   ' : ''}${siteUrl}   |   Sujet Blanc   |   " counter(page) " / " counter(pages);
-    font-family: 'Inter', sans-serif;
-    font-size: 7pt;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 7.5pt;
     font-weight: 600;
-    color: #4b5563;
+    color: #0f172a;
     margin-right: 1.3cm;
     margin-bottom: 0.35cm;
   }
@@ -549,134 +545,137 @@ body{
 html{counter-reset:page ${startPage - 1}}
 
 /* ── PRINT INSTRUCTION OVERLAY ── */
-.print-hint{position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#1e3a8a,#0f172a);
+.print-hint{position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#0f172a,#1e293b);
   color:#fff;padding:0.9rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
-  font-size:9pt;gap:1rem;print-color-adjust:exact;font-family:'Inter',sans-serif}
+  font-size:9.5pt;gap:1rem;print-color-adjust:exact;font-family:'Plus Jakarta Sans',sans-serif;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15)}
 .print-hint-msg{display:flex;align-items:center;gap:0.75rem}
-.print-hint-icon{font-size:1.3rem;flex-shrink:0}
-.print-hint-text strong{font-size:9.5pt;color:#93c5fd}
-.print-hint-text span{color:rgba(255,255,255,0.7);font-size:8pt}
-.hint-badge{background:#2563eb;color:#fff;font-size:7.5pt;font-weight:700;padding:3px 12px;border-radius:20px;
-  white-space:nowrap;cursor:pointer;border:none;font-family:inherit;letter-spacing:.5px}
+.print-hint-icon{font-size:1.4rem;flex-shrink:0}
+.print-hint-text strong{font-size:10pt;color:#38bdf8}
+.print-hint-text span{color:rgba(255,255,255,0.7);font-size:8.5pt}
+.hint-badge{background:#0284c7;color:#fff;font-size:8pt;font-weight:700;padding:4px 14px;border-radius:20px;
+  white-space:nowrap;cursor:pointer;border:none;font-family:inherit;letter-spacing:.5px;transition: all 0.2s}
+.hint-badge:hover{background:#0369a1}
 @media print{.print-hint{display:none!important}}
 
 /* ── COVER PAGE ── */
 .cover{
-  box-sizing:border-box;
-  width:100%;
-  height:27.5cm;
-  padding:1cm;
-  page-break-after:always;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-  background:#fff;
+  box-sizing:border-box;width:100%;height:27.5cm;padding:1.2cm;
+  page-break-after:always;print-color-adjust:exact;-webkit-print-color-adjust:exact;
+  background: radial-gradient(circle at 10% 20%, rgba(243, 246, 249, 1) 0%, rgba(255, 255, 255, 1) 90%);
   color:#0f172a;
 }
 .cover-frame{
-  border:4px double #0f172a;
-  padding:2cm 1.5cm;
+  border:2px solid #e2e8f0;
+  padding:2.5cm 2cm;
   height:100%;
   display:flex;
   flex-direction:column;
   justify-content:space-between;
   align-items:center;
   box-sizing:border-box;
+  background:#ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.04);
 }
 .cover-logo{
-  font-family:${fontFamilyCSS};
-  font-size:2.2rem;
-  font-weight:bold;
-  letter-spacing:6px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size:2.4rem;
+  font-weight:900;
+  letter-spacing:8px;
   text-transform:uppercase;
   margin-bottom:0.2rem;
-  color:#0f172a;
+  color:#005086;
 }
 .cover-subtitle{
-  font-family:'Inter',sans-serif;
-  font-size:0.8rem;
-  font-weight:600;
-  color:#475569;
-  letter-spacing:3px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:0.85rem;
+  font-weight:700;
+  color:#64748b;
+  letter-spacing:4px;
   text-transform:uppercase;
   margin-bottom:1.5rem;
 }
 .cover-divider{
-  width:120px;
-  height:1.5px;
-  background:#0f172a;
-  margin:0 auto 2rem;
+  width:80px;
+  height:4px;
+  background:linear-gradient(90deg, #005086, #007cc6);
+  border-radius:2px;
+  margin:0 auto 2.5rem;
 }
 .cover-header-group{
   text-align:center;
+  max-width: 90%;
 }
 .cover-tag{
-  font-family:'Inter',sans-serif;
-  font-size:0.75rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:0.8rem;
   font-weight:800;
   letter-spacing:3px;
   text-transform:uppercase;
-  color:#475569;
-  border:1px solid #cbd5e1;
-  padding:4px 12px;
-  border-radius:4px;
+  color:#ffffff;
+  background: #005086;
+  padding:6px 16px;
+  border-radius:99px;
   display:inline-block;
-  margin-bottom:1rem;
+  margin-bottom:1.2rem;
 }
 .cover-topic{
-  font-family:${fontFamilyCSS};
-  font-size:2.4rem;
-  font-weight:bold;
-  line-height:1.25;
-  margin:0.5rem 0 1rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:2.8rem;
+  font-weight:800;
+  line-height:1.2;
+  margin:0.5rem 0 1.2rem;
   color:#0f172a;
+  letter-spacing: -0.02em;
 }
 .cover-desc{
   font-family:${fontFamilyCSS};
-  font-size:1rem;
+  font-size:1.1rem;
   color:#475569;
-  font-style:italic;
+  line-height: 1.6;
   margin-bottom:2rem;
 }
 .cover-stats{
   display:flex;
-  gap:2.5rem;
+  gap:2rem;
   justify-content:center;
-  margin:1rem 0;
+  margin:1.5rem 0;
   width:100%;
 }
-.cover-stat{
-  border:1px solid #cbd5e1;
-  border-radius:6px;
-  padding:12px 24px;
-  min-width:110px;
+.cover-stat {
+  border: 1px solid #e2e8f0;
+  border-radius:12px;
+  padding:16px 28px;
+  min-width:130px;
   text-align:center;
   background:#f8fafc;
 }
 .cover-stat .num{
-  font-family:${fontFamilyCSS};
-  font-size:1.6rem;
-  font-weight:bold;
-  color:#0f172a;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:1.8rem;
+  font-weight:800;
+  color:#005086;
 }
 .cover-stat .lbl{
-  font-family:'Inter',sans-serif;
-  font-size:0.7rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:0.75rem;
   color:#64748b;
   text-transform:uppercase;
   letter-spacing:1px;
-  margin-top:0.2rem;
-  font-weight:600;
+  margin-top:0.3rem;
+  font-weight:700;
 }
 .cover-instructions{
   text-align:left;
   background:#f8fafc;
-  border:1.5px solid #cbd5e1;
-  border-radius:8px;
+  border:1px solid #cbd5e1;
+  border-radius:12px;
   padding:1.5rem;
   width:100%;
   max-width:550px;
   margin:1rem auto;
-  font-family:'Inter',sans-serif;
+  font-family:'Plus Jakarta Sans',sans-serif;
   font-size:9pt;
   line-height:1.6;
 }
@@ -696,15 +695,13 @@ html{counter-reset:page ${startPage - 1}}
   color:#334155;
 }
 .cover-prof{
-  font-family:${fontFamilyCSS};
   margin-top:1.5rem;
-  font-size:0.95rem;
+  font-size:1rem;
   color:#334155;
-  font-style:italic;
 }
 .cover-prof strong{
-  color:#0f172a;
-  font-style:normal;
+  color:#005086;
+  font-weight:800;
 }
 
 /* ── STANDALONE PREMIUM OMR SHEET ── */
@@ -728,8 +725,8 @@ html{counter-reset:page ${startPage - 1}}
 .omr-marker.tl {
   left: 14mm;
   top: 10mm;
-  border-top: 0.6mm solid #7c3aed;
-  border-left: 0.6mm solid #7c3aed;
+  border-top: 0.6mm solid #005086;
+  border-left: 0.6mm solid #005086;
 }
 .omr-marker.tl::after {
   content: '';
@@ -738,14 +735,14 @@ html{counter-reset:page ${startPage - 1}}
   top: 0.6mm;
   width: 0.8mm;
   height: 0.8mm;
-  background: #7c3aed;
+  background: #005086;
   border-radius: 50%;
 }
 .omr-marker.tr {
   right: 14mm;
   top: 10mm;
-  border-top: 0.6mm solid #7c3aed;
-  border-right: 0.6mm solid #7c3aed;
+  border-top: 0.6mm solid #005086;
+  border-right: 0.6mm solid #005086;
 }
 .omr-marker.tr::after {
   content: '';
@@ -754,14 +751,14 @@ html{counter-reset:page ${startPage - 1}}
   top: 0.6mm;
   width: 0.8mm;
   height: 0.8mm;
-  background: #7c3aed;
+  background: #005086;
   border-radius: 50%;
 }
 .omr-marker.bl {
   left: 14mm;
   bottom: 10mm;
-  border-bottom: 0.6mm solid #7c3aed;
-  border-left: 0.6mm solid #7c3aed;
+  border-bottom: 0.6mm solid #005086;
+  border-left: 0.6mm solid #005086;
 }
 .omr-marker.bl::after {
   content: '';
@@ -770,14 +767,14 @@ html{counter-reset:page ${startPage - 1}}
   bottom: 0.6mm;
   width: 0.8mm;
   height: 0.8mm;
-  background: #7c3aed;
+  background: #005086;
   border-radius: 50%;
 }
 .omr-marker.br {
   right: 14mm;
   bottom: 10mm;
-  border-bottom: 0.6mm solid #7c3aed;
-  border-right: 0.6mm solid #7c3aed;
+  border-bottom: 0.6mm solid #005086;
+  border-right: 0.6mm solid #005086;
 }
 .omr-marker.br::after {
   content: '';
@@ -786,7 +783,7 @@ html{counter-reset:page ${startPage - 1}}
   bottom: 0.6mm;
   width: 0.8mm;
   height: 0.8mm;
-  background: #7c3aed;
+  background: #005086;
   border-radius: 50%;
 }
 
@@ -796,13 +793,13 @@ html{counter-reset:page ${startPage - 1}}
   left: 14mm;
   width: 182mm;
   height: 34mm;
-  background: #1a1a2e;
+  background: #005086;
   border-radius: 3mm;
   color: #fff;
   padding: 6mm;
 }
 .omr-header-logo {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 20pt;
   font-weight: bold;
   line-height: 1;
@@ -812,21 +809,21 @@ html{counter-reset:page ${startPage - 1}}
 .omr-header-logo span {
   width: 2.4mm;
   height: 2.4mm;
-  background: #f59e0b;
+  background: #38bdf8;
   border-radius: 50%;
   display: inline-block;
   margin-left: 1.5mm;
   margin-top: 1.5mm;
 }
 .omr-header-subtitle {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 8.5pt;
   color: #bfc4d2;
   margin-top: 2mm;
   line-height: 1;
 }
 .omr-header-title {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 10.5pt;
   font-weight: bold;
   color: #fff;
@@ -855,9 +852,9 @@ html{counter-reset:page ${startPage - 1}}
   top: 51mm;
   height: 14mm;
   background: #ffffff;
-  border: 0.3mm solid #e2e8f0;
+  border: 1px solid #e2e8f0;
   border-radius: 2mm;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   padding: 1.5mm 3mm;
 }
 .omr-card-label {
@@ -875,13 +872,13 @@ html{counter-reset:page ${startPage - 1}}
 }
 .omr-card.score {
   background: #f0fdf4;
-  border: 0.4mm solid #10a34a;
+  border: 1.5px solid #10b981;
 }
 .omr-card.score .omr-card-label {
-  color: #10a34a;
+  color: #10b981;
 }
 .omr-card.score .omr-card-val {
-  color: #10a34a;
+  color: #10b981;
   font-size: 9.5pt;
 }
 
@@ -891,14 +888,14 @@ html{counter-reset:page ${startPage - 1}}
   top: 69mm;
   width: 182mm;
   height: 10mm;
-  background: #faf5ff;
+  background: #f0f9ff;
   border-radius: 1.5mm;
   overflow: hidden;
   padding-left: 5mm;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 .omr-instructions-bar {
   position: absolute;
@@ -906,12 +903,12 @@ html{counter-reset:page ${startPage - 1}}
   top: 0;
   bottom: 0;
   width: 2.5mm;
-  background: #7c3aed;
+  background: #005086;
 }
 .omr-instructions-title {
   font-size: 7.5pt;
   font-weight: bold;
-  color: #7c3aed;
+  color: #005086;
   line-height: 1.2;
 }
 .omr-instructions-text {
@@ -929,7 +926,7 @@ html{counter-reset:page ${startPage - 1}}
   display: flex;
   align-items: center;
   gap: 6mm;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
 }
 .omr-legend-title {
   font-size: 7pt;
@@ -940,612 +937,448 @@ html{counter-reset:page ${startPage - 1}}
 .omr-legend-item {
   display: flex;
   align-items: center;
-  gap: 2mm;
+  gap: 1.5mm;
 }
 .omr-legend-bubble {
-  width: 5.6mm;
-  height: 5.6mm;
+  width: 3.5mm;
+  height: 3.5mm;
+  border: 0.3mm solid #64748b;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 5.5pt;
+  font-size: 5pt;
+  color: #64748b;
   font-weight: bold;
 }
-.omr-legend-bubble.ok {
-  background: #1a1a2e;
+.omr-legend-bubble.filled {
+  background: #1f2937;
+  border-color: #1f2937;
   color: #fff;
 }
-.omr-legend-bubble.empty {
-  border: 0.3mm solid #64748b;
-  color: #64748b;
+.omr-legend-bubble.cross {
+  position: relative;
+  background: #fff;
 }
-.omr-legend-label {
+.omr-legend-bubble.cross::after {
+  content: '❌';
+  font-size: 5.5pt;
+}
+.omr-legend-text {
   font-size: 7pt;
-  font-weight: bold;
-}
-.omr-legend-label.ok {
-  color: #10a34a;
-}
-.omr-legend-label.empty {
-  color: #64748b;
-  font-weight: normal;
+  color: #4b5563;
 }
 
-.omr-columns {
+.omr-body {
   position: absolute;
   left: 14mm;
   top: 96mm;
   width: 182mm;
-  display: flex;
-  font-family: 'Helvetica', sans-serif;
+  height: 148mm;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 3mm;
+  padding: 5mm;
+}
+.omr-column {
+  position: absolute;
+  top: 5mm;
+  width: 83mm;
+  height: 138mm;
+}
+.omr-column.col-1 {
+  left: 5mm;
+}
+.omr-column.col-2 {
+  right: 5mm;
 }
 .omr-column-divider {
   position: absolute;
-  left: 91mm;
-  top: 0;
-  bottom: 0;
-  width: 0.3mm;
+  left: 90.75mm;
+  top: 5mm;
+  width: 0.5mm;
+  height: 138mm;
   background: #e2e8f0;
 }
-.omr-column {
-  width: 89mm;
-  position: relative;
-}
-.omr-column.col-2 {
-  margin-left: 2mm;
-}
-
 .omr-col-header {
-  height: 7mm;
-  background: #7c3aed;
-  border-radius: 1.5mm;
   position: relative;
-  display: flex;
-  align-items: center;
-  color: #fff;
+  height: 6mm;
+  border-bottom: 0.3mm solid #cbd5e1;
+}
+.lbl-num {
+  position: absolute;
+  left: 1mm;
+  font-size: 7pt;
   font-weight: bold;
-  font-size: 7.5pt;
-  width: 89mm;
+  color: #4b5563;
 }
-.omr-col-header .lbl-num {
+.lbl-opt {
   position: absolute;
-  left: 3mm;
-}
-.omr-col-header .lbl-opt {
-  position: absolute;
-  width: 5.8mm;
+  font-size: 7pt;
+  font-weight: bold;
+  color: #4b5563;
+  width: 5mm;
   text-align: center;
-  font-size: 7.5pt;
 }
-
 .omr-row {
-  height: 8.5mm;
   position: relative;
-  width: 89mm;
-  border-bottom: 0.15mm solid #e2e8f0;
+  height: 8.5mm;
+  border-bottom: 0.2mm solid #f1f5f9;
   display: flex;
   align-items: center;
 }
 .omr-row.alt {
-  background: #f8f7ff;
+  background: #f8fafc;
 }
-.omr-row .row-num {
+.row-num {
   position: absolute;
-  left: 3mm;
-  font-size: 8.5pt;
+  left: 1.5mm;
+  font-size: 7.5pt;
   font-weight: bold;
-  color: #1a1a2e;
+  color: #005086;
 }
 .omr-bubble {
   position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 5.8mm;
-  height: 5.8mm;
+  width: 5.2mm;
+  height: 5.2mm;
+  border: 0.4mm solid #475569;
   border-radius: 50%;
-  border: 0.35mm solid #64748b;
-  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 6.2pt;
-  font-weight: normal;
-  color: #64748b;
+  font-size: 6.5pt;
+  color: #475569;
+  font-weight: 800;
+  background: #fff;
+}
+.omr-bubble.filled {
+  background: #1f2937 !important;
+  border-color: #1f2937 !important;
+  color: #fff !important;
+}
+.omr-bubble.correct {
+  background: #d1fae5 !important;
+  border-color: #10b981 !important;
+  color: #065f46 !important;
+}
+.omr-bubble.wrong {
+  background: #fee2e2 !important;
+  border-color: #ef4444 !important;
+  color: #991b1b !important;
 }
 
 .omr-footer {
   position: absolute;
   left: 14mm;
   width: 182mm;
-  border-top: 0.5mm solid #e2e8f0;
-  padding-top: 5.5mm;
+  border-top: 0.3mm solid #cbd5e1;
+  padding-top: 3mm;
   display: flex;
   justify-content: space-between;
-  font-family: 'Inter', sans-serif;
-}
-.omr-footer-text {
-  font-size: 7.5pt;
-  color: #64748b;
-  max-width: 120mm;
-  line-height: 1.4;
-}
-.omr-footer-right {
-  text-align: right;
-}
-.omr-footer-exam-id {
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 7pt;
-  font-weight: bold;
-  color: #1a1a2e;
-}
-.omr-footer-brand {
-  font-size: 6pt;
   color: #64748b;
-  margin-top: 1mm;
 }
 
-/* ── COMPACT OMR GRID STYLES (Isolés avec .c- prefix) ── */
-.c-hdr {
+/* ═══════════════════════════════════════
+   WORKSHEET DESIGN SYSTEM (ws- prefix)
+   ═══════════════════════════════════════ */
+
+
+/* ── Main Document Header ── */
+.ws-doc-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: .3cm 0 .2cm 0;
-  border-bottom: 2.5px solid #1a56db;
-}
-.c-logo {
-  font-size: 18pt;
-  font-weight: 900;
-  color: #1a56db;
-  font-family: 'Inter', sans-serif;
-}
-.c-logo span {
-  color: #f59e0b;
-}
-.c-htitle {
-  text-align: center;
-  flex: 1;
-  padding: 0 .5cm;
-}
-.c-htitle h1 {
-  font-size: 11pt;
-  font-weight: bold;
-  text-transform: uppercase;
-  letter-spacing: .5px;
-  font-family: 'Inter', sans-serif;
-  color: #111;
-}
-.c-htitle p {
-  font-size: 8pt;
-  color: #555;
-  margin-top: 2px;
-  font-family: 'Inter', sans-serif;
-}
-.c-hright {
-  font-size: 8pt;
-  color: #555;
-  text-align: right;
-  line-height: 1.5;
-  font-family: 'Inter', sans-serif;
-}
-.c-instruct {
-  background: #f8f9fa;
-  border: 1px solid #dee2e6;
-  border-radius: 3px;
-  padding: 5px 8px;
-  margin: .2cm 0;
-  font-size: 8pt;
-  color: #444;
-  font-family: 'Inter', sans-serif;
-}
-.c-omr-wrap {
-  display: flex;
-  gap: .6cm;
-  align-items: flex-start;
-  padding: .2cm 0;
-  border-bottom: 2px dashed #ccc;
-  margin-bottom: .4cm;
-}
-.c-qr-col {
-  display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 3px;
+  border-bottom: 2px solid #005086;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.8rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
-.c-qr-col img {
-  width: 80px;
-  height: 80px;
-  border: 1px solid #ddd;
-  padding: 2px;
-  background: #fff;
-}
-.c-qr-col span {
-  font-size: 6.5pt;
-  color: #888;
-  text-align: center;
-  font-family: 'Inter', sans-serif;
+.ws-doc-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
   line-height: 1.2;
 }
-.c-omr-col {
-  flex: 2;
+.ws-doc-meta {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 0.2rem;
 }
-.c-omr-title {
-  font-size: 8.5pt;
-  font-weight: bold;
+.ws-doc-type-badge {
+  background: #005086;
+  color: #ffffff;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #1a56db;
-  margin-bottom: 4px;
-  font-family: 'Inter', sans-serif;
-}
-.c-omr-table {
-  border-collapse: collapse;
-  font-size: 7.5pt;
-  width: 100%;
-}
-.c-omr-table th {
-  background: #1a56db;
-  color: #fff;
-  padding: 2px 4px;
-  text-align: center;
-  font-weight: bold;
-}
-.c-omr-table td {
-  padding: 1.5px 4px;
-  text-align: center;
-  border: 1px solid #ddd;
-}
-.c-nn {
-  font-weight: bold;
-  background: #f8f9fa;
-  font-size: 7pt;
-  color: #1a56db;
-}
-.c-b {
-  width: 11px;
-  height: 11px;
-  border: 1.2px solid #333;
-  border-radius: 50%;
-  margin: 0 auto;
-}
-.c-sep {
-  width: 5px;
-  background: #f0f0f0;
-  border: none !important;
-}
-.c-stu-box {
-  flex: 1.2;
-  border: 1.5px solid #444;
-  border-radius: 4px;
-  padding: 6px 8px;
-  background: #fff;
-}
-.c-stu-field {
-  margin-bottom: 6px;
-}
-.c-stu-field label {
-  font-size: 7pt;
-  font-weight: bold;
-  display: block;
-  margin-bottom: 1px;
-  color: #333;
-  font-family: 'Inter', sans-serif;
-}
-.c-stu-line {
-  border-bottom: 1px solid #444;
-  height: 14px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
 
-/* ── COLOR THEMES PER SUBJECT ── */
-.theme-math {
-  --primary: #2563eb;
-  --dark: #1e3a8a;
-  --bg: #eff6ff;
-  --border: #bfdbfe;
-  --text: #1e3a8a;
+/* ── Main Document Header ── */
+.ws-doc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #005086;
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.8rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
-.theme-physique {
-  --primary: #0d9488;
-  --dark: #0f766e;
-  --bg: #f0fdfa;
-  --border: #99f6e4;
-  --text: #115e59;
+.ws-doc-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
-.theme-chimie {
-  --primary: #7c3aed;
-  --dark: #6d28d9;
-  --bg: #f5f3ff;
-  --border: #ddd6fe;
-  --text: #5b21b6;
+.ws-doc-meta {
+  font-size: 0.78rem;
+  color: #64748b;
+  font-weight: 600;
+  margin-top: 0.2rem;
 }
-.theme-svt {
-  --primary: #16a34a;
-  --dark: #15803d;
-  --bg: #f0fdf4;
-  --border: #bbf7d0;
-  --text: #166534;
+.ws-doc-type-badge {
+  background: #005086;
+  color: #ffffff;
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 0.68rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
-.theme-francais {
-  --primary: #ea580c;
-  --dark: #c2410c;
-  --bg: #fff7ed;
-  --border: #fed7aa;
-  --text: #9a3412;
-}
-.theme-general {
-  --primary: #4f46e5;
-  --dark: #4338ca;
-  --bg: #eef2ff;
-  --border: #c7d2fe;
-  --text: #3730a3;
-}
-
-/* ── CONTENT ── */
-.content{padding:${marginCSS}}
-.section-hdr{
-  font-family:inherit;
-  font-size:1.15em;
-  font-weight:bold;
-  letter-spacing:1px;
-  text-transform:uppercase;
-  color:#0f172a;
-  text-align:center;
-  border-top:1.5px solid #0f172a;
-  border-bottom:1.5px solid #0f172a;
-  padding:6px 0;
-  margin:2.2rem 0 1.2rem 0;
-  display:block;
-  width:100%;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-}
-
-.qcard{
-  border:1px solid #e2e8f0;
-  border-left:4px solid var(--primary,#cbd5e1);
-  border-radius:10px;
-  padding:16px 20px;
-  margin-bottom:20px;
-  background:#ffffff;
-  box-shadow:0 1px 3px 0 rgba(0, 0, 0, 0.04),0 1px 2px 0 rgba(0, 0, 0, 0.02);
-  ${pdfConf.avoidPageBreaks ? 'page-break-inside:avoid; break-inside:avoid;' : ''}
-}
-.card-hdr{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  margin-bottom:12px;
-  padding-bottom:8px;
-  border-bottom:1px solid #f1f5f9;
-  flex-wrap:wrap;
-  break-inside:avoid;
-  page-break-inside:avoid;
-}
-.qnum{
-  font-family:'Inter',sans-serif;
-  background:var(--primary,#4f46e5);
-  color:#ffffff !important;
-  font-size:8pt;
-  font-weight:800;
-  padding:3px 10px;
-  border-radius:4px;
-  letter-spacing:0.5px;
-  text-transform:uppercase;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-}
-.src-tag{
-  font-family:'Inter',sans-serif;
-  background:#f1f5f9;
-  color:#475569;
-  font-size:7pt;
-  font-weight:700;
-  padding:3px 9px;
-  border-radius:4px;
-  border:1px solid #cbd5e1;
-  letter-spacing:0.5px;
-  text-transform:uppercase;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-}
-.qtext{
-  font-family:inherit;
-  font-size:1.05em;
-  font-weight:500;
-  line-height:1.65;
-  color:#1e293b;
-  margin-bottom:14px;
-  break-inside:avoid;
-  page-break-inside:avoid;
-  white-space:pre-line;
-  text-align:justify;
-}
-.opts{
-  display:grid;
-  gap:8px 24px;
-  padding-left:0;
-  margin-bottom:4px;
-  break-inside:avoid;
-  page-break-inside:avoid;
-}
-.opts-5col {
-  grid-template-columns: repeat(5, 1fr);
-}
-.opts-4col {
-  grid-template-columns: repeat(4, 1fr);
-}
-.opts-2col {
-  grid-template-columns: repeat(2, 1fr);
-}
-.opts-1col {
-  grid-template-columns: 1fr;
-}
-@media (max-width: 600px) {
-  .opts-5col, .opts-4col, .opts-2col {
-    grid-template-columns: 1fr;
-  }
-}
-.opt{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  font-size:0.95em;
-  color:#334155;
-  padding:6px 12px;
-  border-radius:8px;
-  border:1px solid transparent;
-}
-.opt-badge{
-  font-family:'Inter',sans-serif;
-  font-weight:700;
-  font-size:8.5pt;
-  width:24px;
-  height:24px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:50%;
-  background:#ffffff;
-  color:#64748b;
-  border:1px solid #cbd5e1;
-  flex-shrink:0;
-}
-
-@media print{
-  ${pdfConf.forcePrintColors ? `
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-  ` : ''}
-  .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  ${!shouldShowCover ? '.cover{display:none!important}' : ''}
-}
-.katex{font-size:1.05em}.katex-display{margin:3px 0}
-${templateCSS}
-
-/* === L'CONQ CUSTOM SHEET LOOK override === */
-.print-sidebar {
+/* ── Sidebar ── */
+.ws-sidebar {
   position: fixed;
   top: 0;
-  left: 0.6cm;
-  width: 50px;
+  left: 0.3cm;
+  width: 70px;
   height: 100%;
   background: #ffffff;
-  border-right: 2px solid #005086;
+  border-right: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 2.5cm;
+  padding-top: 2cm;
+  gap: 1.25rem;
   box-sizing: border-box;
   z-index: 1000;
 }
-.print-vertical-tab {
-  background: #005086;
-  color: #ffffff;
-  padding: 1.5cm 0.45cm;
+.ws-vtab {
+  width: 48px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem 0.5rem;
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  font-weight: 800;
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  border-radius: 0 10px 10px 0;
-  text-transform: uppercase;
-  white-space: nowrap;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: #64748b;
   text-align: center;
-  box-shadow: 0 4px 10px rgba(0, 80, 134, 0.15);
-  margin-top: 0.5cm;
-  font-family: 'Inter', sans-serif;
-  line-height: 1;
-}
-.subj-section, .qcard, .compact-header-box, .compact-divider {
-  margin-left: 65px !important;
-}
-.section-hdr-row {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  line-height: 1.1;
+  white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  border-bottom: 2px solid rgba(0, 80, 134, 0.15);
-  padding-bottom: 0.4rem;
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
 }
-.section-badge-circle {
-  width: 28px;
-  height: 28px;
+.ws-vtab-dot {
+  width: 6px;
+  height: 6px;
+  background: #cbd5e1;
   border-radius: 50%;
+  display: inline-block;
+}
+.ws-vtab-active {
+  background: #005086 !important;
+  color: #ffffff !important;
+  border-color: #005086 !important;
+  box-shadow: 0 4px 15px rgba(0, 80, 134, 0.2);
+}
+.ws-vtab-active .ws-vtab-dot {
+  background: #38bdf8 !important;
+}
+
+/* ── Content offset for sidebar ── */
+.ws-content {
+  padding: ${marginCSS};
+  margin-left: 85px;
+}
+
+/* ── Section Header ── */
+.ws-sec-hdr {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+  margin-top: 2.5rem;
+  margin-bottom: 1.5rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.ws-sec-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: #005086;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 900;
-  font-size: 0.85rem;
-  flex-shrink: 0;
-  font-family: 'Inter', sans-serif;
-}
-.section-title-pill {
-  font-size: 1.05rem;
   font-weight: 800;
-  color: #005086;
-  border: 1.5px solid #005086;
-  border-radius: 99px;
-  padding: 0.2rem 1.1rem;
-  display: inline-flex;
-  font-family: 'Inter', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  box-shadow: 0 4px 10px rgba(0, 80, 134, 0.2);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
-.qcard {
-  border: 1.5px solid #005086 !important;
-  border-left: 5px solid #005086 !important;
-  border-radius: 6px !important;
-  padding: 18px 22px !important;
-  background: #ffffff !important;
-  margin-bottom: 24px !important;
-  box-shadow: none !important;
+.ws-sec-pill {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* ── Exercise Wrapper ── */
+.ws-exercise { margin-bottom: 0.45rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.ws-ex-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.15rem;
+}
+.ws-ex-pill { background: #005086; color: #ffffff; padding: 0.2rem 0.65rem;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 80, 134, 0.1);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.05em;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.ws-ex-pill-label {
+  opacity: 0.85;
+}
+.ws-ex-num {
+  background: #ffffff;
+  color: #005086;
+  padding: 1px 4px; border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+.ws-ans-tag {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 1px 6px; border-radius: 5px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* ── Exercise Body Box ── */
+.ws-ex-body {
+  display: flow-root;
+  border-left: 3px solid #005086; background: #ffffff; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; border-radius: 4px 10px 10px 4px; padding: 0.4rem 0.75rem;
+  line-height: 1.75;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.ws-qtext { font-family: inherit; font-size: 1.0em; font-weight: 500; line-height: 1.45; color: #0f172a; margin-bottom: 4px;
+  display: flow-root;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  white-space: pre-line;
+  text-align: justify;
+}
+
+/* ── Options Grid ── */
+.ws-opts { display: grid; gap: 6px 12px; padding-left: 0; margin-top: 4px;
+  break-inside: avoid;
   page-break-inside: avoid;
 }
-.card-hdr {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px dashed rgba(0, 80, 134, 0.15) !important;
-  padding-bottom: 8px !important;
-  margin-bottom: 12px !important;
+.ws-opts-5col { grid-template-columns: repeat(5, 1fr); }
+.ws-opts-4col { grid-template-columns: repeat(4, 1fr); }
+.ws-opts-2col { grid-template-columns: repeat(2, 1fr); }
+.ws-opts-1col { grid-template-columns: 1fr; }
+@media (max-width: 600px) {
+  .ws-opts-5col, .ws-opts-4col, .ws-opts-2col { grid-template-columns: 1fr; }
 }
-.exercise-pill {
-  background: #005086 !important;
-  color: #ffffff !important;
-  padding: 0.25rem 1rem !important;
-  border-radius: 99px !important;
-  font-weight: 800 !important;
-  font-size: 0.82rem !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 0.4rem !important;
-  font-family: 'Inter', sans-serif !important;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-.qnum-circle {
-  background: #ffffff !important;
-  color: #005086 !important;
-  width: 18px !important;
-  height: 18px !important;
-  border-radius: 50% !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-size: 0.72rem !important;
-  font-weight: 900 !important;
-}
-.cover .print-sidebar, 
-.omr-page .print-sidebar {
-  display: none !important;
-}
-</style></head><body><div class="print-sidebar">${sidebarTabsHtml}</div>
 
-<!-- PRE-PRINT INSTRUCTION BANNER -->
+.ws-opt { display: flex; align-items: center; gap: 8px; font-size: 0.9em; color: #334155; padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+.ws-opt-letter {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: 8.5pt;
+  width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; font-size: 8pt;
+  flex-shrink: 0;
+}
+.ws-opt-text {
+  font-family: inherit;
+}
+
+/* ── Print Styles ── */
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .cover { 
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact;
+    background: #ffffff !important;
+  }
+  .cover-frame {
+    box-shadow: none !important;
+  }
+  ${!shouldShowCover ? '.cover{display:none!important}' : ''}
+  .ws-sidebar {
+    display: flex !important;
+    position: fixed !important;
+    background: #ffffff !important;
+  }
+  .ws-ex-body {
+    box-shadow: none !important;
+  }
+}
+.katex{font-size:1.05em}.katex-display{margin:4px 0}
+${templateCSS}
+</style>
+</head><body>
+
+<!-- Sidebar -->
+<div class="ws-sidebar">${sidebarTabsHtml}</div>
+
 <div class="print-hint" id="printHint">
   <div class="print-hint-msg">
     <span class="print-hint-icon">🖨️</span>
@@ -1559,115 +1392,78 @@ ${templateCSS}
 
 ${coverHtml}
 
-<!-- STANDALONE PREMIUM OMR SHEET PAGE -->
+<!-- PREMIUM OMR SHEET PAGE -->
+${settings.premiumOmr === true ? `
 <div class="omr-page">
-  <!-- Crop marks / Corner markers -->
   <div class="omr-marker tl"></div>
   <div class="omr-marker tr"></div>
   <div class="omr-marker bl"></div>
   <div class="omr-marker br"></div>
 
-  <!-- Navy Header Band -->
   <div class="omr-header">
     <div class="omr-header-logo">L'CONQ<span></span></div>
-    <div class="omr-header-subtitle">Feuille de réponses officielle · Correction par Intelligence Artificielle</div>
-    <div class="omr-header-title">${school} — ${examTitle} ${year || ''}</div>
+    <div class="omr-header-subtitle">Grille de Réponses Optique · Scanner Automatique</div>
+    <div class="omr-header-title">${examTitle}</div>
     <div class="omr-header-qr">
-      <img src="${premiumQrUrl}" alt="QR Code"/>
+      <img src="${premiumQrUrl}" alt="QR Code" />
     </div>
   </div>
 
-  <!-- Info Cards -->
-  <div class="omr-card" style="left: 14mm; width: 70mm;">
-    <div class="omr-card-label">NOM &amp; PRÉNOM DU CANDIDAT</div>
-    <div class="omr-card-val">___________________________</div>
+  <div class="omr-card info-student" style="left: 14mm; width: 85mm;">
+    <div class="omr-card-label">CANDIDAT (NOM ET PRÉNOM)</div>
+    <div class="omr-card-val" style="border-bottom: 0.3mm solid #475569; height: 5mm; margin-top: 2.5mm;"></div>
   </div>
-  <div class="omr-card" style="left: 86mm; width: 35mm;">
-    <div class="omr-card-label">DATE DE PASSAGE</div>
+
+  <div class="omr-card info-code" style="left: 104mm; width: 44mm;">
+    <div class="omr-card-label">DATE DE L'ÉPREUVE</div>
     <div class="omr-card-val">${dateStr}</div>
   </div>
-  <div class="omr-card" style="left: 123mm; width: 35mm;">
-    <div class="omr-card-label">DURÉE</div>
+
+  <div class="omr-card info-class" style="left: 152mm; width: 44mm;">
+    <div class="omr-card-label">DURÉE DE L'ÉPREUVE</div>
     <div class="omr-card-val">${examDuration}</div>
   </div>
-  <div class="omr-card score" style="left: 160mm; width: 36mm;">
-    <div class="omr-card-label">SCORE FINAL</div>
-    <div class="omr-card-val">____ / ${questions.length}</div>
-  </div>
 
-  <!-- Instructions Bar -->
   <div class="omr-instructions">
     <div class="omr-instructions-bar"></div>
-    <div class="omr-instructions-title">INFORMATIONS &amp; CONSIGNES IMPORTANTES :</div>
-    <div class="omr-instructions-text">· Noircissez complètement le cercle avec un stylo bleu ou noir. &nbsp;&nbsp;· En cas d'erreur, blanchissez proprement le cercle.</div>
+    <div class="omr-instructions-title">⚠️ CONSIGNES DE REMPLISSAGE</div>
+    <div class="omr-instructions-text">Coloriez la case correspondante à votre réponse avec un stylo NOIR ou BLEU. Ne faites aucune autre marque.</div>
   </div>
 
-  <!-- Legend -->
   <div class="omr-legend">
-    <span class="omr-legend-title">Exemples de Remplissage :</span>
+    <span class="omr-legend-title">EXEMPLES :</span>
     <div class="omr-legend-item">
-      <div class="omr-legend-bubble ok">A</div>
-      <span class="omr-legend-label ok">Correct</span>
+      <div class="omr-legend-bubble filled">A</div>
+      <span class="omr-legend-text">Bon Remplissage</span>
     </div>
     <div class="omr-legend-item">
-      <div class="omr-legend-bubble empty">B</div>
-      <span class="omr-legend-label empty">Vide</span>
+      <div class="omr-legend-bubble cross">B</div>
+      <span class="omr-legend-text">Mauvais Remplissage</span>
     </div>
   </div>
 
-  <!-- OMR Columns -->
-  <div class="omr-columns">
+  <div class="omr-body">
     ${premiumOmrHtml}
   </div>
 
-  <!-- Footer -->
   <div class="omr-footer" style="top: ${footerY}mm;">
-    <div class="omr-footer-text">Après avoir terminé, scannez cette feuille via l'application L'CONQ pour obtenir une correction instantanée.</div>
-    <div class="omr-footer-right">
-      <div class="omr-footer-exam-id">EXAM ID: ${examId.slice(0, 8).toUpperCase()}</div>
-      <div class="omr-footer-brand">lconq.ma · IA OMR Engine v2.0</div>
-    </div>
+    <span>⚡ L'CONQ OMR Engine v3.0</span>
+    <span>ID de l'Examen : ${examId}</span>
+    <span>Ne pas plier ni froisser cette feuille</span>
   </div>
 </div>
+` : ''}
 
-<!-- CONTENT -->
-<div class="content">
-  <!-- Compact OMR grid scanner at the top of the questions section -->
-  <div class="c-hdr">
-    <div class="c-logo">L'<span>Conq</span></div>
-    <div class="c-htitle">
-      <h1>${examTitle}</h1>
-      <p>${school} &nbsp;·&nbsp; ${year || ''} &nbsp;·&nbsp; ${questions.length} Questions &nbsp;·&nbsp; Durée : 2h</p>
+<div class="ws-content">
+  <div class="ws-doc-header">
+    <div class="ws-doc-header-left">
+      <h1 class="ws-doc-title">${examTitle}</h1>
+      <div class="ws-doc-meta">${school} &nbsp;·&nbsp; Concours Officiel &nbsp;·&nbsp; ${year || ''}</div>
     </div>
-    <div class="c-hright">Date : ___/___/______<br>Note : _____ / ${questions.length}</div>
-  </div>
-  <div class="c-instruct">⚠️ <b>Consignes :</b> Une seule réponse correcte par question. Noircissez la bulle correspondante dans la grille ci-dessous. Toute bulle non noircie ou noircie plusieurs fois = réponse incorrecte.</div>
-  <div class="c-omr-wrap">
-    <div class="c-qr-col">
-      <img src="${qrUrl}" alt="QR"/>
-      <span>Scanner avec<br>L'CONQ App</span>
-    </div>
-    <div class="c-omr-col">
-      <div class="c-omr-title">📋 Grille de Réponses OMR</div>
-      <table class="c-omr-table">
-        <thead>
-          <tr>
-            <th>N°</th><th>A</th><th>B</th><th>C</th><th>D</th>
-            <th class="c-sep"></th>
-            <th>N°</th><th>A</th><th>B</th><th>C</th><th>D</th>
-          </tr>
-        </thead>
-        <tbody>${compactOmrRows}</tbody>
-      </table>
-    </div>
-    <div class="c-stu-box">
-      <div class="c-stu-field"><label>Nom &amp; Prénom</label><div class="c-stu-line"></div></div>
-      <div class="c-stu-field"><label>CNE / Matricule</label><div class="c-stu-line"></div></div>
-      <div class="c-stu-field"><label>Établissement</label><div class="c-stu-line"></div></div>
-      <div class="c-stu-field"><label>Filière</label><div class="c-stu-line"></div></div>
+    <div class="ws-doc-header-right">
+      <span class="ws-doc-type-badge">SUJET OFFICIEL</span>
     </div>
   </div>
-
   ${questionsHtml}
 </div>
 
@@ -1683,12 +1479,7 @@ async function printWhenReady() {
 printWhenReady();
 </script>
 </body></html>`;
-};
-
-/* ═══════════════════════════════════════════════
-   2. GUIDE DES ASTUCES — Correction Book
-   ═══════════════════════════════════════════════ */
-export const generateCorrectionHTML = (examTitle, school, year, questions, settings = {}) => {
+};export const generateCorrectionHTML = (examTitle, school, year, questions, settings = {}) => {
   const pdfConf = getPdfSettings(settings);
   const marginCSS = getMarginStyle(pdfConf.pageMargins);
   const fontFamilyCSS = getFontFamilyStyle(pdfConf.fontFamily);
@@ -1712,27 +1503,15 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
   }
   const sidebarTabsHtml = schools.map(sch => {
     const isActive = sch.toLowerCase() === school.toLowerCase();
-    const activeClass = isActive ? ' active-tab' : '';
     let displayName = sch;
     if (sch === 'Médecine / Pharmacie') displayName = 'Médecine';
     if (displayName.includes('Général')) displayName = 'Prépa';
-    return `<div class="print-vertical-tab${activeClass}">${displayName}</div>`;
+    if (displayName.length > 20) displayName = displayName.substring(0, 18) + '…';
+    return `<div class="ws-vtab${isActive ? ' ws-vtab-active' : ''}">
+      <span class="ws-vtab-dot"></span>
+      ${displayName}
+    </div>`;
   }).join('');
-
-  const compactHeaderHtml = templateStyle === 'compact_eco' ? `
-<div class="compact-header-box">
-  <div class="ch-left">
-    <div class="ch-school">${school}</div>
-    <div class="ch-title">${examTitle}</div>
-  </div>
-  <div class="ch-right">
-    <div class="ch-pill">CORRIGÉ</div>
-    ${year ? `<div class="ch-pill">${year}</div>` : ''}
-    <div class="ch-pill">${questions.length} Qs</div>
-  </div>
-</div>
-<hr class="compact-divider">
-` : '';
 
   if (typeof window !== 'undefined' && window.localStorage) {
     if (!profName) profName = localStorage.getItem('profName') || '';
@@ -1745,97 +1524,21 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
     ? `© ${new Date().getFullYear()} L'CONQ × ${profName}. Tous droits réservés.`
     : `© ${new Date().getFullYear()} L'CONQ. Tous droits réservés.`;
 
-  const examId = settings.examId || 'PREVIEW';
-  const dateStr = new Date().toLocaleDateString('fr-MA');
-  const examDuration = `${Math.ceil(questions.length * 1.5)} minutes`;
+  const groups = groupBySubject(questions);
 
-  const premiumQrPayload = JSON.stringify({
-    examId: examId,
-    examName: examTitle,
-    school: school,
-    studentId: 'anonymous',
-    qCount: questions.length,
-    generated: new Date().toISOString()
-  });
-  const premiumQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(premiumQrPayload)}`;
-
-  const pCount = questions.length;
-  const pHalf = Math.ceil(pCount / 2);
-  const pOpts = ['A', 'B', 'C', 'D', 'E'];
-
-  let premiumOmrHtml = '';
-  
-  // Left Column
-  premiumOmrHtml += '<div class="omr-column col-1">';
-  premiumOmrHtml += `
-    <div class="omr-col-header">
-      <span class="lbl-num">N°</span>
-      ${pOpts.map((o, i) => `<span class="lbl-opt" style="left: ${20 + i * 9 - 2.9}mm;">${o}</span>`).join('')}
-    </div>
-  `;
-  for (let i = 0; i < pHalf; i++) {
-    const isAlt = i % 2 === 0 ? ' alt' : '';
-    const qNum = String(i + 1).padStart(2, '0');
-    const correctLetter = questions[i]?.correct_answer || '';
-    const bubblesHtml = pOpts.map((o, oi) => {
-      const cx = 20 + oi * 9 - 2.9;
-      const isCorrect = correctLetter === o;
-      const isCorrectClass = isCorrect ? ' correct-bubble-filled' : '';
-      return `<div class="omr-bubble${isCorrectClass}" style="left: ${cx}mm;">${o}</div>`;
-    }).join('');
-    premiumOmrHtml += `
-      <div class="omr-row${isAlt}">
-        <span class="row-num">${qNum}</span>
-        ${bubblesHtml}
-      </div>
-    `;
-  }
-  premiumOmrHtml += '</div>';
-
-  // Divider
-  premiumOmrHtml += '<div class="omr-column-divider"></div>';
-
-  // Right Column
-  premiumOmrHtml += '<div class="omr-column col-2">';
-  premiumOmrHtml += `
-    <div class="omr-col-header">
-      <span class="lbl-num">N°</span>
-      ${pOpts.map((o, i) => `<span class="lbl-opt" style="left: ${20 + i * 9 - 2.9}mm;">${o}</span>`).join('')}
-    </div>
-  `;
-  for (let i = pHalf; i < pCount; i++) {
-    const isAlt = i % 2 === 0 ? ' alt' : '';
-    const qNum = String(i + 1).padStart(2, '0');
-    const correctLetter = questions[i]?.correct_answer || '';
-    const bubblesHtml = pOpts.map((o, oi) => {
-      const cx = 20 + oi * 9 - 2.9;
-      const isCorrect = correctLetter === o;
-      const isCorrectClass = isCorrect ? ' correct-bubble-filled' : '';
-      return `<div class="omr-bubble${isCorrectClass}" style="left: ${cx}mm;">${o}</div>`;
-    }).join('');
-    premiumOmrHtml += `
-      <div class="omr-row${isAlt}">
-        <span class="row-num">${qNum}</span>
-        ${bubblesHtml}
-      </div>
-    `;
-  }
-  premiumOmrHtml += '</div>';
-
-  const usedRows = Math.ceil(pCount / 2);
-  const footerY = Math.max(96 + 7 + usedRows * 8.5 + 12, 258);
+  const LETTERS = ['A', 'B', 'C', 'D', 'E'];
 
   const coverHtml = shouldShowCover ? `
 <div class="cover">
   <div class="cover-frame">
     <div class="cover-logo">L'CONQ</div>
-    <div class="cover-subtitle">EXAMEN BLANC — CORRIGÉ DÉTAILLÉ</div>
+    <div class="cover-subtitle">EXAMEN BLANC - CORRECTION</div>
     <div class="cover-divider"></div>
     
     <div class="cover-header-group">
-      <div class="cover-tag">Guide des Astuces</div>
+      <div class="cover-tag">CORRIGÉ DÉTAILLÉ</div>
       <div class="cover-topic">${examTitle}</div>
-      <div class="cover-desc">${school} &nbsp;·&nbsp; Solutions Détaillées &amp; Raccourcis</div>
+      <div class="cover-desc">${school} &nbsp;·&nbsp; Résolution avec Astuces IA</div>
     </div>
     
     <div class="cover-stats">
@@ -1845,7 +1548,7 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
       </div>
       <div class="cover-stat">
         <div class="num">100%</div>
-        <div class="lbl">Résolu</div>
+        <div class="lbl">Explications</div>
       </div>
       <div class="cover-stat">
         <div class="num">${year || '—'}</div>
@@ -1854,72 +1557,87 @@ export const generateCorrectionHTML = (examTitle, school, year, questions, setti
     </div>
     
     <div class="cover-instructions">
-      <h3>📚 CONTENU DE CE GUIDE :</h3>
+      <h3>⚠️ GUIDE DE CORRECTION :</h3>
       <ul>
-        <li>Correction rigoureuse de chaque QCM avec rappel des notions.</li>
-        <li><strong>⭐ RÈGLES DE L'ART :</strong> Les techniques fondamentales et astuces de cours essentielles.</li>
-        <li><strong>⚡ COUPS DE GRÂCE :</strong> Les raccourcis mathématiques et astuces d'élimination pour gagner du temps.</li>
+        <li>Ce livret contient les réponses commentées de l'épreuve.</li>
+        <li>Pour chaque question, l'alternative correcte est surlignée en vert.</li>
+        <li>Consultez les rubriques <strong>Règle de l'Art</strong> pour les astuces rapides de calcul.</li>
+        <li>Consultez les rubriques <strong>Coup de Grâce</strong> pour les techniques d'élimination par logique.</li>
       </ul>
     </div>
 
     <div class="cover-prof">
-      ${profName ? `Rédigé par : <strong>${profName}</strong>${profPhone ? ' · ' + profPhone : ''}` : `<strong>${siteUrl}</strong>`}
+      ${profName ? `Préparé par : <strong>${profName}</strong>${profPhone ? ' · ' + profPhone : ''}` : `<strong>${siteUrl}</strong>`}
     </div>
   </div>
 </div>` : '';
 
-  const cardsHtml = questions.map((q, i) => {
-    const num = q.question_number || (i + 1);
-    const subject = q.subject || q.topic || 'Général';
+  /* Questions HTML */
+  let sectionIndex = 0;
+  const questionsHtml = Object.entries(groups).map(([subject, qs]) => {
+    sectionIndex++;
     const themeClass = getThemeClass(subject);
-    
-    const optionsHtml = (q.options || []).map((opt, oi) => {
-      const letter = LETTERS[oi] || String(oi + 1);
-      const isCorrect = q.correct_answer === letter;
-      return `<div class="opt${isCorrect ? ' correct-opt' : ''}">
-        <span class="opt-badge${isCorrect ? ' correct-badge' : ''}">${letter}</span>
-        <span>${renderMath(optText(opt))}</span>
-        ${isCorrect ? '<span class="correct-check">✓</span>' : ''}
-      </div>`;
-    }).join('');
-
     return `
-    <div class="qcard ${themeClass}">
-      <div class="card-hdr">
-        <div class="exercise-pill">
-          <span>Question N°</span>
-          <span class="qnum-circle">${num}</span>
-        </div>
-        <span class="src-tag">${subject.toUpperCase()}</span>
-        <span class="ans-badge">Réponse : <b>${q.correct_answer || '?'}</b></span>
-      </div>
-      ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)}</div>` : ''}
-      ${renderQuestionImageHTML(q, 'above')}
-      <div class="qtext" style="margin-top: 4px;">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
-      ${renderQuestionImageHTML(q, 'below')}
-      <div class="opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
-      ${q.astuce ? `<div class="rule-box">
-        <div class="rule-title">⭐ RÈGLE DE L'ART</div>
-        <div class="rule-body">${renderMath(q.astuce)}</div>
-      </div>` : ''}
-      ${showTricks && q.trick ? `<div class="trick-box">
-        <div class="trick-title">⚡ COUP DE GRÂCE</div>
-        <div class="trick-body">${renderMath(q.trick)}</div>
-      </div>` : ''}
+    <div class="ws-section ${themeClass}">
+      ${qs.map((q, idx) => {
+        const num = q.question_number || (idx + 1);
+        const optionsHtml = (q.options || []).map((opt, oi) => {
+          const letter = LETTERS[oi] || String(oi + 1);
+          const isCorrect = q.correct_answer === letter;
+          return `<div class="ws-opt${isCorrect ? ' ws-opt-correct' : ''}">
+            <span class="ws-opt-letter${isCorrect ? ' ws-opt-letter-correct' : ''}">${letter}</span>
+            <span class="ws-opt-text">${renderMath(optText(opt))}</span>
+            ${isCorrect ? '<span class="ws-check">✓</span>' : ''}
+          </div>`;
+        }).join('');
+
+        return `<div class="ws-exercise">
+          <div class="ws-ex-header">
+            <div class="ws-ex-pill">
+              <span class="ws-ex-pill-label">Question N°</span>
+              <span class="ws-ex-num">${num}</span>
+            </div>
+            <span class="ws-ans-tag">👁️ Réponse : <strong>${q.correct_answer || '?'}</strong></span>
+          </div>
+          <div class="ws-ex-body">
+            ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)}</div>` : ''}
+            ${renderQuestionImageHTML(q, 'above')}
+            <div class="ws-qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
+            ${renderQuestionImageHTML(q, 'below')}
+            <div class="ws-opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
+          </div>
+          ${q.astuce ? `<div class="ws-tip-card">
+            <div class="ws-tip-header">
+              <span class="ws-tip-icon">💡</span>
+              <span class="ws-tip-title">Règle de l'Art</span>
+              <span class="ws-tip-accent">Astuce & Méthode Rapide</span>
+            </div>
+            <div class="ws-tip-body">${renderMath(q.astuce)}</div>
+          </div>` : ''}
+          ${showTricks && q.trick ? `<div class="ws-trick-card">
+            <div class="ws-trick-header">
+              <span class="ws-trick-icon">⚡</span>
+              <span class="ws-trick-title">Coup de Grâce</span>
+              <span class="ws-trick-accent">Technique d'Élimination</span>
+            </div>
+            <div class="ws-trick-body">${renderMath(q.trick)}</div>
+          </div>` : ''}
+        </div>`;
+      }).join('')}
     </div>`;
   }).join('');
 
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
-<title>${examTitle} — Corrigé</title>
+<title>${examTitle} — Correction</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
 <style>
 *{box-decoration-break:clone;-webkit-box-decoration-break:clone;box-sizing:border-box;margin:0;padding:0}
 body{
-  font-family:${fontFamilyCSS};
-  color:#111;background:#fff;font-size:${fontSizeCSS};line-height:1.65;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color:#1e293b;background:#f8fafc;font-size:${fontSizeCSS};line-height:1.65;
   padding-bottom:1.2cm;
   print-color-adjust:exact;-webkit-print-color-adjust:exact;
   font-feature-settings:'liga' 1,'kern' 1;
@@ -1930,19 +1648,19 @@ body{
   ${showPageNumbers ? `
   @bottom-left {
     content: "⚡ L'CONQ   |   ${examTitle}   |   ${copyrightLine}";
-    font-family: 'Inter', sans-serif;
-    font-size: 7pt;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 7.5pt;
     font-weight: 500;
-    color: #6b7280;
+    color: #64748b;
     margin-left: 1.3cm;
     margin-bottom: 0.35cm;
   }
   @bottom-right {
-    content: "${profPhone ? profPhone + '   ·   ' : ''}${siteUrl}   |   Corrigé & Astuces   |   " counter(page) " / " counter(pages);
-    font-family: 'Inter', sans-serif;
-    font-size: 7pt;
+    content: "${profPhone ? profPhone + '   ·   ' : ''}${siteUrl}   |   Correction   |   " counter(page) " / " counter(pages);
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 7.5pt;
     font-weight: 600;
-    color: #4b5563;
+    color: #0f172a;
     margin-right: 1.3cm;
     margin-bottom: 0.35cm;
   }
@@ -1952,141 +1670,140 @@ body{
   @bottom-left { content: none; }
   @bottom-right { content: none; }
 }
-@page omr-page-layout {
-  size: A4;
-  margin: 0;
-}
 html{counter-reset:page ${startPage - 1}}
 
 /* ── PRINT INSTRUCTION OVERLAY ── */
-.print-hint{position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#7c3aed,#16213e);
+.print-hint{position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#0f172a,#1e293b);
   color:#fff;padding:0.9rem 1.5rem;display:flex;align-items:center;justify-content:space-between;
-  font-size:9pt;gap:1rem;print-color-adjust:exact;font-family:'Inter',sans-serif}
+  font-size:9.5pt;gap:1rem;print-color-adjust:exact;font-family:'Plus Jakarta Sans',sans-serif;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15)}
 .print-hint-msg{display:flex;align-items:center;gap:0.75rem}
-.print-hint-icon{font-size:1.3rem;flex-shrink:0}
-.print-hint-text strong{font-size:9.5pt;color:#a78bfa}
-.print-hint-text span{color:rgba(255,255,255,0.7);font-size:8pt}
-.hint-badge{background:#7c3aed;color:#fff;font-size:7.5pt;font-weight:700;padding:3px 12px;border-radius:20px;
-  white-space:nowrap;cursor:pointer;border:none;font-family:inherit;letter-spacing:.5px}
+.print-hint-icon{font-size:1.4rem;flex-shrink:0}
+.print-hint-text strong{font-size:10pt;color:#38bdf8}
+.print-hint-text span{color:rgba(255,255,255,0.7);font-size:8.5pt}
+.hint-badge{background:#0284c7;color:#fff;font-size:8pt;font-weight:700;padding:4px 14px;border-radius:20px;
+  white-space:nowrap;cursor:pointer;border:none;font-family:inherit;letter-spacing:.5px;transition: all 0.2s}
+.hint-badge:hover{background:#0369a1}
 @media print{.print-hint{display:none!important}}
 
 /* ── COVER PAGE ── */
 .cover{
-  box-sizing:border-box;
-  width:100%;
-  height:27.5cm;
-  padding:1cm;
-  page-break-after:always;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-  background:#fff;
+  box-sizing:border-box;width:100%;height:27.5cm;padding:1.2cm;
+  page-break-after:always;print-color-adjust:exact;-webkit-print-color-adjust:exact;
+  background: radial-gradient(circle at 10% 20%, rgba(243, 246, 249, 1) 0%, rgba(255, 255, 255, 1) 90%);
   color:#0f172a;
 }
 .cover-frame{
-  border:4px double #0f172a;
-  padding:2cm 1.5cm;
+  border:2px solid #e2e8f0;
+  padding:2.5cm 2cm;
   height:100%;
   display:flex;
   flex-direction:column;
   justify-content:space-between;
   align-items:center;
   box-sizing:border-box;
+  background:#ffffff;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(15, 23, 42, 0.04);
 }
 .cover-logo{
-  font-family:${fontFamilyCSS};
-  font-size:2.2rem;
-  font-weight:bold;
-  letter-spacing:6px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size:2.4rem;
+  font-weight:900;
+  letter-spacing:8px;
   text-transform:uppercase;
   margin-bottom:0.2rem;
-  color:#0f172a;
+  color:#005086;
 }
 .cover-subtitle{
-  font-family:'Inter',sans-serif;
-  font-size:0.8rem;
-  font-weight:600;
-  color:#475569;
-  letter-spacing:3px;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:0.85rem;
+  font-weight:700;
+  color:#64748b;
+  letter-spacing:4px;
   text-transform:uppercase;
   margin-bottom:1.5rem;
 }
 .cover-divider{
-  width:120px;
-  height:1.5px;
-  background:#0f172a;
-  margin:0 auto 2rem;
+  width:80px;
+  height:4px;
+  background:linear-gradient(90deg, #005086, #007cc6);
+  border-radius:2px;
+  margin:0 auto 2.5rem;
 }
 .cover-header-group{
   text-align:center;
+  max-width: 90%;
 }
 .cover-tag{
-  font-family:'Inter',sans-serif;
-  font-size:0.75rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:0.8rem;
   font-weight:800;
   letter-spacing:3px;
   text-transform:uppercase;
-  color:#475569;
-  border:1px solid #cbd5e1;
-  padding:4px 12px;
-  border-radius:4px;
+  color:#ffffff;
+  background: #005086;
+  padding:6px 16px;
+  border-radius:99px;
   display:inline-block;
-  margin-bottom:1rem;
+  margin-bottom:1.2rem;
 }
 .cover-topic{
-  font-family:${fontFamilyCSS};
-  font-size:2.4rem;
-  font-weight:bold;
-  line-height:1.25;
-  margin:0.5rem 0 1rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:2.8rem;
+  font-weight:800;
+  line-height:1.2;
+  margin:0.5rem 0 1.2rem;
   color:#0f172a;
+  letter-spacing: -0.02em;
 }
 .cover-desc{
   font-family:${fontFamilyCSS};
-  font-size:1rem;
+  font-size:1.1rem;
   color:#475569;
-  font-style:italic;
+  line-height: 1.6;
   margin-bottom:2rem;
 }
 .cover-stats{
   display:flex;
-  gap:2.5rem;
+  gap:2rem;
   justify-content:center;
-  margin:1rem 0;
+  margin:1.5rem 0;
   width:100%;
 }
-.cover-stat{
-  border:1px solid #cbd5e1;
-  border-radius:6px;
-  padding:12px 24px;
-  min-width:110px;
+.cover-stat {
+  border: 1px solid #e2e8f0;
+  border-radius:12px;
+  padding:16px 28px;
+  min-width:130px;
   text-align:center;
   background:#f8fafc;
 }
 .cover-stat .num{
-  font-family:${fontFamilyCSS};
-  font-size:1.6rem;
-  font-weight:bold;
-  color:#0f172a;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:1.8rem;
+  font-weight:800;
+  color:#005086;
 }
 .cover-stat .lbl{
-  font-family:'Inter',sans-serif;
-  font-size:0.7rem;
+  font-family:'Plus Jakarta Sans',sans-serif;
+  font-size:0.75rem;
   color:#64748b;
   text-transform:uppercase;
   letter-spacing:1px;
-  margin-top:0.2rem;
-  font-weight:600;
+  margin-top:0.3rem;
+  font-weight:700;
 }
 .cover-instructions{
   text-align:left;
   background:#f8fafc;
-  border:1.5px solid #cbd5e1;
-  border-radius:8px;
+  border:1px solid #cbd5e1;
+  border-radius:12px;
   padding:1.5rem;
   width:100%;
   max-width:550px;
   margin:1rem auto;
-  font-family:'Inter',sans-serif;
+  font-family:'Plus Jakarta Sans',sans-serif;
   font-size:9pt;
   line-height:1.6;
 }
@@ -2106,400 +1823,13 @@ html{counter-reset:page ${startPage - 1}}
   color:#334155;
 }
 .cover-prof{
-  font-family:${fontFamilyCSS};
   margin-top:1.5rem;
-  font-size:0.95rem;
+  font-size:1rem;
   color:#334155;
-  font-style:italic;
 }
 .cover-prof strong{
-  color:#0f172a;
-  font-style:normal;
-}
-
-/* ── STANDALONE PREMIUM OMR SHEET ── */
-.omr-page {
-  page: omr-page-layout;
-  position: relative;
-  width: 210mm;
-  height: 297mm;
-  box-sizing: border-box;
-  background: #fff;
-  page-break-after: always;
-  break-inside: avoid;
-  page-break-inside: avoid;
-}
-.omr-marker {
-  position: absolute;
-  width: 6mm;
-  height: 6mm;
-  box-sizing: border-box;
-}
-.omr-marker.tl {
-  left: 14mm;
-  top: 10mm;
-  border-top: 0.6mm solid #7c3aed;
-  border-left: 0.6mm solid #7c3aed;
-}
-.omr-marker.tl::after {
-  content: '';
-  position: absolute;
-  left: 0.6mm;
-  top: 0.6mm;
-  width: 0.8mm;
-  height: 0.8mm;
-  background: #7c3aed;
-  border-radius: 50%;
-}
-.omr-marker.tr {
-  right: 14mm;
-  top: 10mm;
-  border-top: 0.6mm solid #7c3aed;
-  border-right: 0.6mm solid #7c3aed;
-}
-.omr-marker.tr::after {
-  content: '';
-  position: absolute;
-  right: 0.6mm;
-  top: 0.6mm;
-  width: 0.8mm;
-  height: 0.8mm;
-  background: #7c3aed;
-  border-radius: 50%;
-}
-.omr-marker.bl {
-  left: 14mm;
-  bottom: 10mm;
-  border-bottom: 0.6mm solid #7c3aed;
-  border-left: 0.6mm solid #7c3aed;
-}
-.omr-marker.bl::after {
-  content: '';
-  position: absolute;
-  left: 0.6mm;
-  bottom: 0.6mm;
-  width: 0.8mm;
-  height: 0.8mm;
-  background: #7c3aed;
-  border-radius: 50%;
-}
-.omr-marker.br {
-  right: 14mm;
-  bottom: 10mm;
-  border-bottom: 0.6mm solid #7c3aed;
-  border-right: 0.6mm solid #7c3aed;
-}
-.omr-marker.br::after {
-  content: '';
-  position: absolute;
-  right: 0.6mm;
-  bottom: 0.6mm;
-  width: 0.8mm;
-  height: 0.8mm;
-  background: #7c3aed;
-  border-radius: 50%;
-}
-
-.omr-header {
-  position: absolute;
-  top: 12mm;
-  left: 14mm;
-  width: 182mm;
-  height: 34mm;
-  background: #1a1a2e;
-  border-radius: 3mm;
-  color: #fff;
-  padding: 6mm;
-}
-.omr-header-logo {
-  font-family: 'Inter', sans-serif;
-  font-size: 20pt;
-  font-weight: bold;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-}
-.omr-header-logo span {
-  width: 2.4mm;
-  height: 2.4mm;
-  background: #f59e0b;
-  border-radius: 50%;
-  display: inline-block;
-  margin-left: 1.5mm;
-  margin-top: 1.5mm;
-}
-.omr-header-subtitle {
-  font-family: 'Inter', sans-serif;
-  font-size: 8.5pt;
-  color: #bfc4d2;
-  margin-top: 2mm;
-  line-height: 1;
-}
-.omr-header-title {
-  font-family: 'Inter', sans-serif;
-  font-size: 10.5pt;
-  font-weight: bold;
-  color: #fff;
-  margin-top: 4.5mm;
-  max-width: 130mm;
-  line-height: 1.3;
-}
-.omr-header-qr {
-  position: absolute;
-  right: 4mm;
-  top: 4mm;
-  width: 26mm;
-  height: 26mm;
-  background: #fff;
-  border-radius: 1mm;
-  padding: 1mm;
-}
-.omr-header-qr img {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.omr-card {
-  position: absolute;
-  top: 51mm;
-  height: 14mm;
-  background: #ffffff;
-  border: 0.3mm solid #e2e8f0;
-  border-radius: 2mm;
-  font-family: 'Inter', sans-serif;
-  padding: 1.5mm 3mm;
-}
-.omr-card-label {
-  font-size: 7.5pt;
-  font-weight: bold;
-  color: #64748b;
-  line-height: 1;
-}
-.omr-card-val {
-  font-size: 9pt;
-  font-weight: bold;
-  color: #1f2937;
-  margin-top: 1.5mm;
-  line-height: 1;
-}
-.omr-card.score {
-  background: #f0fdf4;
-  border: 0.4mm solid #10a34a;
-}
-.omr-card.score .omr-card-label {
-  color: #10a34a;
-}
-.omr-card.score .omr-card-val {
-  color: #10a34a;
-  font-size: 9.5pt;
-}
-
-.omr-instructions {
-  position: absolute;
-  left: 14mm;
-  top: 69mm;
-  width: 182mm;
-  height: 10mm;
-  background: #faf5ff;
-  border-radius: 1.5mm;
-  overflow: hidden;
-  padding-left: 5mm;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  font-family: 'Inter', sans-serif;
-}
-.omr-instructions-bar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 2.5mm;
-  background: #7c3aed;
-}
-.omr-instructions-title {
-  font-size: 7.5pt;
-  font-weight: bold;
-  color: #7c3aed;
-  line-height: 1.2;
-}
-.omr-instructions-text {
-  font-size: 7pt;
-  color: #1f2937;
-  line-height: 1.2;
-  margin-top: 0.5mm;
-}
-
-.omr-legend {
-  position: absolute;
-  left: 14mm;
-  top: 82mm;
-  height: 10mm;
-  display: flex;
-  align-items: center;
-  gap: 6mm;
-  font-family: 'Inter', sans-serif;
-}
-.omr-legend-title {
-  font-size: 7pt;
-  font-weight: bold;
-  color: #64748b;
-  text-transform: uppercase;
-}
-.omr-legend-item {
-  display: flex;
-  align-items: center;
-  gap: 2mm;
-}
-.omr-legend-bubble {
-  width: 5.6mm;
-  height: 5.6mm;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 5.5pt;
-  font-weight: bold;
-}
-.omr-legend-bubble.ok {
-  background: #1a1a2e;
-  color: #fff;
-}
-.omr-legend-bubble.empty {
-  border: 0.3mm solid #64748b;
-  color: #64748b;
-}
-.omr-legend-label {
-  font-size: 7pt;
-  font-weight: bold;
-}
-.omr-legend-label.ok {
-  color: #10a34a;
-}
-.omr-legend-label.empty {
-  color: #64748b;
-  font-weight: normal;
-}
-
-.omr-columns {
-  position: absolute;
-  left: 14mm;
-  top: 96mm;
-  width: 182mm;
-  display: flex;
-  font-family: 'Helvetica', sans-serif;
-}
-.omr-column-divider {
-  position: absolute;
-  left: 91mm;
-  top: 0;
-  bottom: 0;
-  width: 0.3mm;
-  background: #e2e8f0;
-}
-.omr-column {
-  width: 89mm;
-  position: relative;
-}
-.omr-column.col-2 {
-  margin-left: 2mm;
-}
-
-.omr-col-header {
-  height: 7mm;
-  background: #7c3aed;
-  border-radius: 1.5mm;
-  position: relative;
-  display: flex;
-  align-items: center;
-  color: #fff;
-  font-weight: bold;
-  font-size: 7.5pt;
-  width: 89mm;
-}
-.omr-col-header .lbl-num {
-  position: absolute;
-  left: 3mm;
-}
-.omr-col-header .lbl-opt {
-  position: absolute;
-  width: 5.8mm;
-  text-align: center;
-  font-size: 7.5pt;
-}
-
-.omr-row {
-  height: 8.5mm;
-  position: relative;
-  width: 89mm;
-  border-bottom: 0.15mm solid #e2e8f0;
-  display: flex;
-  align-items: center;
-}
-.omr-row.alt {
-  background: #f8f7ff;
-}
-.omr-row .row-num {
-  position: absolute;
-  left: 3mm;
-  font-size: 8.5pt;
-  font-weight: bold;
-  color: #1a1a2e;
-}
-.omr-bubble {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 5.8mm;
-  height: 5.8mm;
-  border-radius: 50%;
-  border: 0.35mm solid #64748b;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 6.2pt;
-  font-weight: normal;
-  color: #64748b;
-}
-.omr-bubble.correct-bubble-filled {
-  background: #10a34a !important;
-  color: #ffffff !important;
-  border-color: #10a34a !important;
-  font-weight: bold;
-  print-color-adjust: exact;
-  -webkit-print-color-adjust: exact;
-}
-
-.omr-footer {
-  position: absolute;
-  left: 14mm;
-  width: 182mm;
-  border-top: 0.5mm solid #e2e8f0;
-  padding-top: 5.5mm;
-  display: flex;
-  justify-content: space-between;
-  font-family: 'Inter', sans-serif;
-}
-.omr-footer-text {
-  font-size: 7.5pt;
-  color: #64748b;
-  max-width: 120mm;
-  line-height: 1.4;
-}
-.omr-footer-right {
-  text-align: right;
-}
-.omr-footer-exam-id {
-  font-size: 7pt;
-  font-weight: bold;
-  color: #1a1a2e;
-}
-.omr-footer-brand {
-  font-size: 6pt;
-  color: #64748b;
-  margin-top: 1mm;
+  color:#005086;
+  font-weight:800;
 }
 
 /* ── COLOR THEMES PER SUBJECT ── */
@@ -2546,396 +1876,356 @@ html{counter-reset:page ${startPage - 1}}
   --text: #3730a3;
 }
 
-/* ── CONTENT ── */
-.content{padding:${marginCSS}}
-.section-hdr{
-  font-family:inherit;
-  font-size:1.15em;
-  font-weight:bold;
-  letter-spacing:1px;
-  text-transform:uppercase;
-  color:#0f172a;
-  text-align:center;
-  border-top:1.5px solid #0f172a;
-  border-bottom:1.5px solid #0f172a;
-  padding:6px 0;
-  margin:2.2rem 0 1.2rem 0;
-  display:block;
-  width:100%;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-}
+/* ═══════════════════════════════════════
+   WORKSHEET DESIGN SYSTEM (ws- prefix)
+   ═══════════════════════════════════════ */
 
-.qcard{
-  border:1px solid #e2e8f0;
-  border-left:4px solid var(--primary,#cbd5e1);
-  border-radius:10px;
-  padding:16px 20px;
-  margin-bottom:20px;
-  background:#ffffff;
-  box-shadow:0 1px 3px 0 rgba(0, 0, 0, 0.04),0 1px 2px 0 rgba(0, 0, 0, 0.02);
-  ${pdfConf.avoidPageBreaks ? 'page-break-inside:avoid; break-inside:avoid;' : ''}
-}
-.card-hdr{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  margin-bottom:12px;
-  padding-bottom:8px;
-  border-bottom:1px solid #f1f5f9;
-  flex-wrap:wrap;
-  break-inside:avoid;
-  page-break-inside:avoid;
-}
-.qnum{
-  font-family:'Inter',sans-serif;
-  background:var(--primary,#4f46e5);
-  color:#ffffff !important;
-  font-size:8pt;
-  font-weight:800;
-  padding:3px 10px;
-  border-radius:4px;
-  letter-spacing:0.5px;
-  text-transform:uppercase;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-}
-.src-tag{
-  font-family:'Inter',sans-serif;
-  background:#f1f5f9;
-  color:#475569;
-  font-size:7pt;
-  font-weight:700;
-  padding:3px 9px;
-  border-radius:4px;
-  border:1px solid #cbd5e1;
-  letter-spacing:0.5px;
-  text-transform:uppercase;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-}
-.ans-badge{
-  font-family:'Inter',sans-serif;
-  margin-left:auto;
-  background:#f0fdf4;
-  color:#16a34a;
-  padding:3px 10px;
-  border-radius:4px;
-  font-size:8pt;
-  font-weight:800;
-  border:1px solid #bbf7d0;
-  letter-spacing:0.5px;
-  text-transform:uppercase;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-}
-.qtext{
-  font-family:inherit;
-  font-size:1.05em;
-  font-weight:500;
-  line-height:1.65;
-  color:#1e293b;
-  margin-bottom:14px;
-  break-inside:avoid;
-  page-break-inside:avoid;
-  white-space:pre-line;
-  text-align:justify;
-}
-.opts{
-  display:grid;
-  gap:8px 24px;
-  padding-left:0;
-  margin-bottom:10px;
-  break-inside:avoid;
-  page-break-inside:avoid;
-}
-.opts-5col {
-  grid-template-columns: repeat(5, 1fr);
-}
-.opts-4col {
-  grid-template-columns: repeat(4, 1fr);
-}
-.opts-2col {
-  grid-template-columns: repeat(2, 1fr);
-}
-.opts-1col {
-  grid-template-columns: 1fr;
-}
-@media (max-width: 600px) {
-  .opts-5col, .opts-4col, .opts-2col {
-    grid-template-columns: 1fr;
-  }
-}
-.opt{
-  display:flex;
-  align-items:center;
-  gap:12px;
-  font-size:0.95em;
-  color:#334155;
-  padding:6px 12px;
-  border-radius:8px;
-  border:1px solid transparent;
-}
-.opt-badge{
-  font-family:'Inter',sans-serif;
-  font-weight:700;
-  font-size:8.5pt;
-  width:24px;
-  height:24px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  border-radius:50%;
-  background:#ffffff;
-  color:#64748b;
-  border:1px solid #cbd5e1;
-  flex-shrink:0;
-}
-.correct-opt{
-  background:#f0fdf4!important;
-  border:1px solid #bbf7d0!important;
-  color:#15803d!important;
-  font-weight:600;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-}
-.correct-opt .opt-badge.correct-badge{
-  font-family:'Inter',sans-serif;
-  background:#10b981 !important;
-  border-color:#10b981 !important;
-  color:#ffffff !important;
-  font-weight:bold;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-}
-.correct-check{
-  margin-left:auto;
-  color:#10b981;
-  font-weight:bold;
-  font-size:9pt;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  background:rgba(16, 185, 129, 0.12);
-  width:18px;
-  height:18px;
-  border-radius:50%;
-  flex-shrink:0;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-}
-
-.ctx-box{
-  background:#f8fafc;
-  border-left:3px solid #64748b;
-  padding:6px 10px;
-  font-size:0.85em;
-  margin-bottom:8px;
-  border-radius:0 4px 4px 0;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-  font-family:inherit;
-  break-inside:avoid;
-  page-break-inside:avoid;
-  white-space:pre-line;
-  text-align:justify;
-}
-
-.rule-box{
-  background:#fffbeb;
-  border:1px solid #fde68a;
-  border-left:4px solid #f59e0b;
-  border-radius:4px;
-  padding:8px 12px;
-  margin-top:8px;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-  break-inside:avoid;
-  page-break-inside:avoid;
-}
-.rule-title{
-  font-family:'Inter',sans-serif;
-  font-size:0.65rem;
-  font-weight:800;
-  letter-spacing:1.5px;
-  color:#92400e;
-  margin-bottom:4px;
-  text-transform:uppercase;
-}
-.rule-body{
-  font-family:inherit;
-  font-size:0.85em;
-  line-height:1.6;
-  color:#78350f;
-  white-space:pre-line;
-  text-align:justify;
-}
-.trick-box{
-  background:#fdf4ff;
-  border:1px solid #e9d5ff;
-  border-left:4px solid #7c3aed;
-  border-radius:4px;
-  padding:8px 12px;
-  margin-top:6px;
-  print-color-adjust:exact;
-  -webkit-print-color-adjust:exact;
-  break-inside:avoid;
-  page-break-inside:avoid;
-}
-.trick-title{
-  font-family:'Inter',sans-serif;
-  font-size:0.65rem;
-  font-weight:800;
-  letter-spacing:1.5px;
-  color:#6b21a8;
-  margin-bottom:4px;
-  text-transform:uppercase;
-}
-.trick-body{
-  font-family:inherit;
-  font-size:0.85em;
-  line-height:1.6;
-  color:#581c87;
-  white-space:pre-line;
-  text-align:justify;
-}
-
-@media print{
-  ${pdfConf.forcePrintColors ? `
-  * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-  ` : ''}
-  .cover{-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  ${!shouldShowCover ? '.cover{display:none!important}' : ''}
-}
-.katex{font-size:.95em}.katex-display{margin:4px 0}
-${templateCSS}
-
-/* === L'CONQ CUSTOM SHEET LOOK override === */
-.print-sidebar {
+/* ── Sidebar ── */
+.ws-sidebar {
   position: fixed;
   top: 0;
-  left: 0.6cm;
-  width: 50px;
+  left: 0.3cm;
+  width: 70px;
   height: 100%;
   background: #ffffff;
-  border-right: 2px solid #005086;
+  border-right: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-top: 2.5cm;
+  padding-top: 2cm;
+  gap: 1.25rem;
   box-sizing: border-box;
   z-index: 1000;
 }
-.print-vertical-tab {
-  background: #005086;
-  color: #ffffff;
-  padding: 1.5cm 0.45cm;
+.ws-vtab {
+  width: 48px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem 0.5rem;
   writing-mode: vertical-rl;
   text-orientation: mixed;
-  font-weight: 800;
-  font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  border-radius: 0 10px 10px 0;
-  text-transform: uppercase;
-  white-space: nowrap;
+  font-weight: 700;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: #64748b;
   text-align: center;
-  box-shadow: 0 4px 10px rgba(0, 80, 134, 0.15);
-  margin-top: 0.5cm;
-  font-family: 'Inter', sans-serif;
-  line-height: 1;
-}
-.subj-section, .qcard, .compact-header-box, .compact-divider {
-  margin-left: 65px !important;
-}
-.section-hdr-row {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  line-height: 1.1;
+  white-space: nowrap;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  border-bottom: 2px solid rgba(0, 80, 134, 0.15);
-  padding-bottom: 0.4rem;
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
 }
-.section-badge-circle {
-  width: 28px;
-  height: 28px;
+.ws-vtab-dot {
+  width: 6px;
+  height: 6px;
+  background: #cbd5e1;
   border-radius: 50%;
+  display: inline-block;
+}
+.ws-vtab-active {
+  background: #005086 !important;
+  color: #ffffff !important;
+  border-color: #005086 !important;
+  box-shadow: 0 4px 15px rgba(0, 80, 134, 0.2);
+}
+.ws-vtab-active .ws-vtab-dot {
+  background: #38bdf8 !important;
+}
+
+/* ── Content offset for sidebar ── */
+.ws-content {
+  padding: ${marginCSS};
+  margin-left: 85px;
+}
+
+/* ── Section Header ── */
+.ws-sec-hdr {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+  margin-top: 2.5rem;
+  margin-bottom: 1.5rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.ws-sec-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   background: #005086;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-weight: 900;
-  font-size: 0.85rem;
-  flex-shrink: 0;
-  font-family: 'Inter', sans-serif;
-}
-.section-title-pill {
-  font-size: 1.05rem;
   font-weight: 800;
-  color: #005086;
-  border: 1.5px solid #005086;
-  border-radius: 99px;
-  padding: 0.2rem 1.1rem;
-  display: inline-flex;
-  font-family: 'Inter', sans-serif;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
+  font-size: 1.05rem;
+  flex-shrink: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  box-shadow: 0 4px 10px rgba(0, 80, 134, 0.2);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
 }
-.qcard {
-  border: 1.5px solid #005086 !important;
-  border-left: 5px solid #005086 !important;
-  border-radius: 6px !important;
-  padding: 18px 22px !important;
-  background: #ffffff !important;
-  margin-bottom: 24px !important;
-  box-shadow: none !important;
+.ws-sec-pill {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: -0.02em;
+}
+
+/* ── Exercise Wrapper ── */
+.ws-exercise { margin-bottom: 0.45rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.ws-ex-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.15rem;
+}
+.ws-ex-pill { background: #005086; color: #ffffff; padding: 0.2rem 0.65rem;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 80, 134, 0.1);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.05em;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.ws-ex-pill-label {
+  opacity: 0.85;
+}
+.ws-ex-num {
+  background: #ffffff;
+  color: #005086;
+  padding: 1px 4px; border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+.ws-ans-tag {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 500;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  padding: 1px 6px; border-radius: 5px;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* ── Exercise Body Box ── */
+.ws-ex-body {
+  display: flow-root;
+  border-left: 3px solid #005086; background: #ffffff; border-top: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0; border-radius: 4px 10px 10px 4px; padding: 0.4rem 0.75rem;
+  line-height: 1.75;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.02);
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.ws-qtext { font-family: inherit; font-size: 1.0em; font-weight: 500; line-height: 1.45; color: #0f172a; margin-bottom: 4px;
+  display: flow-root;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  white-space: pre-line;
+  text-align: justify;
+}
+
+/* ── Options Grid ── */
+.ws-opts { display: grid; gap: 6px 12px; padding-left: 0; margin-top: 4px;
+  break-inside: avoid;
   page-break-inside: avoid;
 }
-.card-hdr {
+.ws-opts-5col { grid-template-columns: repeat(5, 1fr); }
+.ws-opts-4col { grid-template-columns: repeat(4, 1fr); }
+.ws-opts-2col { grid-template-columns: repeat(2, 1fr); }
+.ws-opts-1col { grid-template-columns: 1fr; }
+@media (max-width: 600px) {
+  .ws-opts-5col, .ws-opts-4col, .ws-opts-2col { grid-template-columns: 1fr; }
+}
+
+.ws-opt { display: flex; align-items: center; gap: 8px; font-size: 0.9em; color: #334155; padding: 3px 8px;
+  border-radius: 10px;
+  border: 1px solid #f1f5f9;
+  background: #f8fafc;
+}
+.ws-opt-letter {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 800;
+  font-size: 8.5pt;
+  width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; border-radius: 5px; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; font-size: 8pt;
+  flex-shrink: 0;
+}
+.ws-opt-text {
+  font-family: inherit;
+}
+.ws-opt-correct {
+  background: #ecfdf5 !important;
+  border: 1px solid #a7f3d0 !important;
+  color: #065f46 !important;
+  font-weight: 600;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.ws-opt-letter-correct {
+  background: #10b981 !important;
+  border-color: #10b981 !important;
+  color: #ffffff !important;
+  font-weight: bold;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.ws-check {
+  margin-left: auto;
+  color: #10b981;
+  font-weight: bold;
+  font-size: 9pt;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(16, 185, 129, 0.12);
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+/* ── Tip / Trick Cards (Subsection Card Style) ── */
+.ws-tip-card {
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #0284c7;
+  border-radius: 12px;
+  padding: 1.2rem 1.5rem;
+  background: #f0f9ff;
+  margin-top: 0.85rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.ws-tip-header {
+  font-size: 0.9rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  color: #0369a1;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px dashed rgba(0, 80, 134, 0.15) !important;
-  padding-bottom: 8px !important;
-  margin-bottom: 12px !important;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
-.exercise-pill {
-  background: #005086 !important;
-  color: #ffffff !important;
-  padding: 0.25rem 1rem !important;
-  border-radius: 99px !important;
-  font-weight: 800 !important;
-  font-size: 0.82rem !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  gap: 0.4rem !important;
-  font-family: 'Inter', sans-serif !important;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+.ws-tip-icon {
+  font-size: 1.1rem;
 }
-.qnum-circle {
-  background: #ffffff !important;
-  color: #005086 !important;
-  width: 18px !important;
-  height: 18px !important;
-  border-radius: 50% !important;
-  display: inline-flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-size: 0.72rem !important;
-  font-weight: 900 !important;
+.ws-tip-title {
+  font-weight: 800;
 }
-.cover .print-sidebar, 
-.omr-page .print-sidebar {
-  display: none !important;
+.ws-tip-accent {
+  font-weight: 500;
+  opacity: 0.8;
+  font-size: 0.8rem;
+  margin-left: auto;
+  background: rgba(3, 105, 161, 0.1);
+  padding: 2px 8px;
+  border-radius: 6px;
 }
-</style></head><body><div class="print-sidebar">${sidebarTabsHtml}</div>
+.ws-tip-body {
+  font-family: inherit;
+  font-size: 0.9em;
+  line-height: 1.65;
+  color: #0369a1;
+  white-space: pre-line;
+  text-align: justify;
+}
 
-<!-- PRE-PRINT INSTRUCTION BANNER -->
+.ws-trick-card {
+  border: 1px solid #e9d5ff;
+  border-left: 4px solid #7c3aed;
+  border-radius: 12px;
+  padding: 1.2rem 1.5rem;
+  background: #faf5ff;
+  margin-top: 0.65rem;
+  page-break-inside: avoid;
+  break-inside: avoid;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+.ws-trick-header {
+  font-size: 0.9rem;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  color: #6b21a8;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.ws-trick-icon {
+  font-size: 1.1rem;
+}
+.ws-trick-title {
+  font-weight: 800;
+}
+.ws-trick-accent {
+  font-weight: 500;
+  opacity: 0.8;
+  font-size: 0.8rem;
+  margin-left: auto;
+  background: rgba(107, 33, 168, 0.08);
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+.ws-trick-body {
+  font-family: inherit;
+  font-size: 0.9em;
+  line-height: 1.65;
+  color: #6b21a8;
+  white-space: pre-line;
+  text-align: justify;
+}
+
+/* ── Print Styles ── */
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .cover { 
+    -webkit-print-color-adjust: exact; 
+    print-color-adjust: exact;
+    background: #ffffff !important;
+  }
+  .cover-frame {
+    box-shadow: none !important;
+  }
+  ${!shouldShowCover ? '.cover{display:none!important}' : ''}
+  .ws-sidebar {
+    display: flex !important;
+    position: fixed !important;
+    background: #ffffff !important;
+  }
+  .ws-ex-body {
+    box-shadow: none !important;
+  }
+}
+.katex{font-size:1.05em}.katex-display{margin:4px 0}
+${templateCSS}
+</style>
+</head><body>
+
+<!-- Sidebar -->
+<div class="ws-sidebar">${sidebarTabsHtml}</div>
+
 <div class="print-hint" id="printHint">
   <div class="print-hint-msg">
     <span class="print-hint-icon">🖨️</span>
@@ -2949,81 +2239,17 @@ ${templateCSS}
 
 ${coverHtml}
 
-<!-- STANDALONE PREMIUM OMR SHEET PAGE (Correction Key) -->
-<div class="omr-page">
-  <!-- Crop marks / Corner markers -->
-  <div class="omr-marker tl"></div>
-  <div class="omr-marker tr"></div>
-  <div class="omr-marker bl"></div>
-  <div class="omr-marker br"></div>
-
-  <!-- Navy Header Band -->
-  <div class="omr-header">
-    <div class="omr-header-logo">L'CONQ<span></span></div>
-    <div class="omr-header-subtitle">Grille de Réponses Officielle · Document de Correction de Référence</div>
-    <div class="omr-header-title">${school} — ${examTitle} ${year || ''}</div>
-    <div class="omr-header-qr">
-      <img src="${premiumQrUrl}" alt="QR Code"/>
+<div class="ws-content">
+  <div class="ws-doc-header" style="border-bottom-color: #7c3aed;">
+    <div class="ws-doc-header-left">
+      <h1 class="ws-doc-title">${examTitle}</h1>
+      <div class="ws-doc-meta">${school} &nbsp;·&nbsp; Concours Officiel &nbsp;·&nbsp; ${year || ''}</div>
+    </div>
+    <div class="ws-doc-header-right">
+      <span class="ws-doc-type-badge" style="background: #7c3aed;">CORRIGÉ DÉTAILLÉ</span>
     </div>
   </div>
-
-  <!-- Info Cards -->
-  <div class="omr-card" style="left: 14mm; width: 70mm;">
-    <div class="omr-card-label">RÉFÉRENCE DE CORRECTION</div>
-    <div class="omr-card-val">CORRIGÉ OFFICIEL TYPE</div>
-  </div>
-  <div class="omr-card" style="left: 86mm; width: 35mm;">
-    <div class="omr-card-label">DATE DE GENERATION</div>
-    <div class="omr-card-val">${dateStr}</div>
-  </div>
-  <div class="omr-card" style="left: 123mm; width: 35mm;">
-    <div class="omr-card-label">DURÉE</div>
-    <div class="omr-card-val">${examDuration}</div>
-  </div>
-  <div class="omr-card score" style="left: 160mm; width: 36mm;">
-    <div class="omr-card-label">SCORE CORRECTION</div>
-    <div class="omr-card-val">${questions.length} / ${questions.length}</div>
-  </div>
-
-  <!-- Instructions Bar -->
-  <div class="omr-instructions" style="background: #f0fdf4;">
-    <div class="omr-instructions-bar" style="background: #10a34a;"></div>
-    <div class="omr-instructions-title" style="color: #10a34a;">INFORMATIONS &amp; CONSIGNES IMPORTANTES :</div>
-    <div class="omr-instructions-text">· Les cercles colorés en vert indiquent les réponses correctes pour chaque question.</div>
-  </div>
-
-  <!-- Legend -->
-  <div class="omr-legend">
-    <span class="omr-legend-title">Exemples de Remplissage :</span>
-    <div class="omr-legend-item">
-      <div class="omr-legend-bubble ok" style="background: #10a34a; border-color: #10a34a; color: #fff;">A</div>
-      <span class="omr-legend-label ok" style="color: #10a34a;">Réponse Correcte</span>
-    </div>
-    <div class="omr-legend-item">
-      <div class="omr-legend-bubble empty">B</div>
-      <span class="omr-legend-label empty">Réponse Incorrecte</span>
-    </div>
-  </div>
-
-  <!-- OMR Columns -->
-  <div class="omr-columns">
-    ${premiumOmrHtml}
-  </div>
-
-  <!-- Footer -->
-  <div class="omr-footer" style="top: ${footerY}mm;">
-    <div class="omr-footer-text">Ce document contient les réponses correctes officielles. Utilisez-le comme grille de validation de référence.</div>
-    <div class="omr-footer-right">
-      <div class="omr-footer-exam-id">EXAM ID: ${examId.slice(0, 8).toUpperCase()}</div>
-      <div class="omr-footer-brand">lconq.ma · IA OMR Engine v2.0</div>
-    </div>
-  </div>
-</div>
-
-<!-- CONTENT -->
-<div class="content">
-  ${compactHeaderHtml}
-  ${cardsHtml}
+  ${questionsHtml}
 </div>
 
 <script>
@@ -3038,25 +2264,7 @@ async function printWhenReady() {
 printWhenReady();
 </script>
 </body></html>`;
-};
-
-/* ── Open generated HTML in a new print window ── */
-export const openPrintWindow = (html) => {
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const win  = window.open(url, '_blank', 'width=960,height=720,scrollbars=yes');
-  if (!win) {
-    URL.revokeObjectURL(url);
-    alert('Veuillez autoriser les popups pour ce site.');
-    return;
-  }
-  win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
-};
-
-/* ═══════════════════════════════════════════════
-   3. DOMAIN E-BOOK — "كتاب الحيل الموجهة"
-   ═══════════════════════════════════════════════ */
-export const generateEbookHTML = (topic, questionsWithSource, settings = {}) => {
+};export const generateEbookHTML = (topic, questionsWithSource, settings = {}) => {
   const pdfConf = getPdfSettings(settings);
   const marginCSS = getMarginStyle(pdfConf.pageMargins);
   const fontFamilyCSS = getFontFamilyStyle(pdfConf.fontFamily);
@@ -4049,4 +3257,16 @@ printWhenReady();
 </script>
 </body>
 </html>`;
+};
+
+export const openPrintWindow = (html, title) => {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const win  = window.open(url, '_blank', 'width=960,height=720,scrollbars=yes');
+  if (!win) {
+    URL.revokeObjectURL(url);
+    alert('Veuillez autoriser les popups pour ce site.');
+    return;
+  }
+  win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
 };

@@ -1,218 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Timer, ArrowLeft, CheckCircle2, XCircle, Lightbulb, Trophy, Flame, Zap, ChevronLeft, ChevronRight, TrendingUp, Lock, LayoutGrid } from 'lucide-react';
+import { Timer, ArrowLeft, CheckCircle2, Zap, ChevronLeft, ChevronRight, LayoutGrid, Flame } from 'lucide-react';
 
 import { renderWithMath } from '../utils/mathRenderer';
-import DiagnosticReport from '../components/DiagnosticReport';
+import CircularTimer from '../components/CircularTimer';
+import MockExamResults from '../components/MockExamResults';
 
-/* ─── Math renderer (from shared utility) ───────────────────────── */
 function renderOptionText(text) {
   return renderWithMath(text);
 }
 
-/* ─── Circular Timer (Zen Edition) ────────────────────────────────── */
-function CircularTimer({ timeLeft, totalTime }) {
-  const r = 40;
-  const circ = 2 * Math.PI * r;
-  const pct = Math.max(0, Math.min(1, timeLeft / totalTime));
-  const offset = circ * (1 - pct);
-  const critical = timeLeft <= 300;
-  const color = critical ? 'var(--danger)' : timeLeft <= 1200 ? 'var(--warning)' : 'var(--violet)';
-  const h = Math.floor(timeLeft / 3600);
-  const m = Math.floor((timeLeft % 3600) / 60);
-  const s = timeLeft % 60;
-  const label = h > 0
-    ? `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`
-    : `${m}:${s.toString().padStart(2,'0')}`;
-
-  return (
-    <div style={{ 
-      display: 'flex', 
-      flexDirection: 'column', 
-      alignItems: 'center', 
-      gap: '0.75rem',
-      padding: '0.5rem 0'
-    }}>
-      <div style={{ position: 'relative', width: 90, height: 90 }}>
-        <svg width={90} height={90} viewBox="0 0 90 90" style={{ position: 'absolute', inset: 0 }}>
-          {/* Track */}
-          <circle cx="45" cy="45" r={r} fill="none" stroke="var(--bg-hover)" strokeWidth="5" />
-          {/* Fill */}
-          <circle
-            cx="45" cy="45" r={r} fill="none"
-            stroke={color}
-            strokeWidth="5"
-            strokeLinecap="round"
-            strokeDasharray={circ}
-            strokeDashoffset={offset}
-            transform="rotate(-90 45 45)"
-            style={{ transition: 'stroke-dashoffset 1s linear, stroke 0.5s ease' }}
-          />
-          {/* Time label */}
-          <text
-            x="45" y="48"
-            textAnchor="middle" dominantBaseline="middle"
-            fill="var(--text-main)"
-            fontSize="14"
-            fontWeight="800"
-            fontFamily="'Plus Jakarta Sans', sans-serif"
-          >
-            {label}
-          </text>
-        </svg>
-      </div>
-      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-        Temps restant
-      </span>
-    </div>
-  );
-}
-
-/* ─── Results Screen ────────────────────────────────────────────── */
-function ResultsScreen({ questions, answers, exam, onReturn }) {
-  const { schoolBranding } = useAuth();
-  const [tab, setTab] = React.useState('correction');
-
-  // Get school scoring rules
-  const brand = schoolBranding[exam.school] || { scoring: { correct: 1, wrong: -0.25, empty: 0 } };
-  const rules = brand.scoring || { correct: 1, wrong: -0.25, empty: 0 };
-
-  let score = 0;
-  questions.forEach(q => {
-    const ans = answers[q.id];
-    if (ans === q.correct_answer) score += rules.correct;
-    else if (!ans) score += rules.empty;
-    else score += rules.wrong;
-  });
-
-  const maxPossible = questions.length * rules.correct;
-  const pct = Math.max(0, Math.round((score / maxPossible) * 100));
-
-  // Build corrected array with topic for DiagnosticReport
-  const corrected = questions.map((q, idx) => ({
-    q: idx + 1,
-    question: q.question,
-    correct: q.correct_answer,
-    detected: answers[q.id] || null,
-    result: answers[q.id] === q.correct_answer ? 'correct' : 'wrong',
-    topic: q.topic || 'Général',
-  }));
-
-  return (
-    <div className="animate-fade-in" style={{ maxWidth: 900, margin: '0 auto', padding: 'clamp(1rem, 4vw, 2rem) clamp(0.875rem, 4vw, 1.5rem) 4rem' }}>
-      {/* Trophy card */}
-      <div className="glass-panel text-center" style={{ padding: '2.5rem 2rem', marginBottom: '1.5rem' }}>
-        <div style={{
-          width: 72, height: 72, borderRadius: '50%', margin: '0 auto 1.25rem',
-          background: pct >= 50 ? 'var(--emerald-soft)' : 'var(--danger-soft)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: `2px solid ${pct >= 50 ? 'var(--emerald)' : 'var(--danger)'}`,
-        }}>
-          <Trophy size={32} color={pct >= 50 ? 'var(--emerald)' : 'var(--danger)'} />
-        </div>
-        <h1 className="text-gradient" style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>
-          Rapport de Performance
-        </h1>
-        <div style={{ fontSize: '3.5rem', fontWeight: 900, margin: '0.5rem 0', lineHeight: 1 }}>
-          {score}<span style={{ fontSize: '1.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>/{questions.length}</span>
-        </div>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-          background: pct >= 50 ? 'var(--emerald-soft)' : 'var(--danger-soft)',
-          color: pct >= 50 ? 'var(--emerald)' : 'var(--danger)',
-          padding: '0.35rem 1.1rem', borderRadius: '99px', fontWeight: 700,
-          border: `1px solid ${pct >= 50 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
-          marginBottom: '1.25rem'
-        }}>
-          <Zap size={14} /> {pct}% de réussite
-        </div>
-        <button className="btn" style={{ marginTop: '0.75rem' }} onClick={onReturn}>
-          <ArrowLeft size={16} /> Retour au Dashboard
-        </button>
-      </div>
-
-      {/* Tab switcher */}
-      <div style={{ display:'flex', gap:'0.5rem', marginBottom:'1.5rem', background:'var(--bg-glass)', padding:'0.35rem', borderRadius:'var(--radius-md)', border:'1px solid var(--border)', width:'fit-content', maxWidth:'100%', flexWrap:'wrap' }}>
-        {[{id:'correction', label:'Correction', icon:<CheckCircle2 size={15}/>},{id:'diagnostic', label:'Diagnostic', icon:<TrendingUp size={15}/>}].map(t => (
-          <button key={t.id} onClick={()=>setTab(t.id)}
-            style={{ display:'flex', alignItems:'center', gap:'0.4rem', padding:'0.5rem 1rem', borderRadius:'calc(var(--radius-md) - 3px)', border:'none', cursor:'pointer', fontWeight:700, fontSize:'0.85rem', fontFamily:'inherit', transition:'all 0.2s',
-              background: tab===t.id ? 'var(--violet)' : 'transparent',
-              color:      tab===t.id ? '#fff'           : 'var(--text-muted)',
-              boxShadow:  tab===t.id ? '0 2px 8px var(--violet-glow)' : 'none',
-            }}>
-            {t.icon} {t.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab content */}
-      {tab === 'correction' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-          {questions.map((q, idx) => {
-            const userAns = answers[q.id];
-            const isCorrect = userAns === q.correct_answer;
-            return (
-              <div key={q.id} className="glass-panel" style={{
-                borderLeft: `4px solid ${isCorrect ? 'var(--emerald)' : 'var(--danger)'}`,
-                padding: '1.5rem'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', fontWeight: 600 }}>
-                    Question {idx + 1} {q.topic && `· ${q.topic}`}
-                  </span>
-                  {isCorrect
-                    ? <CheckCircle2 size={20} color="var(--emerald)" />
-                    : <XCircle size={20} color="var(--danger)" />}
-                </div>
-                <div style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: 500 }}>
-                  {renderWithMath(q.question)}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <div style={{ background: 'var(--bg-glass)', padding: '0.875rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', marginBottom: '0.4rem', fontWeight: 600 }}>VOTRE RÉPONSE</p>
-                    {userAns
-                      ? <span style={{ color: isCorrect ? 'var(--emerald)' : 'var(--danger)', fontWeight: 600 }}>
-                          {userAns}) {renderOptionText(q.options.find(o => o.id === userAns)?.text)}
-                        </span>
-                      : <span className="text-muted">Aucune réponse</span>
-                    }
-                  </div>
-                  <div style={{ background: 'var(--emerald-soft)', padding: '0.875rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16,185,129,0.25)' }}>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--emerald)', marginBottom: '0.4rem', fontWeight: 600 }}>BONNE RÉPONSE</p>
-                    <span style={{ color: 'var(--emerald)', fontWeight: 600 }}>
-                      {q.correct_answer}) {renderOptionText(q.options.find(o => o.id === q.correct_answer)?.text)}
-                    </span>
-                  </div>
-                </div>
-                {!isCorrect && q.astuce && (
-                  <div className="astuce-box">
-                    <div className="astuce-header"><Lightbulb size={16} /> Astuce</div>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>{renderWithMath(q.astuce)}</p>
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {tab === 'diagnostic' && (
-        <DiagnosticReport corrected={corrected} exam={exam} onClose={onReturn} />
-      )}
-    </div>
-  );
-}
-
-/* ─── Main Component ────────────────────────────────────────────── */
 export default function MockExamMode() {
   const { exams, saveMockExamResult, schoolBranding, isExamLocked, updateCardProgress } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const navigate = useNavigate();
 
-  const currentExam = examId ? exams.find(e => e.id === examId) : exams[0];
-  const questions = currentExam?.questions ?? [];
+  const currentExam = useMemo(() => examId ? exams.find(e => e.id === examId) : exams[0], [exams, examId]);
+  const questions = useMemo(() => currentExam?.questions ?? [], [currentExam]);
   const TOTAL_TIME = 120 * 60;
 
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -224,7 +30,7 @@ export default function MockExamMode() {
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
   const [showMobileContext, setShowMobileContext] = useState(false);
 
-  const hasSavedResult = React.useRef(false);
+  const hasSavedResult = useRef(false);
 
   useEffect(() => {
     if (!questions.length || isFinished) return;
@@ -238,7 +44,6 @@ export default function MockExamMode() {
     if (isFinished && !hasSavedResult.current && currentExam) {
       hasSavedResult.current = true;
 
-      // Get school scoring rules
       const brand = schoolBranding[currentExam.school] || { scoring: { correct: 1, wrong: -0.25, empty: 0 } };
       const rules = brand.scoring || { correct: 1, wrong: -0.25, empty: 0 };
 
@@ -261,7 +66,6 @@ export default function MockExamMode() {
           wrongCount++;
         }
         
-        // Push progress to Spaced Repetition (SRS)
         updateCardProgress(q.id, isCorrect ? 4 : 0);
       });
 
@@ -284,19 +88,26 @@ export default function MockExamMode() {
   }, [isFinished, answers, currentExam, questions, saveMockExamResult, schoolBranding, updateCardProgress]);
 
   const handleSelect = useCallback((optId) => {
-    if (answers[questions[currentIndex]?.id]) return; // already answered in mock? allow re-select
     setAnswers(prev => ({ ...prev, [questions[currentIndex].id]: optId }));
-  }, [answers, currentIndex, questions]);
+  }, [currentIndex, questions]);
 
-  const goNext = () => { if (currentIndex < questions.length - 1) setCurrentIndex(i => i + 1); };
-  const goPrev = () => { if (currentIndex > 0) setCurrentIndex(i => i - 1); };
+  const goNext = useCallback(() => { if (currentIndex < questions.length - 1) setCurrentIndex(i => i + 1); }, [questions.length, currentIndex]);
+  const goPrev = useCallback(() => { if (currentIndex > 0) setCurrentIndex(i => i - 1); }, [currentIndex]);
+
+  const currentQuestion = useMemo(() => questions[currentIndex], [questions, currentIndex]);
+  const progress = useMemo(() => questions.length > 0 ? ((currentIndex + 1) / questions.length) * 100 : 0, [currentIndex, questions.length]);
+  const answered = useMemo(() => currentQuestion ? answers[currentQuestion.id] : undefined, [currentQuestion, answers]);
+  const isCritical = useMemo(() => timeLeft <= 300, [timeLeft]);
+  const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
+
+  const onReturn = useCallback(() => navigate('/dashboard'), [navigate]);
 
   if (!currentExam) {
     return (
       <div className="focus-layout flex items-center justify-center" style={{ height: '100vh' }}>
         <div className="glass-panel text-center" style={{ padding: '3rem' }}>
           <h2 style={{ marginBottom: '1rem' }}>Aucun examen sélectionné</h2>
-          <button className="btn" onClick={() => navigate('/dashboard')}>
+          <button className="btn" onClick={onReturn}>
             <ArrowLeft size={16} /> Retour
           </button>
         </div>
@@ -319,7 +130,7 @@ export default function MockExamMode() {
             <button onClick={() => navigate('/subscription')} className="btn" style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}>
               ✦ Voir les offres
             </button>
-            <button onClick={() => navigate('/dashboard')} className="btn-outline">
+            <button onClick={onReturn} className="btn-outline">
               Retour
             </button>
           </div>
@@ -331,30 +142,16 @@ export default function MockExamMode() {
   if (isFinished) {
     return (
       <div className="focus-layout">
-        <div className="focus-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-            <div style={{ width: 28, height: 28, borderRadius: '8px', background: 'linear-gradient(135deg,var(--violet),var(--emerald))', display:'flex',alignItems:'center',justifyContent:'center' }}>
-              <Trophy size={16} color="#fff" />
-            </div>
-            <span style={{ fontWeight: 800 }}>Résultats — {currentExam.name}</span>
-          </div>
-        </div>
-        <ResultsScreen
+        <MockExamResults
           questions={questions}
           answers={answers}
           exam={currentExam}
-          onReturn={() => navigate('/dashboard')}
+          onReturn={onReturn}
+          schoolBranding={schoolBranding}
         />
       </div>
     );
   }
-
-  const currentQuestion = questions[currentIndex];
-  const progress = ((currentIndex + 1) / questions.length) * 100;
-  const answered = answers[currentQuestion?.id];
-  const isCritical = timeLeft <= 300;
-
-  const answeredCount = Object.keys(answers).length;
 
   return (
     <div className="focus-layout" style={{ height: '100dvh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
@@ -362,7 +159,7 @@ export default function MockExamMode() {
       <div className="focus-header" style={{ padding: '0.6rem clamp(0.75rem, 3vw, 1.5rem)', height: '55px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <button
           className="btn-ghost"
-          onClick={() => navigate('/dashboard')}
+          onClick={onReturn}
           style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 600, fontSize: '0.85rem' }}
         >
           <ArrowLeft size={16} /> <span className="hide-xs">Quitter</span>
@@ -376,7 +173,7 @@ export default function MockExamMode() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           {combo >= 2 && (
             <div className="combo-badge" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}>
-              <Flame size={12} /> {combo}x Combo
+              ✦ {combo}x Combo
             </div>
           )}
           <div className={`timer-pill ${isCritical ? 'critical' : ''}`} style={{ padding: '0.35rem 0.8rem', fontSize: '0.85rem' }}>
@@ -446,7 +243,7 @@ export default function MockExamMode() {
             <div className="glass-card animate-fade-in desktop-context-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', borderLeft: '4px solid var(--primary)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: 'var(--text-subtle)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.08em', flexShrink: 0 }}>
                 <div style={{ background: 'var(--primary)', color: 'white', padding: '0.3rem', borderRadius: '0.4rem', display: 'flex' }}>
-                  <Lightbulb size={14} />
+                  <Zap size={14} />
                 </div>
                 Énoncé / Contexte
               </div>
@@ -622,7 +419,6 @@ export default function MockExamMode() {
                   fontSize: '0.85rem',
                   opacity: currentIndex === 0 ? 0.45 : 1,
                   cursor: currentIndex === 0 ? 'not-allowed' : 'pointer',
-                  borderColor: currentIndex === 0 ? 'var(--border)' : 'var(--border)',
                   color: currentIndex === 0 ? 'var(--text-subtle)' : 'var(--text-main)',
                   background: currentIndex === 0 ? 'var(--bg-glass)' : 'transparent',
                 }}
@@ -696,7 +492,6 @@ export default function MockExamMode() {
                     };
 
                     if (isCurrent) {
-                      // Pulsing glowing Violet border for active question
                       btnStyle = {
                         ...btnStyle,
                         border: '2px solid var(--violet)',
@@ -705,7 +500,6 @@ export default function MockExamMode() {
                         boxShadow: '0 0 10px rgba(99, 102, 241, 0.35)',
                       };
                     } else if (isAnswered) {
-                      // High-fidelity Emerald Green tint for answered/completed questions
                       btnStyle = {
                         ...btnStyle,
                         border: '1px solid rgba(16, 185, 129, 0.4)',
@@ -713,7 +507,6 @@ export default function MockExamMode() {
                         color: 'var(--emerald)',
                       };
                     } else {
-                      // Glassmorphic light grey/dark theme standard layout
                       btnStyle = {
                         ...btnStyle,
                         border: '1px solid var(--border)',
@@ -801,7 +594,6 @@ export default function MockExamMode() {
         display: 'flex',
         flexDirection: 'column',
       }}>
-        {/* Drawer Drag Indicator / Top Handle */}
         <div 
           style={{
             width: '40px',
@@ -814,7 +606,6 @@ export default function MockExamMode() {
           onClick={() => setIsNavDrawerOpen(false)} 
         />
         
-        {/* Drawer Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexShrink: 0 }}>
           <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>Grille de Navigation</h3>
           <button 
@@ -826,9 +617,7 @@ export default function MockExamMode() {
           </button>
         </div>
         
-        {/* Drawer Content Area (Scrollable) */}
         <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '1.25rem', paddingRight: '2px' }}>
-          {/* Progress stats in 4-column compact row */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '0.35rem', flexShrink: 0 }}>
             <div style={{ textAlign: 'center', background: 'var(--bg-glass)', borderRadius: '6px', padding: '0.4rem 0.25rem', border: '1px solid var(--border)' }}>
               <p style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--violet)', margin: 0, lineHeight: 1.1 }}>{currentIndex + 1}</p>
@@ -848,7 +637,6 @@ export default function MockExamMode() {
             </div>
           </div>
           
-          {/* Scrollable grid navigator */}
           <div style={{ marginBottom: '1rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '0.35rem' }}>
               {questions.map((q, i) => {

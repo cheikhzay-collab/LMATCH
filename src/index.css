@@ -3566,3 +3566,80 @@ body.light-theme .mobile-hero-card {
 body.light-theme .mob-nav-badge {
   border-color: #fff;
 }
+
+/* ─── UI REACTION & SHIMMER LOADING SYSTEM ────────────────────────── */
+@keyframes shimmer-effect {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 25%,
+    rgba(255, 255, 255, 0.07) 37%,
+    rgba(255, 255, 255, 0.02) 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer-effect 1.4s ease-in-out infinite;
+}
+
+body.light-theme .shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    #e2e8f0 25%,
+    #f1f5f9 37%,
+    #e2e8f0 63%
+  );
+  background-size: 200% 100%;
+}
+
+/* Hardware-accelerated smooth transitions (no layout shifts) */
+.glass-panel, .glass-card, .btn, .btn-outline, .option-btn, .nav-item {
+  will-change: transform, box-shadow, border-color;
+  transform: translate3d(0, 0, 0);
+  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              box-shadow 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), 
+              border-color 0.22s ease,
+              background-color 0.22s ease;
+}
+
+.glass-panel:hover {
+  transform: translate3d(0, -4px, 0) scale3d(1.005, 1.005, 1);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.25), 0 0 15px var(--violet-glow);
+  border-color: rgba(113, 109, 242, 0.25);
+}
+
+.option-btn:hover:not(:disabled) {
+  transform: translate3d(0, -2px, 0);
+}
+
+/* Micro click responses */
+button:active:not(:disabled), 
+.btn:active:not(:disabled),
+.nav-item:active {
+  transform: scale3d(0.97, 0.97, 1) translate3d(0, 0, 0) !important;
+  transition: transform 0.08s ease !important;
+}
+
+/* Cascade animations for lists/grids */
+@keyframes slideUpCascade {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 16px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-slide-up-cascade {
+  opacity: 0;
+  animation: slideUpCascade 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
