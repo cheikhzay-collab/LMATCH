@@ -92,6 +92,11 @@ export default function StudentDashboard() {
   }, [stats.dueToday, stats.masteredCards, stats.weakTopics]);
 
   const handleGenerateWeaknessPDF = useCallback(() => {
+    if (user?.role !== 'admin' && user?.tier !== 'premium') {
+      alert("La génération de Cahiers d'Erreurs PDF est réservée aux abonnés Premium.");
+      navigate('/subscription');
+      return;
+    }
     const topicsToPrint = stats.weakTopics.map(t => t.name);
     if (topicsToPrint.length === 0) return;
 
@@ -129,7 +134,7 @@ export default function StudentDashboard() {
     const title = "Fascicule de Révision Personnalisé";
     const html = generateEbookHTML(title, questionsToPrint, s);
     openPrintWindow(html, `cahier-revision-points-faibles`);
-  }, [stats.weakTopics, exams, profName, profPhone, profSite]);
+  }, [stats.weakTopics, exams, profName, profPhone, profSite, user, navigate]);
 
   const handleDownloadReport = useCallback((item) => {
     const exam = exams.find(e => e.id === item.examId);
@@ -337,7 +342,9 @@ export default function StudentDashboard() {
               style={{
                 marginTop: '1.25rem',
                 width: '100%',
-                background: stats.weakTopics.length === 0 ? 'var(--bg-glass)' : 'var(--violet-soft)',
+                background: stats.weakTopics.length === 0 
+                  ? 'var(--bg-glass)' 
+                  : (user?.role === 'admin' || user?.tier === 'premium' ? 'var(--violet-soft)' : 'linear-gradient(135deg, var(--violet-soft), rgba(16, 185, 129, 0.05))'),
                 border: stats.weakTopics.length === 0 ? '1px solid var(--border)' : '1px solid rgba(99, 102, 241, 0.25)',
                 fontWeight: 800,
                 display: 'flex',
@@ -362,13 +369,23 @@ export default function StudentDashboard() {
               onMouseLeave={e => { 
                 if (stats.weakTopics.length > 0) {
                   e.currentTarget.style.transform = 'translateY(0)'; 
-                  e.currentTarget.style.background = 'var(--violet-soft)';
+                  e.currentTarget.style.background = stats.weakTopics.length === 0 
+                    ? 'var(--bg-glass)' 
+                    : (user?.role === 'admin' || user?.tier === 'premium' ? 'var(--violet-soft)' : 'linear-gradient(135deg, var(--violet-soft), rgba(16, 185, 129, 0.05))');
                   e.currentTarget.style.color = 'var(--violet)';
                   e.currentTarget.style.boxShadow = 'none';
                 }
               }}
             >
-              <FileText size={16} /> Générer mon Cahier d'Erreurs PDF
+              {(user?.role === 'admin' || user?.tier === 'premium') ? (
+                <>
+                  <FileText size={16} /> Générer mon Cahier d'Erreurs PDF
+                </>
+              ) : (
+                <>
+                  <Zap size={16} /> Générer mon Cahier d'Erreurs (Premium)
+                </>
+              )}
             </button>
           </div>
 

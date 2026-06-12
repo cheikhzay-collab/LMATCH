@@ -1,4 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Upload, Camera, CheckCircle2, XCircle, AlertCircle,
   BrainCircuit, Zap, RotateCcw, X, Loader2, Edit3, Check, TrendingUp
@@ -114,7 +115,8 @@ function ResultRow({ row }) {
 
 /* ── Main modal ──────────────────────────────────────────────────── */
 export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
-  const { user, updateCardProgress, schoolBranding, exams } = useAuth();
+  const { user, mockExamHistory, updateCardProgress, schoolBranding, exams } = useAuth();
+  const navigate = useNavigate();
   
   const [activeExam, setActiveExam] = useState(exam);
 
@@ -124,6 +126,11 @@ export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
   // Get school scoring rules
   const brand = (activeExam ? schoolBranding[activeExam.school] : null) || { scoring: { correct: 1, wrong: -0.25, empty: 0 } };
   const rules = brand.scoring || { correct: 1, wrong: -0.25, empty: 0 };
+
+  const isPremium = user?.role === 'admin' || user?.tier === 'premium';
+  const scanLimit = 3;
+  const omrScansCount = mockExamHistory ? mockExamHistory.filter(h => h.mode === 'omr').length : 0;
+  const hasReachedLimit = !isPremium && omrScansCount >= scanLimit;
 
   const [phase,        setPhase]        = useState('upload');
   const [scanMethod,   setScanMethod]   = useState('camera');
@@ -265,147 +272,168 @@ export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
           {/* ── UPLOAD ── */}
           {phase === 'upload' && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-              
-              {/* Premium Segmented Controller */}
-              <div style={{ 
-                display: 'flex', 
-                background: 'var(--bg-glass)', 
-                border: '1px solid var(--border)', 
-                padding: '0.25rem', 
-                borderRadius: '0.875rem', 
-                width: '100%'
-              }}>
-                <button 
-                  onClick={() => setScanMethod('camera')}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '0.6rem',
-                    borderRadius: '0.65rem',
-                    border: 'none',
-                    fontWeight: 800,
-                    fontSize: '0.82rem',
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    transition: 'all 0.25s',
-                    background: scanMethod === 'camera' ? 'var(--violet)' : 'transparent',
-                    color: scanMethod === 'camera' ? '#fff' : 'var(--text-muted)',
-                    boxShadow: scanMethod === 'camera' ? '0 4px 12px var(--violet-glow)' : 'none'
-                  }}
-                >
-                  <Camera size={15} />
-                  Scanneur Intelligent
-                </button>
-                <button 
-                  onClick={() => setScanMethod('file')}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '0.6rem',
-                    borderRadius: '0.65rem',
-                    border: 'none',
-                    fontWeight: 800,
-                    fontSize: '0.82rem',
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    transition: 'all 0.25s',
-                    background: scanMethod === 'file' ? 'var(--violet)' : 'transparent',
-                    color: scanMethod === 'file' ? '#fff' : 'var(--text-muted)',
-                    boxShadow: scanMethod === 'file' ? '0 4px 12px var(--violet-glow)' : 'none'
-                  }}
-                >
-                  <Upload size={15} />
-                  Importer Image
-                </button>
-              </div>
-
-              {scanError && (
-                <div style={{ padding:'0.75rem 1rem', background:'var(--danger-soft)', border:'1px solid var(--danger)33', borderRadius:'0.75rem', color:'var(--danger)', fontSize:'0.85rem', fontWeight:600 }}>
-                  ⚠ {scanError}
+              {hasReachedLimit ? (
+                <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(99,102,241,0.1)', color: 'var(--violet)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 8px 24px rgba(99,102,241,0.15)' }}>
+                    <Zap size={28} fill="currentColor" />
+                  </div>
+                  <h3 style={{ fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-main)', fontSize: '1.1rem' }}>Limite de scans atteinte</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.55, maxWidth: '380px', margin: '0 auto 1.5rem' }}>
+                    Vous avez utilisé vos 3 scans gratuits OMR. Abonnez-vous pour profiter d'analyses de copies et de rapports d'erreurs illimités.
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.75rem', flexDirection: 'column', width: '100%', maxWidth: '240px', margin: '0 auto' }}>
+                    <button onClick={() => { onClose(); navigate('/subscription'); }} className="btn" style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)', padding: '0.6rem 1rem', fontSize: '0.85rem' }}>
+                      ✦ Passer à l'offre Premium
+                    </button>
+                    <button onClick={onClose} className="btn-outline" style={{ padding: '0.6rem 1rem', fontSize: '0.85rem' }}>
+                      Fermer
+                    </button>
+                  </div>
                 </div>
-              )}
-              
-              <div style={{ transition: 'all 0.3s ease' }}>
-                {scanMethod === 'camera' ? (
-                  <SmartCameraScanner
-                    onCapture={handleFile}
-                    onCancel={() => setScanMethod('file')}
-                    activeExam={activeExam}
-                  />
-                ) : (
-                  <div
-                    onDrop={handleDrop} 
-                    onDragOver={e => e.preventDefault()}
-                    onClick={() => fileRef.current?.click()}
-                    style={{ 
-                      border: '2px dashed var(--border)', 
-                      borderRadius: '1.25rem', 
-                      padding: '3rem 2rem', 
-                      textAlign: 'center', 
-                      cursor: 'pointer', 
-                      transition: 'all 0.25s', 
-                      background: 'var(--bg-glass)',
-                      boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    onMouseEnter={e => { 
-                      e.currentTarget.style.borderColor = 'var(--violet)'; 
-                      e.currentTarget.style.boxShadow = '0 8px 32px var(--violet-glow)';
-                    }}
-                    onMouseLeave={e => { 
-                      e.currentTarget.style.borderColor = 'var(--border)';  
-                      e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.15)';
-                    }}
-                  >
-                    <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
-                    <div style={{ 
-                      width: 60, 
-                      height: 60, 
-                      borderRadius: '50%', 
-                      background: 'var(--violet-soft)', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'center', 
-                      marginBottom: '1.25rem',
-                      boxShadow: '0 4px 14px var(--violet-glow)'
-                    }}>
-                      <Upload size={26} color="var(--violet)" />
-                    </div>
-                    <h4 style={{ fontWeight: 800, marginBottom: '0.4rem', color: 'var(--text-main)' }}>Sélectionnez la photo de la feuille</h4>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6, maxWidth: 320 }}>
-                      Faites glisser le fichier ici, ou cliquez pour parcourir vos dossiers.<br/>
-                      <span style={{ color: 'var(--violet)', fontWeight: 700 }}>PNG, JPG, JPEG, WebP</span>
-                    </p>
+              ) : (
+                <>
+                  {/* Premium Segmented Controller */}
+                  <div style={{ 
+                    display: 'flex', 
+                    background: 'var(--bg-glass)', 
+                    border: '1px solid var(--border)', 
+                    padding: '0.25rem', 
+                    borderRadius: '0.875rem', 
+                    width: '100%'
+                  }}>
+                    <button 
+                      onClick={() => setScanMethod('camera')}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        padding: '0.6rem',
+                        borderRadius: '0.65rem',
+                        border: 'none',
+                        fontWeight: 800,
+                        fontSize: '0.82rem',
+                        fontFamily: 'inherit',
+                        cursor: 'pointer',
+                        transition: 'all 0.25s',
+                        background: scanMethod === 'camera' ? 'var(--violet)' : 'transparent',
+                        color: scanMethod === 'camera' ? '#fff' : 'var(--text-muted)',
+                        boxShadow: scanMethod === 'camera' ? '0 4px 12px var(--violet-glow)' : 'none'
+                      }}
+                    >
+                      <Camera size={15} />
+                      Scanneur Intelligent
+                    </button>
+                    <button 
+                      onClick={() => setScanMethod('file')}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        padding: '0.6rem',
+                        borderRadius: '0.65rem',
+                        border: 'none',
+                        fontWeight: 800,
+                        fontSize: '0.82rem',
+                        fontFamily: 'inherit',
+                        cursor: 'pointer',
+                        transition: 'all 0.25s',
+                        background: scanMethod === 'file' ? 'var(--violet)' : 'transparent',
+                        color: scanMethod === 'file' ? '#fff' : 'var(--text-muted)',
+                        boxShadow: scanMethod === 'file' ? '0 4px 12px var(--violet-glow)' : 'none'
+                      }}
+                    >
+                      <Upload size={15} />
+                      Importer Image
+                    </button>
                   </div>
-                )}
-              </div>
 
-              {/* Tips */}
-              <div style={{ marginTop:'1.25rem', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.625rem' }}>
-                {[
-                  ['💡','Bonne lumière','Éclairage uniforme, pas de reflets.'],
-                  ['📐','Feuille droite','Tenez le téléphone parallèle à la feuille.'],
-                  ['🖊️','Bulles noircies','Remplissez complètement chaque cercle.'],
-                  ['📷','Cadrage complet','Toute la feuille doit être visible.'],
-                ].map(([ic,t,d]) => (
-                  <div key={t} style={{ display:'flex', gap:'0.625rem', padding:'0.625rem 0.875rem', background:'var(--bg-glass)', borderRadius:'0.75rem', border:'1px solid var(--border)' }}>
-                    <span style={{ fontSize:'1.15rem', flexShrink:0 }}>{ic}</span>
-                    <div>
-                      <p style={{ fontWeight:700, fontSize:'0.8rem' }}>{t}</p>
-                      <p style={{ color:'var(--text-muted)', fontSize:'0.75rem' }}>{d}</p>
+                  {scanError && (
+                    <div style={{ padding:'0.75rem 1rem', background:'var(--danger-soft)', border:'1px solid var(--danger)33', borderRadius:'0.75rem', color:'var(--danger)', fontSize:'0.85rem', fontWeight:600 }}>
+                      ⚠ {scanError}
                     </div>
+                  )}
+                  
+                  <div style={{ transition: 'all 0.3s ease' }}>
+                    {scanMethod === 'camera' ? (
+                      <SmartCameraScanner
+                        onCapture={handleFile}
+                        onCancel={() => setScanMethod('file')}
+                        activeExam={activeExam}
+                      />
+                    ) : (
+                      <div
+                        onDrop={handleDrop} 
+                        onDragOver={e => e.preventDefault()}
+                        onClick={() => fileRef.current?.click()}
+                        style={{ 
+                          border: '2px dashed var(--border)', 
+                          borderRadius: '1.25rem', 
+                          padding: '3rem 2rem', 
+                          textAlign: 'center', 
+                          cursor: 'pointer', 
+                          transition: 'all 0.25s', 
+                          background: 'var(--bg-glass)',
+                          boxShadow: '0 8px 32px rgba(0,0,0,0.15)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        onMouseEnter={e => { 
+                          e.currentTarget.style.borderColor = 'var(--violet)'; 
+                          e.currentTarget.style.boxShadow = '0 8px 32px var(--violet-glow)';
+                        }}
+                        onMouseLeave={e => { 
+                          e.currentTarget.style.borderColor = 'var(--border)';  
+                          e.currentTarget.style.boxShadow = '0 8px 32px rgba(0,0,0,0.15)';
+                        }}
+                      >
+                        <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={e => handleFile(e.target.files[0])} />
+                        <div style={{ 
+                          width: 60, 
+                          height: 60, 
+                          borderRadius: '50%', 
+                          background: 'var(--violet-soft)', 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center', 
+                          marginBottom: '1.25rem',
+                          boxShadow: '0 4px 14px var(--violet-glow)'
+                        }}>
+                          <Upload size={26} color="var(--violet)" />
+                        </div>
+                        <h4 style={{ fontWeight: 800, marginBottom: '0.4rem', color: 'var(--text-main)' }}>Sélectionnez la photo de la feuille</h4>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', lineHeight: 1.6, maxWidth: 320 }}>
+                          Faites glisser le fichier ici, ou cliquez pour parcourir vos dossiers.<br/>
+                          <span style={{ color: 'var(--violet)', fontWeight: 700 }}>PNG, JPG, JPEG, WebP</span>
+                        </p>
+                      </div>
+                    )}
                   </div>
-                ))}
-              </div>
+
+                  {/* Tips */}
+                  <div style={{ marginTop:'1.25rem', display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.625rem' }}>
+                    {[
+                      ['💡','Bonne lumière','Éclairage uniforme, pas de reflets.'],
+                      ['📐','Feuille droite','Tenez le téléphone parallèle à la feuille.'],
+                      ['🖊️','Bulles noircies','Remplissez complètement chaque cercle.'],
+                      ['📷','Cadrage complet','Toute la feuille doit être visible.'],
+                    ].map(([ic,t,d]) => (
+                      <div key={t} style={{ display:'flex', gap:'0.625rem', padding:'0.625rem 0.875rem', background:'var(--bg-glass)', borderRadius:'0.75rem', border:'1px solid var(--border)' }}>
+                        <span style={{ fontSize:'1.15rem', flexShrink:0 }}>{ic}</span>
+                        <div>
+                          <p style={{ fontWeight:700, fontSize:'0.8rem' }}>{t}</p>
+                          <p style={{ color:'var(--text-muted)', fontSize:'0.75rem' }}>{d}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
           )}
 

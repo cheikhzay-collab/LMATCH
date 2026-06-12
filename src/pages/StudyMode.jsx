@@ -41,7 +41,7 @@ function groupCardsByContext(compiledCards, questionsPool) {
 }
 
 export default function StudyMode() {
-  const { exams, progress: allProgress, updateCardProgress, isExamLocked } = useAuth();
+  const { user, exams, progress: allProgress, updateCardProgress, isExamLocked } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const topicId = searchParams.get('topic');
@@ -331,6 +331,30 @@ export default function StudyMode() {
     setCurrentIndex(0);
     setSessionHistory([]);
   };
+
+  const isPremium = user?.role === 'admin' || user?.tier === 'premium';
+
+  if (!isPremium) {
+    return (
+      <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', padding: '2rem', textAlign: 'center' }}>
+        <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(99,102,241,0.1)', color: 'var(--violet)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', boxShadow: '0 8px 24px rgba(99,102,241,0.15)' }}>
+          <BrainCircuit size={36} color="var(--violet)" />
+        </div>
+        <h2 style={{ fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-main)' }}>Révision SRS (Spaced Repetition System) Premium</h2>
+        <p style={{ color: 'var(--text-muted)', maxWidth: '460px', marginBottom: '2rem', lineHeight: 1.6 }}>
+          La révision intelligente par répétition espacée (SRS) est réservée aux abonnés Premium. Abonnez-vous pour mémoriser durablement les notions et réussir vos concours.
+        </p>
+        <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', width: '100%', maxWidth: '280px', margin: '0 auto' }}>
+          <button onClick={() => navigate('/subscription')} className="btn" style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}>
+            ✦ Devenir Premium
+          </button>
+          <button onClick={() => navigate('/dashboard')} className="btn-outline">
+            Retour au Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ── Study Selector Dashboard (Main screen when no exam/session is selected) ──
   if (!sessionStarted) {

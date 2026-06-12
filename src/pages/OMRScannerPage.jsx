@@ -131,7 +131,7 @@ function ResultRow({ row }) {
 
 /* ── Main Global Scanner Page ────────────────────────────────────── */
 export default function OMRScannerPage() {
-  const { user, updateCardProgress, saveMockExamResult, schoolBranding, exams, isExamLocked, profName, profPhone, profSite } = useAuth();
+  const { user, mockExamHistory, updateCardProgress, saveMockExamResult, schoolBranding, exams, isExamLocked, profName, profPhone, profSite } = useAuth();
   const navigate = useNavigate();
 
   const [activeExam,   setActiveExam]   = useState(null);
@@ -163,6 +163,11 @@ export default function OMRScannerPage() {
 
   const brand = (activeExam ? schoolBranding[activeExam.school] : null) || { scoring: { correct: 1, wrong: -0.25, empty: 0 } };
   const rules = brand.scoring || { correct: 1, wrong: -0.25, empty: 0 };
+
+  const isPremium = user?.role === 'admin' || user?.tier === 'premium';
+  const scanLimit = 3;
+  const omrScansCount = mockExamHistory ? mockExamHistory.filter(h => h.mode === 'omr').length : 0;
+  const hasReachedLimit = !isPremium && omrScansCount >= scanLimit;
 
   const handleFile = useCallback(async (file) => {
     if (!file || !file.type.startsWith('image/')) return;
@@ -272,7 +277,7 @@ export default function OMRScannerPage() {
   };
 
   const reset = () => {
-    setPhase('upload'); setActiveExam(null); setImagePreview(null); setScanned([]);
+    setPhase('upload'); setActiveExam(null); setImagePreview(url => { if (url) URL.revokeObjectURL(url); return null; }); setScanned([]);
     setCorrected([]); setScore(null); setScanStep(0); setScanError(null); setResultsTab('list');
     setScanMethod('camera');
   };
@@ -318,22 +323,42 @@ export default function OMRScannerPage() {
           {/* ── UPLOAD PHASE ── */}
           {phase === 'upload' && (
             <div style={{ maxWidth: 640, margin: '0 auto' }}>
-              {scanError && (
-                <div style={{ padding:'0.875rem 1.25rem', background:'var(--danger-soft)', border:'1px solid var(--danger)33', borderRadius:'0.875rem', marginBottom:'1.5rem', color:'var(--danger)', fontSize:'0.88rem', fontWeight:600, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                  <AlertCircle size={18} style={{ flexShrink: 0 }} />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-start' }}>
-                    <span>{scanError}</span>
-                    {scanError.includes("Premium") && (
-                      <button 
-                        onClick={() => navigate('/subscription')} 
-                        style={{ background: 'none', border: 'none', color: 'var(--violet)', padding: 0, fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', textAlign: 'left', textDecoration: 'underline' }}
-                      >
-                        Voir les formules d'abonnement
-                      </button>
-                    )}
+              {hasReachedLimit ? (
+                <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
+                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(99,102,241,0.1)', color: 'var(--violet)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 8px 24px rgba(99,102,241,0.15)' }}>
+                    <Zap size={28} fill="currentColor" />
+                  </div>
+                  <h3 style={{ fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-main)' }}>Limite de scans atteinte</h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.55, maxWidth: '420px', margin: '0 auto 2rem' }}>
+                    Vous avez utilisé vos 3 scans gratuits OMR. Abonnez-vous pour profiter d'analyses de copies et de rapports d'erreurs illimités.
+                  </p>
+                  <div style={{ display: 'flex', gap: '0.85rem', flexDirection: 'column', width: '100%', maxWidth: '280px', margin: '0 auto' }}>
+                    <button onClick={() => navigate('/subscription')} className="btn" style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}>
+                      ✦ Passer à l'offre Premium
+                    </button>
+                    <button onClick={() => navigate('/dashboard')} className="btn-outline">
+                      Retour au Dashboard
+                    </button>
                   </div>
                 </div>
-              )}
+              ) : (
+                <>
+                  {scanError && (
+                    <div style={{ padding:'0.875rem 1.25rem', background:'var(--danger-soft)', border:'1px solid var(--danger)33', borderRadius:'0.875rem', marginBottom:'1.5rem', color:'var(--danger)', fontSize:'0.88rem', fontWeight:600, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <AlertCircle size={18} style={{ flexShrink: 0 }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-start' }}>
+                        <span>{scanError}</span>
+                        {scanError.includes("Premium") && (
+                          <button 
+                            onClick={() => navigate('/subscription')} 
+                            style={{ background: 'none', border: 'none', color: 'var(--violet)', padding: 0, fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', textAlign: 'left', textDecoration: 'underline' }}
+                          >
+                            Voir les formules d'abonnement
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
               
               {/* Premium Segmented Controller */}
               <div style={{ 
@@ -441,8 +466,10 @@ export default function OMRScannerPage() {
                   ))}
                 </div>
               </div>
-            </div>
+            </>
           )}
+        </div>
+      )}
 
           {/* ── SCANNING PHASE ── */}
           {phase === 'scanning' && (
