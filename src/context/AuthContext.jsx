@@ -299,7 +299,21 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   useEffect(() => {
-    safeSetItem('exams', JSON.stringify(exams));
+    // Save a light version of exams to localStorage to avoid exceeding the 5MB quota 
+    // and prevent blocking the main thread with massive JSON serialization.
+    const lightExams = exams.map(e => ({
+      id: e.id,
+      name: e.name,
+      school: e.school,
+      year: e.year,
+      tier: e.tier,
+      isActive: e.isActive,
+      isArchived: e.isArchived,
+      dateAdded: e.dateAdded,
+      // Retain questions only for the default seed exam to allow offline development
+      questions: e.id === "QVVOBFE7" ? e.questions : undefined
+    }));
+    safeSetItem('exams', JSON.stringify(lightExams));
     safeSetItem('examsSchemaVersion', String(SCHEMA_VERSION));
   }, [exams]);
 

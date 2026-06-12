@@ -1,31 +1,33 @@
-import React from 'react';
+import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
+// Core pages kept statically for instant initial render
 import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Layout from './components/Layout';
 import StudentDashboard from './pages/StudentDashboard';
-import StudyMode from './pages/StudyMode';
-import AdminOverview from './pages/AdminOverview';
-import AdminExams from './pages/AdminExams';
-import AdminUsers from './pages/AdminUsers';
-import AdminUpload from './pages/AdminUpload';
-import AdminSettings from './pages/AdminSettings';
-import MockExamMode from './pages/MockExamMode';
-import SchoolsPage from './pages/SchoolsPage';
-import SchoolExamsPage from './pages/SchoolExamsPage';
-import AdminStudentDetail from './pages/AdminStudentDetail';
-import AdminAIImport from './pages/AdminAIImport';
-import AdminEbooks from './pages/AdminEbooks';
-import AdminMarketing from './pages/AdminMarketing';
-import AdminExamEdit from './pages/AdminExamEdit';
-import SuitesNumeriquesPage from './pages/SuitesNumeriquesPage';
 
-import OMRScannerPage from './pages/OMRScannerPage';
-import SubscriptionPage from './pages/SubscriptionPage';
-import RankingPage from './pages/RankingPage';
-import AuthCallback from './pages/AuthCallback';
+// Secondary/Admin pages lazy-loaded to reduce main bundle size
+const StudyMode = lazy(() => import('./pages/StudyMode'));
+const AdminOverview = lazy(() => import('./pages/AdminOverview'));
+const AdminExams = lazy(() => import('./pages/AdminExams'));
+const AdminUsers = lazy(() => import('./pages/AdminUsers'));
+const AdminUpload = lazy(() => import('./pages/AdminUpload'));
+const AdminSettings = lazy(() => import('./pages/AdminSettings'));
+const MockExamMode = lazy(() => import('./pages/MockExamMode'));
+const SchoolsPage = lazy(() => import('./pages/SchoolsPage'));
+const SchoolExamsPage = lazy(() => import('./pages/SchoolExamsPage'));
+const AdminStudentDetail = lazy(() => import('./pages/AdminStudentDetail'));
+const AdminAIImport = lazy(() => import('./pages/AdminAIImport'));
+const AdminEbooks = lazy(() => import('./pages/AdminEbooks'));
+const AdminMarketing = lazy(() => import('./pages/AdminMarketing'));
+const AdminExamEdit = lazy(() => import('./pages/AdminExamEdit'));
+const SuitesNumeriquesPage = lazy(() => import('./pages/SuitesNumeriquesPage'));
+const OMRScannerPage = lazy(() => import('./pages/OMRScannerPage'));
+const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
+const RankingPage = lazy(() => import('./pages/RankingPage'));
+const AuthCallback = lazy(() => import('./pages/AuthCallback'));
 
 /**
  * OAuthRedirectGuard — detects when Supabase redirected back with a hash-based
@@ -163,11 +165,47 @@ function AppContent() {
   );
 }
 
+const LoadingFallback = () => (
+  <div style={{
+    position: 'fixed',
+    inset: 0,
+    background: 'radial-gradient(circle at center, #18181B 0%, #09090B 100%)',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 9999
+  }}>
+    <div style={{ position: 'relative', width: '60px', height: '60px', marginBottom: '1.2rem' }}>
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        borderRadius: '50%',
+        border: '3px solid rgba(113, 109, 242, 0.15)',
+        borderTop: '3px solid var(--violet)',
+        borderRight: '3px solid var(--emerald)',
+        animation: 'spinApp 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite'
+      }} />
+    </div>
+    <h3 style={{ color: '#fff', fontSize: '1.2rem', fontWeight: 800, margin: 0, fontFamily: 'sans-serif', letterSpacing: '0.05em' }}>
+      L'CONQ
+    </h3>
+    <style dangerouslySetInnerHTML={{__html: `
+      @keyframes spinApp {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `}} />
+  </div>
+);
+
 function App() {
   return (
     <AuthProvider>
       <Router>
-        <AppContent />
+        <Suspense fallback={<LoadingFallback />}>
+          <AppContent />
+        </Suspense>
       </Router>
     </AuthProvider>
   );
