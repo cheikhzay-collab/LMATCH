@@ -1135,8 +1135,16 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Student Statistics (computed from real progress data) ─────────────────
-  const getStudentStats = () => {
+  // ── Student Statistics (computed from real progress data - cached for performance) ─────────────────
+  const studentStats = React.useMemo(() => {
+    if (!user) {
+      return {
+        totalCards: 0, masteredCards: 0, learningCards: 0, newCards: 0,
+        dueToday: 0, globalMasteryPct: 0, weakTopics: [], strongTopics: [],
+        weeklyActivity: [], streak: 0, rank: 1200, totalStudents: 1200,
+      };
+    }
+
     const now = new Date();
     const todayStr = now.toISOString().split('T')[0];
     const activeExams = exams.filter(e => e.isActive !== false && e.isArchived !== true);
@@ -1193,7 +1201,6 @@ export function AuthProvider({ children }) {
     });
 
     // Topics sorted by mastery (weakest first)
-    // Note: divide by s.total (all cards of topic) to show real progress over total exam material
     const topicsArr = Object.entries(topicMap)
       .map(([name, s]) => {
         const masteryPct = s.total > 0 ? Math.round((s.weightedMasterySum / s.total) * 100) : 0;
@@ -1267,7 +1274,11 @@ export function AuthProvider({ children }) {
       dueToday, globalMasteryPct, weakTopics, strongTopics,
       weeklyActivity, streak, rank, totalStudents,
     };
-  };
+  }, [exams, progress, leaderboard, user]);
+
+  const getStudentStats = React.useCallback(() => {
+    return studentStats;
+  }, [studentStats]);
 
   const [schools, setSchools] = useState(() => {
     const saved = localStorage.getItem('schools');
