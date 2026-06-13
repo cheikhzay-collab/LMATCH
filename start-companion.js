@@ -83,6 +83,35 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && req.url.startsWith('/save-icon')) {
+    let body = '';
+    req.on('data', chunk => {
+      body += chunk.toString();
+    });
+    req.on('end', () => {
+      try {
+        const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+        const size = parsedUrl.searchParams.get('size');
+        const payload = JSON.parse(body);
+        const base64Data = payload.image.replace(/^data:image\/png;base64,/, "");
+        const iconsDir = path.join(__dirname, 'public', 'icons');
+        if (!fs.existsSync(iconsDir)) {
+          fs.mkdirSync(iconsDir, { recursive: true });
+        }
+        const iconPath = path.join(iconsDir, `icon-${size}.png`);
+        fs.writeFileSync(iconPath, base64Data, 'base64');
+        console.log(`[Companion] Icon icon-${size}.png saved successfully!`);
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+      } catch (err) {
+        console.error('[Companion] Error saving icon:', err);
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: false, error: err.message }));
+      }
+    });
+    return;
+  }
+
   res.writeHead(404);
   res.end();
 });
