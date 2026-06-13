@@ -377,10 +377,15 @@ export default function SchoolExamsPage() {
                       if (exam.pdfUrl) {
                         window.open(exam.pdfUrl, '_blank');
                       } else {
+                        // Open the print window synchronously to avoid mobile popup blockers
+                        const win = window.open('', '_blank');
+                        if (win) {
+                          win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre sujet PDF en cours...</p></div></body></html>');
+                        }
                         import('../utils/generateExamPDF').then(async ({ generateSubjectHTML, openPrintWindow }) => {
                           const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
                           const html = await generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
-                          openPrintWindow(html);
+                          openPrintWindow(html, 'sujet', win);
                         });
                       }
                     }}
@@ -420,10 +425,15 @@ export default function SchoolExamsPage() {
                         navigate(user ? '/subscription' : '/login');
                         return;
                       }
+                      // Open the print window synchronously to avoid mobile popup blockers
+                      const win = window.open('', '_blank');
+                      if (win) {
+                        win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre corrigé PDF en cours...</p></div></body></html>');
+                      }
                       import('../utils/generateExamPDF').then(({ generateCorrectionHTML, openPrintWindow }) => {
                         const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
                         const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
-                        openPrintWindow(html);
+                        openPrintWindow(html, 'corrigé', win);
                       });
                     }}
                     title="Voir le corrigé de l'examen"

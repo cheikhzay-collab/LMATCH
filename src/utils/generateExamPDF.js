@@ -3262,14 +3262,38 @@ printWhenReady();
 </html>`;
 };
 
-export const openPrintWindow = (html, title) => {
-  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const url  = URL.createObjectURL(blob);
-  const win  = window.open(url, '_blank', 'width=960,height=720,scrollbars=yes');
-  if (!win) {
-    URL.revokeObjectURL(url);
-    alert('Veuillez autoriser les popups pour ce site.');
-    return;
+export const openPrintWindow = (html, title, targetWindow) => {
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+  
+  if (isMobile || targetWindow) {
+    const win = targetWindow || window.open('', '_blank');
+    if (!win) {
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url  = URL.createObjectURL(blob);
+      window.location.href = url;
+      return;
+    }
+    
+    try {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } catch (err) {
+      console.error('Error writing to print window:', err);
+      // Fallback: redirect if writing fails
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url  = URL.createObjectURL(blob);
+      win.location.href = url;
+    }
+  } else {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const win  = window.open(url, '_blank', 'width=960,height=720,scrollbars=yes');
+    if (!win) {
+      URL.revokeObjectURL(url);
+      alert('Veuillez autoriser les popups pour ce site.');
+      return;
+    }
+    win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
   }
-  win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
 };

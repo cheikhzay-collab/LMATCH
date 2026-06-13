@@ -112,14 +112,6 @@ export default function Sidebar() {
             <NavLink to="/admin/ebooks" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
               <BookMarked size={18} /> E-Books
             </NavLink>
-            <NavLink to="/admin/marketing" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
-              style={({ isActive }) => ({
-                background: isActive ? 'linear-gradient(90deg, rgba(236,72,153,0.12) 0%, transparent 100%)' : undefined,
-                color: isActive ? '#EC4899' : undefined,
-              })}
-            >
-              <Megaphone size={18} /> Studio Marketing
-            </NavLink>
             <NavLink to="/admin/settings" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
               <Settings size={18} /> Paramètres
             </NavLink>

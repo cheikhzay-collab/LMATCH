@@ -21,7 +21,6 @@ const SchoolExamsPage = lazy(() => import('./pages/SchoolExamsPage'));
 const AdminStudentDetail = lazy(() => import('./pages/AdminStudentDetail'));
 const AdminAIImport = lazy(() => import('./pages/AdminAIImport'));
 const AdminEbooks = lazy(() => import('./pages/AdminEbooks'));
-const AdminMarketing = lazy(() => import('./pages/AdminMarketing'));
 const AdminExamEdit = lazy(() => import('./pages/AdminExamEdit'));
 const SuitesNumeriquesPage = lazy(() => import('./pages/SuitesNumeriquesPage'));
 const OMRScannerPage = lazy(() => import('./pages/OMRScannerPage'));
@@ -115,8 +114,6 @@ function AppContent() {
       title = "Admin : Importateur de Sujets IA — L'CONQ";
     } else if (path === '/admin/ebooks') {
       title = "Admin : Générateur d'E-Books — L'CONQ";
-    } else if (path === '/admin/marketing') {
-      title = "Admin : Marketing & Contenus IA — L'CONQ";
     } else if (path === '/admin/settings') {
       title = "Admin : Paramètres Système — L'CONQ";
     }
@@ -156,7 +153,6 @@ function AppContent() {
             <Route path="/admin/upload" element={<AdminUpload />} />
             <Route path="/admin/ai-import" element={<AdminAIImport />} />
             <Route path="/admin/ebooks" element={<AdminEbooks />} />
-            <Route path="/admin/marketing" element={<AdminMarketing />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
 
