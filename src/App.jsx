@@ -27,7 +27,6 @@ const OMRScannerPage = lazy(() => import('./pages/OMRScannerPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const RankingPage = lazy(() => import('./pages/RankingPage'));
 const AuthCallback = lazy(() => import('./pages/AuthCallback'));
-const PrintPage = lazy(() => import('./pages/PrintPage'));
 
 /**
  * OAuthRedirectGuard — detects when Supabase redirected back with a hash-based
@@ -157,7 +156,6 @@ function AppContent() {
             <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>
 
-          <Route path="/print" element={<PrintPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Suspense>
