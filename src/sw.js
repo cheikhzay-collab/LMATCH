@@ -36,7 +36,7 @@ cleanupOutdatedCaches();
 // ── SPA fallback: all navigation requests → index.html ────────────────────
 const handler = createHandlerBoundToURL('/index.html');
 const navigationRoute = new NavigationRoute(handler, {
-  denylist: [/\/api\//, /\/_/, /\/admin\/.+\.(json|csv|pdf)$/],
+  denylist: [/\/api\//, /\/_/, /\/admin\/.+\.(json|csv|pdf)$/, /\/print/],
 });
 registerRoute(navigationRoute);
 
