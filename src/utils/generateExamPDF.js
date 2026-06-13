@@ -3272,19 +3272,19 @@ export const openPrintWindow = (html, title, targetWindow) => {
       console.error('Failed to write print HTML to localStorage:', e);
     }
 
-    const win = targetWindow || window.open('/print.html', '_blank');
+    const win = targetWindow || window.open('/print', '_blank');
     if (!win) {
-      window.location.href = '/print.html';
+      window.location.href = '/print';
       return;
     }
     
     try {
-      if (!win.location.pathname.includes('/print.html')) {
-        win.location.href = '/print.html';
+      if (win.location.pathname !== '/print') {
+        win.location.href = '/print';
       }
     } catch (err) {
       // Fallback in case of cross-origin security block (though they are same origin)
-      win.location.href = '/print.html';
+      win.location.href = '/print';
     }
   } else {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });

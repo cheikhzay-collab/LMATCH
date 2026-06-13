@@ -378,7 +378,7 @@ export default function SchoolExamsPage() {
                         window.open(exam.pdfUrl, '_blank');
                       } else {
                         // Open the print window synchronously to avoid mobile popup blockers
-                        const win = window.open('/print.html', '_blank');
+                        const win = window.open('/print', '_blank');
                         import('../utils/generateExamPDF').then(async ({ generateSubjectHTML, openPrintWindow }) => {
                           const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
                           const html = await generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
@@ -423,7 +423,7 @@ export default function SchoolExamsPage() {
                         return;
                       }
                       // Open the print window synchronously to avoid mobile popup blockers
-                      const win = window.open('/print.html', '_blank');
+                      const win = window.open('/print', '_blank');
                       import('../utils/generateExamPDF').then(({ generateCorrectionHTML, openPrintWindow }) => {
                         const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
                         const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
