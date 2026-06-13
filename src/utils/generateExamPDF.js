@@ -3266,24 +3266,25 @@ export const openPrintWindow = (html, title, targetWindow) => {
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
   
   if (isMobile || targetWindow) {
-    const win = targetWindow || window.open('', '_blank');
+    try {
+      localStorage.setItem('print_html', html);
+    } catch (e) {
+      console.error('Failed to write print HTML to localStorage:', e);
+    }
+
+    const win = targetWindow || window.open('/print', '_blank');
     if (!win) {
-      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-      const url  = URL.createObjectURL(blob);
-      window.location.href = url;
+      window.location.href = '/print';
       return;
     }
     
     try {
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
+      if (win.location.pathname !== '/print') {
+        win.location.href = '/print';
+      }
     } catch (err) {
-      console.error('Error writing to print window:', err);
-      // Fallback: redirect if writing fails
-      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-      const url  = URL.createObjectURL(blob);
-      win.location.href = url;
+      // Fallback in case of cross-origin security block (though they are same origin)
+      win.location.href = '/print';
     }
   } else {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
