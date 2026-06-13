@@ -2,11 +2,26 @@ import React, { useEffect } from 'react';
 
 export default function PrintPage() {
   useEffect(() => {
+    let intervalId;
+    let timeoutId;
+
+    const handleStorage = (e) => {
+      if (e.key === 'print_html' && e.newValue) {
+        checkAndPrint();
+      }
+    };
+
     const checkAndPrint = () => {
       try {
         const html = localStorage.getItem('print_html');
         if (html) {
           localStorage.removeItem('print_html');
+          
+          // Clear all timers immediately before overwriting the document
+          clearInterval(intervalId);
+          clearTimeout(timeoutId);
+          window.removeEventListener('storage', handleStorage);
+          
           document.open();
           document.write(html);
           document.close();
@@ -22,32 +37,30 @@ export default function PrintPage() {
     if (checkAndPrint()) return;
 
     // 2. Poll periodically as a backup
-    const interval = setInterval(() => {
+    intervalId = setInterval(() => {
       if (checkAndPrint()) {
-        clearInterval(interval);
+        clearInterval(intervalId);
       }
     }, 150);
 
     // 3. Listen to storage events for instant reaction
-    const handleStorage = (e) => {
-      if (e.key === 'print_html' && e.newValue) {
-        checkAndPrint();
-        clearInterval(interval);
-      }
-    };
     window.addEventListener('storage', handleStorage);
 
     // 4. Timeout after 15 seconds to prevent hanging
-    const timeout = setTimeout(() => {
-      clearInterval(interval);
+    timeoutId = setTimeout(() => {
+      clearInterval(intervalId);
       window.removeEventListener('storage', handleStorage);
-      window.location.href = '/dashboard';
+      try {
+        window.close();
+      } catch (e) {
+        window.location.href = '/dashboard';
+      }
     }, 15000);
 
     return () => {
-      clearInterval(interval);
+      clearInterval(intervalId);
       window.removeEventListener('storage', handleStorage);
-      clearTimeout(timeout);
+      clearTimeout(timeoutId);
     };
   }, []);
 
