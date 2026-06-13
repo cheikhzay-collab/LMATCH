@@ -34,7 +34,11 @@ export default function BottomNav() {
     { to: '/admin/upload',    icon: UploadCloud,      label: 'Upload'  },
   ];
 
-  const items = isStudent ? studentItems : adminItems;
+  const guestItems = [
+    { to: '/schools',   icon: GraduationCap,   label: 'Écoles'   },
+  ];
+
+  const items = !user ? guestItems : (isStudent ? studentItems : adminItems);
 
   /* Sliding pill indicator */
   useEffect(() => {
@@ -140,177 +144,228 @@ export default function BottomNav() {
               margin: '0.875rem auto 0',
             }} />
 
-            {/* ── User card ── */}
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: '0.875rem',
-              padding: '1.25rem 1.5rem 1.125rem',
-              borderBottom: '1px solid var(--border)',
-            }}>
-              {/* Avatar */}
-              <div style={{
-                width: 52, height: 52, borderRadius: '15px', flexShrink: 0,
-                background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '1.5rem', fontWeight: 900, color: '#fff',
-                boxShadow: '0 4px 16px rgba(99,102,241,0.35)',
-              }}>
-                {initial}
-              </div>
-
-              {/* Name + email */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{
-                  fontWeight: 800, fontSize: '1rem', margin: 0,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                  color: 'var(--text-main)',
-                }}>
-                  {user?.name || 'Utilisateur'}
+            {!user ? (
+              <div style={{ padding: '1.75rem 1.5rem 1.25rem', textAlign: 'center' }}>
+                <h3 style={{ fontWeight: 800, fontSize: '1.1rem', marginBottom: '0.5rem', color: 'var(--text-main)' }}>Rejoignez L'CONQ</h3>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', marginBottom: '1.5rem', lineHeight: 1.5 }}>
+                  Créez un compte pour suivre votre progression, réviser avec l'algorithme SRS et participer au classement national.
                 </p>
-                <p style={{
-                  color: 'var(--text-muted)', fontSize: '0.78rem', margin: '3px 0 0',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {user?.email}
-                </p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  <button
+                    onClick={() => { navigate('/login'); setShowSheet(false); }}
+                    className="btn"
+                    style={{
+                      width: '100%',
+                      background: 'linear-gradient(135deg, var(--violet), #818cf8)',
+                      fontWeight: 800,
+                      padding: '0.875rem',
+                      borderRadius: 'var(--radius-lg)',
+                      color: '#fff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
+                    }}
+                  >
+                    Se connecter / S'inscrire
+                  </button>
+                  <button
+                    onClick={() => { toggleTheme(); setShowSheet(false); }}
+                    className="btn-outline"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      borderRadius: 'var(--radius-lg)',
+                      border: '1px solid var(--border)',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      background: 'transparent',
+                      color: 'var(--text-main)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+                    {theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+                  </button>
+                </div>
               </div>
-
-              {/* Tier badge */}
-              <span 
-                onClick={() => {
-                  if (isStudent) {
-                    navigate('/subscription');
-                    setShowSheet(false);
-                  }
-                }}
-                style={{
-                  padding: '0.28rem 0.7rem', borderRadius: 99,
-                  fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em',
-                  background: user?.tier === 'premium' ? 'var(--violet-soft)' : 'var(--bg-glass)',
-                  color:      user?.tier === 'premium' ? 'var(--violet)'      : 'var(--text-muted)',
-                  border: `1px solid ${user?.tier === 'premium' ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
-                  flexShrink: 0,
-                  cursor: isStudent ? 'pointer' : 'default'
-                }}
-                title={isStudent ? "Gérer mon abonnement" : undefined}
-              >
-                {user?.tier === 'premium' ? '⚡ Pro' : 'Free'}
-              </span>
-            </div>
-
-            {/* ── Actions ── */}
-            <div style={{ padding: '0.875rem 1.25rem 0', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-
-              {/* Subscription (Abonnement) */}
-              {isStudent && (
-                <button
-                  onClick={() => { navigate('/subscription'); setShowSheet(false); }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: '0.875rem',
-                    padding: '0.75rem 0.875rem',
-                    background: 'var(--violet-soft)',
-                    border: '1px solid rgba(113, 109, 242, 0.22)',
-                    borderRadius: 'var(--radius-lg)',
-                    cursor: 'pointer', width: '100%',
-                    fontFamily: 'inherit', textAlign: 'left',
-                    transition: 'all 0.2s',
-                    marginBottom: '0.25rem'
-                  }}
-                  onMouseEnter={e => {
-                    e.currentTarget.style.background = 'rgba(113, 109, 242, 0.12)';
-                    e.currentTarget.style.borderColor = 'rgba(113, 109, 242, 0.4)';
-                  }}
-                  onMouseLeave={e => {
-                    e.currentTarget.style.background = 'var(--violet-soft)';
-                    e.currentTarget.style.borderColor = 'rgba(113, 109, 242, 0.22)';
-                  }}
-                >
+            ) : (
+              <>
+                {/* ── User card ── */}
+                <div style={{
+                  display: 'flex', alignItems: 'center', gap: '0.875rem',
+                  padding: '1.25rem 1.5rem 1.125rem',
+                  borderBottom: '1px solid var(--border)',
+                }}>
+                  {/* Avatar */}
                   <div style={{
-                    width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-                    background: 'var(--violet)',
+                    width: 52, height: 52, borderRadius: '15px', flexShrink: 0,
+                    background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 10px rgba(113, 109, 242, 0.25)',
+                    fontSize: '1.5rem', fontWeight: 900, color: '#fff',
+                    boxShadow: '0 4px 16px rgba(99,102,241,0.35)',
                   }}>
-                    <Zap size={18} color="#fff" />
+                    {initial}
                   </div>
+
+                  {/* Name + email */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-main)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {user?.tier === 'premium' ? 'Gérer mon abonnement Pro' : 'Devenir Premium (Pro)'}
-                    </span>
-                    <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {user?.tier === 'premium' ? 'Accès illimité actif' : 'Débloquez tous les QCM et examens'}
-                    </span>
+                    <p style={{
+                      fontWeight: 800, fontSize: '1rem', margin: 0,
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      color: 'var(--text-main)',
+                    }}>
+                      {user?.name || 'Utilisateur'}
+                    </p>
+                    <p style={{
+                      color: 'var(--text-muted)', fontSize: '0.78rem', margin: '3px 0 0',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {user?.email}
+                    </p>
                   </div>
-                </button>
-              )}
 
-              {/* Theme toggle */}
-              <button
-                onClick={toggleTheme}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.875rem',
-                  padding: '0.875rem 1rem',
-                  background: 'var(--bg-glass)',
-                  border: '1px solid var(--border)',
-                  borderRadius: 'var(--radius-lg)',
-                  cursor: 'pointer', width: '100%',
-                  fontFamily: 'inherit', textAlign: 'left',
-                  transition: 'background 0.15s',
-                }}
-              >
-                <div style={{
-                  width: 38, height: 38, borderRadius: 11, flexShrink: 0,
-                  background: 'var(--bg-hover)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  {theme === 'dark'
-                    ? <Sun  size={19} color="var(--warning)" />
-                    : <Moon size={19} color="var(--violet)"  />
-                  }
+                  {/* Tier badge */}
+                  <span 
+                    onClick={() => {
+                      if (isStudent) {
+                        navigate('/subscription');
+                        setShowSheet(false);
+                      }
+                    }}
+                    style={{
+                      padding: '0.28rem 0.7rem', borderRadius: 99,
+                      fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em',
+                      background: user?.tier === 'premium' ? 'var(--violet-soft)' : 'var(--bg-glass)',
+                      color:      user?.tier === 'premium' ? 'var(--violet)'      : 'var(--text-muted)',
+                      border: `1px solid ${user?.tier === 'premium' ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
+                      flexShrink: 0,
+                      cursor: isStudent ? 'pointer' : 'default'
+                    }}
+                    title={isStudent ? "Gérer mon abonnement" : undefined}
+                  >
+                    {user?.tier === 'premium' ? '⚡ Pro' : 'Free'}
+                  </span>
                 </div>
-                <span style={{ fontWeight: 700, fontSize: '0.93rem', color: 'var(--text-main)', flex: 1 }}>
-                  {theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
-                </span>
-              </button>
 
-              {/* ── Logout ── */}
-              <button
-                onClick={handleLogout}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.875rem',
-                  padding: '0.875rem 1rem',
-                  background: 'var(--danger-soft)',
-                  border: '1px solid rgba(239,68,68,0.22)',
-                  borderRadius: 'var(--radius-lg)',
-                  cursor: 'pointer', width: '100%',
-                  fontFamily: 'inherit', textAlign: 'left',
-                  transition: 'background 0.15s',
-                }}
-              >
-                <div style={{
-                  width: 38, height: 38, borderRadius: 11, flexShrink: 0,
-                  background: 'rgba(239,68,68,0.12)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                }}>
-                  <LogOut size={19} color="var(--danger)" />
+                {/* ── Actions ── */}
+                <div style={{ padding: '0.875rem 1.25rem 0', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+
+                  {/* Subscription (Abonnement) */}
+                  {isStudent && (
+                    <button
+                      onClick={() => { navigate('/subscription'); setShowSheet(false); }}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: '0.875rem',
+                        padding: '0.75rem 0.875rem',
+                        background: 'var(--violet-soft)',
+                        border: '1px solid rgba(113, 109, 242, 0.22)',
+                        borderRadius: 'var(--radius-lg)',
+                        cursor: 'pointer', width: '100%',
+                        fontFamily: 'inherit', textAlign: 'left',
+                        transition: 'all 0.2s',
+                        marginBottom: '0.25rem'
+                      }}
+                      onMouseEnter={e => {
+                        e.currentTarget.style.background = 'rgba(113, 109, 242, 0.12)';
+                        e.currentTarget.style.borderColor = 'rgba(113, 109, 242, 0.4)';
+                      }}
+                      onMouseLeave={e => {
+                        e.currentTarget.style.background = 'var(--violet-soft)';
+                        e.currentTarget.style.borderColor = 'rgba(113, 109, 242, 0.22)';
+                      }}
+                    >
+                      <div style={{
+                        width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+                        background: 'var(--violet)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 4px 10px rgba(113, 109, 242, 0.25)',
+                      }}>
+                        <Zap size={18} color="#fff" />
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-main)', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user?.tier === 'premium' ? 'Gérer mon abonnement Pro' : 'Devenir Premium (Pro)'}
+                        </span>
+                        <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', marginTop: '1px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user?.tier === 'premium' ? 'Accès illimité actif' : 'Débloquez tous les QCM et examens'}
+                        </span>
+                      </div>
+                    </button>
+                  )}
+
+                  {/* Theme toggle */}
+                  <button
+                    onClick={toggleTheme}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.875rem',
+                      padding: '0.875rem 1rem',
+                      background: 'var(--bg-glass)',
+                      border: '1px solid var(--border)',
+                      borderRadius: 'var(--radius-lg)',
+                      cursor: 'pointer', width: '100%',
+                      fontFamily: 'inherit', textAlign: 'left',
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+                      background: 'var(--bg-hover)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      {theme === 'dark'
+                        ? <Sun  size={19} color="var(--warning)" />
+                        : <Moon size={19} color="var(--violet)"  />
+                      }
+                    </div>
+                    <span style={{ fontWeight: 700, fontSize: '0.93rem', color: 'var(--text-main)', flex: 1 }}>
+                      {theme === 'dark' ? 'Passer en mode clair' : 'Passer en mode sombre'}
+                    </span>
+                  </button>
+
+                  {/* ── Logout ── */}
+                  <button
+                    onClick={handleLogout}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.875rem',
+                      padding: '0.875rem 1rem',
+                      background: 'var(--danger-soft)',
+                      border: '1px solid rgba(239,68,68,0.22)',
+                      borderRadius: 'var(--radius-lg)',
+                      cursor: 'pointer', width: '100%',
+                      fontFamily: 'inherit', textAlign: 'left',
+                      transition: 'background 0.15s',
+                    }}
+                  >
+                    <div style={{
+                      width: 38, height: 38, borderRadius: 11, flexShrink: 0,
+                      background: 'rgba(239,68,68,0.12)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}>
+                      <LogOut size={19} color="var(--danger)" />
+                    </div>
+                    <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--danger)', flex: 1 }}>
+                      Se déconnecter
+                    </span>
+                  </button>
+
+                  {/* Cancel */}
+                  <button
+                    onClick={() => setShowSheet(false)}
+                    style={{
+                      padding: '0.75rem', background: 'transparent', border: 'none',
+                      borderRadius: 'var(--radius-lg)', cursor: 'pointer',
+                      fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-muted)',
+                      fontFamily: 'inherit', marginTop: '0.125rem',
+                    }}
+                  >
+                    Annuler
+                  </button>
                 </div>
-                <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--danger)', flex: 1 }}>
-                  Se déconnecter
-                </span>
-              </button>
-
-              {/* Cancel */}
-              <button
-                onClick={() => setShowSheet(false)}
-                style={{
-                  padding: '0.75rem', background: 'transparent', border: 'none',
-                  borderRadius: 'var(--radius-lg)', cursor: 'pointer',
-                  fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-muted)',
-                  fontFamily: 'inherit', marginTop: '0.125rem',
-                }}
-              >
-                Annuler
-              </button>
-            </div>
+              </>
+            )}
           </div>
         </>
       )}

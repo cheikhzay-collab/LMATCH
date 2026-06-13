@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  ArrowLeft, BrainCircuit, Play, Zap,
+  ArrowLeft, BrainCircuit, Play, Zap, Lock,
   BookOpen, Clock, GraduationCap, FileDown, ScanLine,
   Stethoscope, Cpu, Wrench, BarChart3, Wifi, TrendingUp, Compass
 } from 'lucide-react';
@@ -53,7 +53,7 @@ function useIsMobile() {
 export default function SchoolExamsPage() {
   const { schoolName } = useParams();
   const school = decodeURIComponent(schoolName);
-  const { exams, user, schoolBranding, schools } = useAuth();
+  const { exams, user, schoolBranding, schools, isExamLocked } = useAuth();
   const navigate = useNavigate();
   const [scanExam, setScanExam] = useState(null);
   const isMobile = useIsMobile();
@@ -217,7 +217,8 @@ export default function SchoolExamsPage() {
       ) : (
         <div style={{ display:'flex', flexDirection:'column', gap:'0.875rem' }}>
           {schoolExams.map((exam, idx) => {
-            const qCount    = exam.questions.length;
+            const qCount    = exam.questions?.length || 0;
+            const locked    = isExamLocked(exam);
 
             return (
               <div
@@ -292,7 +293,13 @@ export default function SchoolExamsPage() {
                   {/* 1. Primary Actions (SRS & Blanc Exam) */}
                   <button
                     className="btn"
-                    onClick={() => navigate(`/study?exam=${exam.id}`)}
+                    onClick={() => {
+                      if (locked) {
+                        navigate(user ? '/subscription' : '/login');
+                      } else {
+                        navigate(`/study?exam=${exam.id}`);
+                      }
+                    }}
                     title="Mode révision SRS"
                     style={{ 
                       gridColumn: isMobile ? 'span 3' : 'none',
@@ -309,12 +316,18 @@ export default function SchoolExamsPage() {
                     onMouseEnter={e => e.currentTarget.style.filter = 'brightness(0.95)'}
                     onMouseLeave={e => e.currentTarget.style.filter = 'none'}
                   >
-                    <BrainCircuit size={15} /> SRS
+                    {locked ? <Lock size={15} /> : <BrainCircuit size={15} />} SRS
                   </button>
                   
                   <button
                     className="btn-outline"
-                    onClick={() => navigate(`/exam?exam=${exam.id}`)}
+                    onClick={() => {
+                      if (locked) {
+                        navigate(user ? '/subscription' : '/login');
+                      } else {
+                        navigate(`/exam?exam=${exam.id}`);
+                      }
+                    }}
                     title="Concours blanc chronométré"
                     style={{ 
                       gridColumn: isMobile ? 'span 3' : 'none',
@@ -339,7 +352,7 @@ export default function SchoolExamsPage() {
                       e.currentTarget.style.background = 'transparent';
                     }}
                   >
-                    <Play size={15} /> Blanc
+                    {locked ? <Lock size={15} /> : <Play size={15} />} Blanc
                   </button>
 
                   {/* Vertical Divider (Desktop Only) */}
@@ -357,6 +370,10 @@ export default function SchoolExamsPage() {
                   <button
                     className="btn-outline"
                     onClick={() => {
+                      if (locked) {
+                        navigate(user ? '/subscription' : '/login');
+                        return;
+                      }
                       if (exam.pdfUrl) {
                         window.open(exam.pdfUrl, '_blank');
                       } else {
@@ -393,12 +410,16 @@ export default function SchoolExamsPage() {
                       e.currentTarget.style.color = 'var(--text-muted)';
                     }}
                   >
-                    <FileDown size={14} /> Sujet
+                    {locked ? <Lock size={14} /> : <FileDown size={14} />} Sujet
                   </button>
 
                   <button
                     className="btn-outline"
                     onClick={() => {
+                      if (locked) {
+                        navigate(user ? '/subscription' : '/login');
+                        return;
+                      }
                       import('../utils/generateExamPDF').then(({ generateCorrectionHTML, openPrintWindow }) => {
                         const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
                         const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
@@ -431,12 +452,18 @@ export default function SchoolExamsPage() {
                       e.currentTarget.style.color = 'var(--text-muted)';
                     }}
                   >
-                    <FileDown size={14} /> Corrigé
+                    {locked ? <Lock size={14} /> : <FileDown size={14} />} Corrigé
                   </button>
 
                   <button
                     className="btn-outline"
-                    onClick={() => handleDownloadPDF(exam)}
+                    onClick={() => {
+                      if (locked) {
+                        navigate(user ? '/subscription' : '/login');
+                        return;
+                      }
+                      handleDownloadPDF(exam);
+                    }}
                     title="Télécharger la grille de réponse OMR"
                     style={{ 
                       gridColumn: isMobile ? 'span 2' : 'none',
@@ -463,7 +490,7 @@ export default function SchoolExamsPage() {
                       e.currentTarget.style.color = 'var(--text-muted)';
                     }}
                   >
-                    <FileDown size={14} /> Grille
+                    {locked ? <Lock size={14} /> : <FileDown size={14} />} Grille
                   </button>
                 </div>
               </div>

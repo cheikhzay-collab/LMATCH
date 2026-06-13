@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
@@ -6,6 +6,35 @@ import { useAuth } from '../context/AuthContext';
 
 // Routes that enter Focus Mode (no nav, full-screen)
 const FOCUS_ROUTES = ['/exam', '/study'];
+
+const LayoutLoadingFallback = () => (
+  <div style={{
+    width: '100%',
+    height: '60vh',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }}>
+    <div style={{ position: 'relative', width: '50px', height: '50px', marginBottom: '1rem' }}>
+      <div style={{
+        position: 'absolute',
+        inset: 0,
+        borderRadius: '50%',
+        border: '3px solid rgba(113, 109, 242, 0.1)',
+        borderTop: '3px solid var(--violet)',
+        borderRight: '3px solid var(--emerald)',
+        animation: 'spinLayout 1s cubic-bezier(0.5, 0, 0.5, 1) infinite'
+      }} />
+    </div>
+    <style dangerouslySetInnerHTML={{__html: `
+      @keyframes spinLayout {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    `}} />
+  </div>
+);
 
 export default function Layout() {
   const { user, loading } = useAuth();
@@ -91,7 +120,15 @@ export default function Layout() {
     );
   }
 
-  if (!user) {
+  const publicPaths = ['/schools', '/study/suites-numeriques', '/exam', '/study'];
+  const isPublicPath = publicPaths.some(p => 
+    location.pathname === p || 
+    location.pathname.startsWith('/schools/') || 
+    location.pathname.startsWith('/exam') ||
+    location.pathname.startsWith('/study')
+  );
+
+  if (!user && !isPublicPath) {
     return <Navigate to="/login" replace />;
   }
 
@@ -100,7 +137,9 @@ export default function Layout() {
   if (isFocusMode) {
     return (
       <div className="focus-layout" style={{ minHeight: '100vh', width: '100vw', background: 'var(--bg-base)', color: 'var(--text-main)', transition: 'background 0.3s, color 0.3s' }}>
-        <Outlet />
+        <Suspense fallback={<LayoutLoadingFallback />}>
+          <Outlet />
+        </Suspense>
       </div>
     );
   }
@@ -112,7 +151,9 @@ export default function Layout() {
 
       {/* Main content area */}
       <main className="main-content">
-        <Outlet />
+        <Suspense fallback={<LayoutLoadingFallback />}>
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* Mobile bottom nav — hidden on desktop via CSS */}

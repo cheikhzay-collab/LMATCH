@@ -12,7 +12,7 @@ function renderOptionText(text) {
 }
 
 export default function MockExamMode() {
-  const { exams, saveMockExamResult, schoolBranding, isExamLocked, updateCardProgress } = useAuth();
+  const { exams, saveMockExamResult, schoolBranding, isExamLocked, updateCardProgress, user } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const navigate = useNavigate();
@@ -100,7 +100,7 @@ export default function MockExamMode() {
   const isCritical = useMemo(() => timeLeft <= 300, [timeLeft]);
   const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
 
-  const onReturn = useCallback(() => navigate('/dashboard'), [navigate]);
+  const onReturn = useCallback(() => navigate(user ? '/dashboard' : '/schools'), [navigate, user]);
 
   if (!currentExam) {
     return (

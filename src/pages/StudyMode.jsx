@@ -272,7 +272,7 @@ export default function StudyMode() {
     if (sessionHistory.length > 0) {
       setShowExitModal(true);
     } else {
-      navigate('/dashboard');
+      navigate(user ? '/dashboard' : '/schools');
     }
   };
 
@@ -280,7 +280,7 @@ export default function StudyMode() {
   useEffect(() => {
     if (isParcours) {
       if (activeExamsList.length === 0) {
-        navigate('/dashboard');
+        navigate(user ? '/dashboard' : '/schools');
       }
       return;
     }
@@ -288,10 +288,10 @@ export default function StudyMode() {
       if (!currentExam && activeExamsList.length > 0) {
         navigate(`/study?exam=${activeExamsList[0].id}`, { replace: true });
       } else if (activeExamsList.length === 0) {
-        navigate('/dashboard');
+        navigate(user ? '/dashboard' : '/schools');
       }
     }
-  }, [currentExam, activeExamsList, navigate, isParcours, topicId]);
+  }, [currentExam, activeExamsList, navigate, isParcours, topicId, user]);
 
   const handleNext = (questionId, quality) => {
     updateCardProgress(questionId, quality); // Updates SRS data in background
@@ -332,29 +332,7 @@ export default function StudyMode() {
     setSessionHistory([]);
   };
 
-  const isPremium = user?.role === 'admin' || user?.tier === 'premium';
 
-  if (!isPremium) {
-    return (
-      <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', padding: '2rem', textAlign: 'center' }}>
-        <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(99,102,241,0.1)', color: 'var(--violet)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1.5rem', boxShadow: '0 8px 24px rgba(99,102,241,0.15)' }}>
-          <BrainCircuit size={36} color="var(--violet)" />
-        </div>
-        <h2 style={{ fontWeight: 800, marginBottom: '0.5rem', color: 'var(--text-main)' }}>Révision SRS (Spaced Repetition System) Premium</h2>
-        <p style={{ color: 'var(--text-muted)', maxWidth: '460px', marginBottom: '2rem', lineHeight: 1.6 }}>
-          La révision intelligente par répétition espacée (SRS) est réservée aux abonnés Premium. Abonnez-vous pour mémoriser durablement les notions et réussir vos concours.
-        </p>
-        <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', width: '100%', maxWidth: '280px', margin: '0 auto' }}>
-          <button onClick={() => navigate('/subscription')} className="btn" style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}>
-            ✦ Devenir Premium
-          </button>
-          <button onClick={() => navigate('/dashboard')} className="btn-outline">
-            Retour au Dashboard
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // ── Study Selector Dashboard (Main screen when no exam/session is selected) ──
   if (!sessionStarted) {
@@ -364,14 +342,14 @@ export default function StudyMode() {
         {/* Top Header Bar */}
         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
           <button 
-            onClick={() => navigate('/dashboard')}
+            onClick={() => navigate(user ? '/dashboard' : '/schools')}
             className="btn-outline"
             style={{ 
               padding: '0.5rem 1rem', fontSize: '0.85rem', fontWeight: 800, 
               display: 'inline-flex', alignItems: 'center', gap: '0.4rem' 
             }}
           >
-            <ArrowLeft size={16} /> Retour au Dashboard
+            <ArrowLeft size={16} /> {user ? 'Retour au Dashboard' : 'Retour aux écoles'}
           </button>
         </div>
 
@@ -577,11 +555,11 @@ export default function StudyMode() {
           L'examen <strong>{currentExam.name}</strong> fait partie de l'offre Premium. Abonnez-vous pour débloquer l'accès à tous les concours et corriger vos faiblesses avec l'IA.
         </p>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <button onClick={() => navigate('/subscription')} className="btn" style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}>
-            ✦ Voir les offres d'abonnement
+          <button onClick={() => navigate(user ? '/subscription' : '/login')} className="btn" style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}>
+            ✦ {user ? "Voir les offres d'abonnement" : "Se connecter pour débloquer"}
           </button>
-          <button onClick={() => navigate('/dashboard')} className="btn-outline">
-            Retour au Dashboard
+          <button onClick={() => navigate(user ? '/dashboard' : '/schools')} className="btn-outline">
+            {user ? 'Retour au Dashboard' : 'Retour aux écoles'}
           </button>
         </div>
       </div>
@@ -610,7 +588,9 @@ export default function StudyMode() {
           <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem' }}>
             Ce module ne contient aucune question. Contactez l'administration.
           </p>
-          <button className="btn" onClick={() => navigate('/dashboard')}>Retour au tableau de bord</button>
+          <button className="btn" onClick={() => navigate(user ? '/dashboard' : '/schools')}>
+            {user ? 'Retour au tableau de bord' : 'Retour aux écoles'}
+          </button>
         </div>
       </div>
     );
@@ -639,8 +619,8 @@ export default function StudyMode() {
                 Forcer une révision (10 cartes)
               </button>
             )}
-            <button className="btn" onClick={() => navigate('/dashboard')} style={{ width: '100%' }}>
-              Retour au tableau de bord
+            <button className="btn" onClick={() => navigate(user ? '/dashboard' : '/schools')} style={{ width: '100%' }}>
+              {user ? 'Retour au tableau de bord' : 'Retour aux écoles'}
             </button>
           </div>
         </div>
@@ -655,7 +635,8 @@ export default function StudyMode() {
         sessionHistory={sessionHistory}
         examName={isParcours ? "Session de révision du jour" : topicId ? `Chapitre : ${topicId}` : currentExam.name}
         onForceReview={isParcours || topicId ? null : handleForceReview}
-        onBackToDashboard={() => navigate('/dashboard')}
+        onBackToDashboard={() => navigate(user ? '/dashboard' : '/schools')}
+        user={user}
       />
     );
   }

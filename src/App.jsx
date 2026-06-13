@@ -127,40 +127,42 @@ function AppContent() {
   return (
     <>
       <OAuthRedirectGuard />
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Login />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-        
-        {/* Protected Routes inside Layout */}
-        <Route element={<Layout />}>
-          {/* Student Routes */}
-          <Route path="/dashboard" element={<StudentDashboard />} />
-          <Route path="/subscription" element={<SubscriptionPage />} />
-          <Route path="/schools" element={<SchoolsPage />} />
-          <Route path="/schools/:schoolName" element={<SchoolExamsPage />} />
-          <Route path="/study" element={<StudyMode />} />
-          <Route path="/study/suites-numeriques" element={<SuitesNumeriquesPage />} />
-          <Route path="/exam" element={<MockExamMode />} />
-          <Route path="/scanner" element={<OMRScannerPage />} />
-          <Route path="/ranking" element={<RankingPage />} />
+      <Suspense fallback={<LoadingFallback />}>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Login />} />
+          <Route path="/auth/callback" element={<AuthCallback />} />
           
-          {/* Admin Routes */}
-          <Route path="/admin/dashboard" element={<AdminOverview />} />
-          <Route path="/admin/exams" element={<AdminExams />} />
-          <Route path="/admin/exams/:id/edit" element={<AdminExamEdit />} />
-          <Route path="/admin/users" element={<AdminUsers />} />
-          <Route path="/admin/users/:id" element={<AdminStudentDetail />} />
-          <Route path="/admin/upload" element={<AdminUpload />} />
-          <Route path="/admin/ai-import" element={<AdminAIImport />} />
-          <Route path="/admin/ebooks" element={<AdminEbooks />} />
-          <Route path="/admin/marketing" element={<AdminMarketing />} />
-          <Route path="/admin/settings" element={<AdminSettings />} />
-        </Route>
+          {/* Protected Routes inside Layout */}
+          <Route element={<Layout />}>
+            {/* Student Routes */}
+            <Route path="/dashboard" element={<StudentDashboard />} />
+            <Route path="/subscription" element={<SubscriptionPage />} />
+            <Route path="/schools" element={<SchoolsPage />} />
+            <Route path="/schools/:schoolName" element={<SchoolExamsPage />} />
+            <Route path="/study" element={<StudyMode />} />
+            <Route path="/study/suites-numeriques" element={<SuitesNumeriquesPage />} />
+            <Route path="/exam" element={<MockExamMode />} />
+            <Route path="/scanner" element={<OMRScannerPage />} />
+            <Route path="/ranking" element={<RankingPage />} />
+            
+            {/* Admin Routes */}
+            <Route path="/admin/dashboard" element={<AdminOverview />} />
+            <Route path="/admin/exams" element={<AdminExams />} />
+            <Route path="/admin/exams/:id/edit" element={<AdminExamEdit />} />
+            <Route path="/admin/users" element={<AdminUsers />} />
+            <Route path="/admin/users/:id" element={<AdminStudentDetail />} />
+            <Route path="/admin/upload" element={<AdminUpload />} />
+            <Route path="/admin/ai-import" element={<AdminAIImport />} />
+            <Route path="/admin/ebooks" element={<AdminEbooks />} />
+            <Route path="/admin/marketing" element={<AdminMarketing />} />
+            <Route path="/admin/settings" element={<AdminSettings />} />
+          </Route>
 
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </Suspense>
     </>
   );
 }
@@ -203,9 +205,7 @@ function App() {
   return (
     <AuthProvider>
       <Router>
-        <Suspense fallback={<LoadingFallback />}>
-          <AppContent />
-        </Suspense>
+        <AppContent />
       </Router>
     </AuthProvider>
   );

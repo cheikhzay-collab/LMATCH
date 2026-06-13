@@ -148,7 +148,7 @@ export default function StudentDashboard() {
     let wrongLeft = item.wrongCount || 0;
     const LETTERS = ['A', 'B', 'C', 'D', 'E'];
     
-    exam.questions.forEach((q, idx) => {
+    (exam.questions || []).forEach((q, idx) => {
       const correct = q.correct_answer || q.answer || 'A';
       let detected = null;
       let result = 'empty';

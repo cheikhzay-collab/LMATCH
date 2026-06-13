@@ -8,7 +8,8 @@ export default function SessionSummary({
   sessionHistory, 
   examName, 
   onForceReview, 
-  onBackToDashboard 
+  onBackToDashboard,
+  user
 }) {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 600);
   useEffect(() => {
@@ -301,7 +302,7 @@ export default function SessionSummary({
                 >
                   <RefreshCw size={15} /> Continuer à réviser (10 fiches)
                 </button>
-                <button 
+                 <button 
                   className="btn-outline" 
                   onClick={onBackToDashboard} 
                   style={{ 
@@ -317,7 +318,7 @@ export default function SessionSummary({
                     minHeight: '44px'
                   }}
                 >
-                  <LayoutDashboard size={15} /> Retour au tableau de bord
+                  <LayoutDashboard size={15} /> {user ? 'Retour au tableau de bord' : 'Retour aux écoles'}
                 </button>
               </>
             ) : (
@@ -335,7 +336,7 @@ export default function SessionSummary({
                   minHeight: '44px'
                 }}
               >
-                <LayoutDashboard size={15} /> Retour au tableau de bord
+                <LayoutDashboard size={15} /> {user ? 'Retour au tableau de bord' : 'Retour aux écoles'}
               </button>
             )}
           </div>

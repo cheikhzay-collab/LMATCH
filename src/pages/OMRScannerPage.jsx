@@ -206,7 +206,7 @@ export default function OMRScannerPage() {
       setActiveExam(found);
 
       // 3. Scan the grid bubbles dynamically
-      const results = await scanAnswerSheet(file, found.questions.length);
+      const results = await scanAnswerSheet(file, found.questions?.length || 0);
       setScanned(results);
       setPhase('verify');
     } catch (e) {

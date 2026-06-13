@@ -1448,7 +1448,7 @@ export function AuthProvider({ children }) {
     };
 
     loadConfigAndExams();
-  }, [user]);
+  }, []);
 
   // Fetch User-specific data (progress, history, activity, leaderboard) when a student logs in
   useEffect(() => {
@@ -1478,7 +1478,7 @@ export function AuthProvider({ children }) {
     };
 
     loadStudentData();
-  }, [user]);
+  }, [user?.id, user?.uid]);
 
   const refreshAdminData = useCallback(async () => {
     if (!SUPABASE_ENABLED || user?.role !== 'admin') return;
@@ -1494,7 +1494,7 @@ export function AuthProvider({ children }) {
     } catch (e) {
       console.warn('[Supabase] Error loading admin users/codes:', e.message);
     }
-  }, [user]);
+  }, [user?.id, user?.uid, user?.role]);
 
   // Fetch all registered users for Admin Dashboard when Admin is logged in
   useEffect(() => {
