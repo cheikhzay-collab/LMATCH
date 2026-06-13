@@ -4,7 +4,8 @@ import './index.css'
 import App from './App.jsx'
 
 // ── Intercept Print Page route to completely bypass React and avoid unmount/redirect issues ──
-if (window.location.pathname === '/print') {
+const isPrintPath = window.location.pathname.replace(/\/$/, '') === '/print';
+if (isPrintPath) {
   // 1. Render a clean loading UI directly in the body
   document.body.innerHTML = `
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0D1117;color:#fff;font-family:sans-serif;">
@@ -38,9 +39,24 @@ if (window.location.pathname === '/print') {
         clearTimeout(timeoutId);
         window.removeEventListener('storage', handleStorage);
         
-        document.open();
-        document.write(html);
-        document.close();
+        // ── Modern, secure rewrite of the document content ──
+        // Using innerHTML is 100% safe on HTTPS/production and is never blocked by browsers.
+        document.documentElement.innerHTML = html;
+        
+        // Manually trigger the print process since script tags inside innerHTML are not executed
+        const triggerPrint = async () => {
+          try {
+            await document.fonts.ready;
+          } catch (e) {
+            console.warn('Font loading check skipped/failed:', e);
+          }
+          await new Promise(r => setTimeout(r, 1000));
+          const hint = document.getElementById('printHint');
+          if (hint) hint.style.display = 'none';
+          window.print();
+          if (hint) hint.style.display = 'flex';
+        };
+        triggerPrint();
         return true;
       }
     } catch (err) {
