@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { generateSubjectHTML, generateCorrectionHTML } from '../utils/generateExamPDF';
 
 export default function PrintView() {
   const [status, setStatus] = useState('Génération de votre document PDF en cours...');
@@ -60,7 +61,6 @@ export default function PrintView() {
         }
 
         setStatus('Compilation du document PDF...');
-        const { generateSubjectHTML, generateCorrectionHTML } = await import('../utils/generateExamPDF');
         
         let html = '';
         if (type === 'corrige') {
