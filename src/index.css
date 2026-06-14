@@ -276,11 +276,18 @@ body.light-theme .xp-bar-container {
 /* ─── RESET ──────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
+html {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
 body {
   font-family: 'Plus Jakarta Sans', 'Inter', sans-serif;
   background-color: var(--bg-base);
   color: var(--text-main);
   min-height: 100vh;
+  max-width: 100%;
+  overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -1819,6 +1826,8 @@ body.light-theme .astuce-tabs {
   .exam-card-premium-action-row {
     width: 100% !important;
     justify-content: space-between !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
   }
   .exam-card-premium button {
     padding: 0.5rem 1rem !important;
@@ -1926,19 +1935,30 @@ body.light-theme .astuce-tabs {
     padding: 1.25rem !important;
   }
   
-  /* Make buttons wrap nicely on mobile */
-  .exam-list-item > div:last-child {
-    display: flex;
-    flex-wrap: wrap;
+  /* Make buttons wrap nicely on mobile using a robust, clean CSS grid */
+  .exam-actions-container {
+    display: grid !important;
+    grid-template-columns: repeat(6, 1fr) !important;
     gap: 0.5rem !important;
+    width: 100% !important;
   }
-  .exam-list-item > div:last-child button,
-  .exam-list-item > div:last-child a {
-    flex: 1 1 calc(50% - 0.25rem);
-    min-width: 110px;
-    padding: 0.5rem;
-    font-size: 0.8rem;
-    justify-content: center;
+  .exam-action-btn {
+    min-width: 0 !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  .srs-btn,
+  .blanc-btn {
+    grid-column: span 3 !important;
+  }
+  .sujet-btn,
+  .corrige-btn,
+  .grille-btn {
+    grid-column: span 2 !important;
+    padding: 0.65rem 0.25rem !important;
+  }
+  .exam-actions-divider {
+    display: none !important;
   }
 }
 
@@ -1969,6 +1989,35 @@ body.light-theme .astuce-tabs {
 }
 .exam-list-item:hover {
   box-shadow: 0 4px 24px rgba(99, 102, 241, 0.08);
+}
+
+/* ─── EXAM LIST ACTIONS STYLING ─── */
+.exam-actions-container {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  width: auto;
+  justify-content: flex-end;
+}
+.exam-action-btn {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 42px;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+.exam-actions-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border);
+  margin: 0 0.25rem;
+  align-self: center;
+  display: block;
 }
 
 /* ─── Bento Step Card Custom Styles ─── */

@@ -282,18 +282,10 @@ export default function SchoolExamsPage() {
                 </div>
 
                 {/* Cohesive, Premium Actions Grid */}
-                <div style={{
-                  display: isMobile ? 'grid' : 'flex',
-                  gridTemplateColumns: isMobile ? 'repeat(6, 1fr)' : 'none',
-                  flexDirection: isMobile ? 'none' : 'row',
-                  alignItems: isMobile ? 'stretch' : 'center',
-                  gap: '0.5rem',
-                  width: isMobile ? '100%' : 'auto',
-                  justifyContent: isMobile ? 'stretch' : 'flex-end',
-                }}>
+                <div className="exam-actions-container">
                   {/* 1. Primary Actions (SRS & Blanc Exam) */}
                   <button
-                    className="btn"
+                    className="btn exam-action-btn srs-btn"
                     onClick={() => {
                       if (locked) {
                         navigate(user ? '/subscription' : '/login');
@@ -303,12 +295,6 @@ export default function SchoolExamsPage() {
                     }}
                     title="Mode révision SRS"
                     style={{ 
-                      gridColumn: isMobile ? 'span 3' : 'none',
-                      flex: isMobile ? 'none' : 'none',
-                      padding: '0.65rem 1rem', 
-                      fontSize: '0.82rem', 
-                      minHeight: '42px', 
-                      borderRadius: '10px',
                       fontWeight: 800,
                       background: brand.accent, // Dynamic Brand Coloring
                       boxShadow: `0 4px 12px ${brand.accent}20`,
@@ -321,7 +307,7 @@ export default function SchoolExamsPage() {
                   </button>
                   
                   <button
-                    className="btn-outline"
+                    className="btn-outline exam-action-btn blanc-btn"
                     onClick={() => {
                       if (locked) {
                         navigate(user ? '/subscription' : '/login');
@@ -331,12 +317,6 @@ export default function SchoolExamsPage() {
                     }}
                     title="Concours blanc chronométré"
                     style={{ 
-                      gridColumn: isMobile ? 'span 3' : 'none',
-                      flex: isMobile ? 'none' : 'none',
-                      padding: '0.65rem 1rem', 
-                      fontSize: '0.82rem', 
-                      minHeight: '42px', 
-                      borderRadius: '10px',
                       fontWeight: 700,
                       border: '1.5px solid var(--border)',
                       color: 'var(--text-main)',
@@ -357,66 +337,42 @@ export default function SchoolExamsPage() {
                   </button>
 
                   {/* Vertical Divider (Desktop Only) */}
-                  {!isMobile && (
-                    <div style={{ 
-                      width: '1px', 
-                      height: '24px', 
-                      background: 'var(--border)', 
-                      margin: '0 0.25rem',
-                      alignSelf: 'center' 
-                    }} />
-                  )}
+                  <div className="exam-actions-divider" />
 
                   {/* 2. Secondary Utility Actions (Sujet, Corrigé, Grille) */}
                   <button
-                    className="btn-outline"
+                    className="btn-outline exam-action-btn sujet-btn"
                     onClick={() => {
                       if (locked) {
                         navigate(user ? '/subscription' : '/login');
                         return;
                       }
                       if (exam.pdfUrl) {
-                        if (isMobile) {
-                          const a = document.createElement('a');
-                          a.href = exam.pdfUrl;
-                          a.download = `${exam.name || 'examen'}.pdf`;
-                          a.target = '_blank';
-                          a.rel = 'noopener noreferrer';
-                          document.body.appendChild(a);
-                          a.click();
-                          document.body.removeChild(a);
-                        } else {
-                          window.open(exam.pdfUrl, '_blank');
-                        }
+                        window.open(exam.pdfUrl, '_blank');
                       } else {
-                        // Open the print window synchronously only on desktop to avoid popup blockers
-                        const win = isMobile ? null : window.open('', '_blank');
-                        if (win) {
-                          win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre sujet PDF en cours...</p></div></body></html>');
+                        if (isMobile) {
+                          // On mobile, open the dedicated print view in a new tab synchronously to bypass popup blockers
+                          window.open(`/print?examId=${exam.id}&type=sujet`, '_blank');
+                        } else {
+                          // On desktop, open a print preview popup synchronously and write contents dynamically
+                          const win = window.open('', '_blank');
+                          if (win) {
+                            win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre sujet PDF en cours...</p></div></body></html>');
+                          }
+                          (async () => {
+                            const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
+                            const html = await generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
+                            openPrintWindow(html, 'sujet', win);
+                          })();
                         }
-                        (async () => {
-                          const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
-                          const html = await generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
-                          openPrintWindow(html, 'sujet', win);
-                        })();
                       }
                     }}
                     title="Voir le sujet de l'examen"
                     style={{ 
-                      gridColumn: isMobile ? 'span 2' : 'none',
-                      flex: isMobile ? 'none' : 'none',
-                      padding: '0.65rem 0.5rem', 
-                      fontSize: '0.8rem', 
-                      minHeight: '42px', 
                       color: 'var(--text-muted)',
-                      borderRadius: '10px',
                       fontWeight: 600,
                       border: '1px solid var(--border)',
                       background: 'var(--bg-glass)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.3rem',
                     }}
                     onMouseEnter={e => {
                       e.currentTarget.style.borderColor = brand.accent;
@@ -429,39 +385,34 @@ export default function SchoolExamsPage() {
                   >
                     {locked ? <Lock size={14} /> : <FileDown size={14} />} Sujet
                   </button>
- 
+  
                   <button
-                    className="btn-outline"
+                    className="btn-outline exam-action-btn corrige-btn"
                     onClick={() => {
                       if (locked) {
                         navigate(user ? '/subscription' : '/login');
                         return;
                       }
-                      // Open the print window synchronously only on desktop to avoid popup blockers
-                      const win = isMobile ? null : window.open('', '_blank');
-                      if (win) {
-                        win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre corrigé PDF en cours...</p></div></body></html>');
+                      if (isMobile) {
+                        // On mobile, open the dedicated print view in a new tab synchronously to bypass popup blockers
+                        window.open(`/print?examId=${exam.id}&type=corrige`, '_blank');
+                      } else {
+                        // On desktop, open a print preview popup synchronously and write contents dynamically
+                        const win = window.open('', '_blank');
+                        if (win) {
+                          win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre corrigé PDF en cours...</p></div></body></html>');
+                        }
+                        const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
+                        const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
+                        openPrintWindow(html, 'corrigé', win);
                       }
-                      const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
-                      const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
-                      openPrintWindow(html, 'corrigé', win);
                     }}
                     title="Voir le corrigé de l'examen"
                     style={{ 
-                      gridColumn: isMobile ? 'span 2' : 'none',
-                      flex: isMobile ? 'none' : 'none',
-                      padding: '0.65rem 0.5rem', 
-                      fontSize: '0.8rem', 
-                      minHeight: '42px', 
                       color: 'var(--text-muted)',
-                      borderRadius: '10px',
                       fontWeight: 600,
                       border: '1px solid var(--border)',
                       background: 'var(--bg-glass)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.3rem',
                     }}
                     onMouseEnter={e => {
                       e.currentTarget.style.borderColor = brand.accent;
@@ -474,9 +425,9 @@ export default function SchoolExamsPage() {
                   >
                     {locked ? <Lock size={14} /> : <FileDown size={14} />} Corrigé
                   </button>
-
+ 
                   <button
-                    className="btn-outline"
+                    className="btn-outline exam-action-btn grille-btn"
                     onClick={() => {
                       if (locked) {
                         navigate(user ? '/subscription' : '/login');
@@ -486,20 +437,10 @@ export default function SchoolExamsPage() {
                     }}
                     title="Télécharger la grille de réponse OMR"
                     style={{ 
-                      gridColumn: isMobile ? 'span 2' : 'none',
-                      flex: isMobile ? 'none' : 'none',
-                      padding: '0.65rem 0.5rem', 
-                      fontSize: '0.8rem', 
-                      minHeight: '42px', 
                       color: 'var(--text-muted)',
-                      borderRadius: '10px',
                       fontWeight: 600,
                       border: '1px solid var(--border)',
                       background: 'var(--bg-glass)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '0.3rem',
                     }}
                     onMouseEnter={e => {
                       e.currentTarget.style.borderColor = brand.accent;

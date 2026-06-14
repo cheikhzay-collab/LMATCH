@@ -337,7 +337,7 @@ export default function StudyMode() {
   // ── Study Selector Dashboard (Main screen when no exam/session is selected) ──
   if (!sessionStarted) {
     return (
-      <div className="animate-fade-in" style={{ padding: 'clamp(1rem, 4vw, 2.5rem) 1rem', maxWidth: '1100px', margin: '0 auto', minHeight: '85vh', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+      <div className="animate-fade-in" style={{ padding: 'clamp(1rem, 4vw, 2.5rem) 1rem', maxWidth: '1100px', width: '100%', boxSizing: 'border-box', margin: '0 auto', minHeight: '85vh', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
         
         {/* Top Header Bar */}
         <div style={{ display: 'flex', justifyContent: 'flex-start' }}>
@@ -633,6 +633,7 @@ export default function StudyMode() {
       minHeight: '100dvh',
       display: 'flex',
       flexDirection: 'column',
+      width: '100%',
       maxWidth: isMobile ? '100%' : '1200px',
       margin: '0 auto',
       padding: isMobile ? '0.5rem 0.75rem' : '0.5rem 1rem',
