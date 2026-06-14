@@ -688,7 +688,7 @@ export default function AdminSettings() {
           </h3>
           <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
             Utilisée pour l'import IA automatique de PDF. Obtenez votre clé sur{' '}
-            <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" className="text-violet">console.anthropic.com</a>.
+            <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-violet">console.anthropic.com</a>.
             Elle est stockée uniquement dans ce navigateur.
           </p>
 
@@ -758,7 +758,7 @@ export default function AdminSettings() {
           </h3>
           <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
             Utilisée pour générer des visuels marketing avec <strong>Google Imagen 3</strong>. Obtenez votre clé gratuitement sur{' '}
-            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" style={{ color: '#4285F4', fontWeight: 600 }}>aistudio.google.com</a>.
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" style={{ color: '#4285F4', fontWeight: 600 }}>aistudio.google.com</a>.
             Elle est stockée uniquement dans ce navigateur.
           </p>
 

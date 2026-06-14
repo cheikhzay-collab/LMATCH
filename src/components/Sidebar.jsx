@@ -185,6 +185,7 @@ export default function Sidebar() {
             <button
               onClick={toggleTheme}
               title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+              aria-label={theme === 'dark' ? 'Passer au mode clair' : 'Passer au mode sombre'}
               style={{
                 background: 'transparent', border: 'none',
                 color: theme === 'dark' ? 'var(--warning)' : 'var(--violet)',
@@ -200,6 +201,7 @@ export default function Sidebar() {
               onClick={handleLogout}
               style={{ background: 'transparent', border: 'none', color: 'var(--text-subtle)', cursor: 'pointer', padding: '4px', borderRadius: '6px', transition: 'color 0.2s', display: 'flex', alignItems: 'center' }}
               title="Déconnexion"
+              aria-label="Déconnexion"
               onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
               onMouseLeave={e => e.currentTarget.style.color = 'var(--text-subtle)'}
             >

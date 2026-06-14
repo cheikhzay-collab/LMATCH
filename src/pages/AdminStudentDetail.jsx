@@ -147,6 +147,7 @@ export default function AdminStudentDetail() {
       <div style={{ marginBottom: '2rem', display:'flex', alignItems:'center', gap:'1rem' }}>
         <button 
           onClick={() => navigate('/admin/users')}
+          aria-label="Retour à la liste des élèves"
           style={{ background:'var(--bg-glass)', border:'1px solid var(--border)', borderRadius:'12px', width:'40px', height:'40px', display:'flex', alignItems:'center', justifyContent:'center', color:'var(--text-main)', cursor:'pointer' }}
         >
           <ArrowLeft size={20} />

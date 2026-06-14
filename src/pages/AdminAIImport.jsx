@@ -1115,7 +1115,7 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
               />
               <p style={{ marginTop: '0.4rem', fontSize: '0.73rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                 💡 Vérifiez les IDs disponibles sur{' '}
-                <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" className="text-violet">console.anthropic.com</a>{' '}
+                <a href="https://console.anthropic.com" target="_blank" rel="noopener noreferrer" className="text-violet">console.anthropic.com</a>{' '}
                 → Models. La clé API doit venir de <strong>console.anthropic.com</strong> (≠ claude.ai).
               </p>
             </div>
@@ -1143,7 +1143,7 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
               />
               <p style={{ marginTop: '0.4rem', fontSize: '0.73rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                 💡 Vérifiez les IDs disponibles sur{' '}
-                <a href="https://aistudio.google.com" target="_blank" rel="noreferrer" style={{ color: '#4285F4', fontWeight: 600 }}>aistudio.google.com</a>.
+                <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#4285F4', fontWeight: 600 }}>aistudio.google.com</a>.
                 Le modèle <strong>gemini-2.0-flash</strong> est recommandé pour sa rapidité et son respect strict du schéma de sortie.
               </p>
             </div>

@@ -240,9 +240,10 @@ const MockExamHistoryList = React.memo(({ mockExamHistory = [], exams = [], onDo
                         {item.score}/{item.maxScore} <span style={{ opacity: 0.85, fontSize: '0.75rem', fontWeight: 600 }}>({item.pct}%)</span>
                       </div>
 
-                      <button
+                       <button
                         onClick={() => onDownloadReport(item)}
                         title="Télécharger le rapport PDF"
+                        aria-label="Télécharger le rapport PDF"
                         style={{
                           display: 'inline-flex',
                           alignItems: 'center',

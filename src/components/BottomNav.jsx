@@ -90,6 +90,7 @@ export default function BottomNav() {
             className="mob-nav-item"
             onClick={() => setShowSheet(true)}
             title="Profil & Déconnexion"
+            aria-label="Profil et Déconnexion"
             style={{ position: 'relative' }}
           >
             <div className="mob-nav-icon-wrap" style={{ position: 'relative' }}>
