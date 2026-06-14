@@ -464,7 +464,7 @@ export function AuthProvider({ children }) {
   
   // Theme Management
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem('theme') || 'dark';
+    return localStorage.getItem('theme') || 'light';
   });
 
   useEffect(() => {
