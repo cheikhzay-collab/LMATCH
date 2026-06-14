@@ -407,7 +407,7 @@ export default function StudyMode() {
           return (
             <div style={{ maxWidth: '800px', width: '100%', margin: '0 auto' }}>
               <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '0.85rem', marginBottom: '0.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.85rem', marginBottom: '0.25rem' }}>
                   <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, margin: 0, fontSize: '1.15rem' }}>
                     <BrainCircuit size={20} color="var(--violet)" /> Révision par Chapitres
                   </h3>
@@ -440,13 +440,6 @@ export default function StudyMode() {
                       <div 
                         key={topic.name} 
                         className="exam-card-premium"
-                        style={{ 
-                          padding: isMobile ? '0.75rem 1rem' : '0.85rem 1.25rem',
-                          display: 'flex',
-                          flexDirection: isMobile ? 'column' : 'row',
-                          alignItems: isMobile ? 'stretch' : 'center',
-                          gap: isMobile ? '0.75rem' : '1.25rem',
-                        }}
                       >
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', minWidth: 0, flex: 1 }}>
                           <div style={{ 
@@ -467,16 +460,9 @@ export default function StudyMode() {
                           </div>
                         </div>
                         
-                        <div style={{ 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          gap: '0.6rem', 
-                          flexShrink: 0,
-                          width: isMobile ? '100%' : 'auto',
-                          justifyContent: isMobile ? 'space-between' : 'flex-end'
-                        }}>
+                        <div className="exam-card-premium-actions">
                           {!isCompleted ? (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
+                            <div className="exam-card-premium-action-row">
                               <div style={{ 
                                 background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', 
                                 padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
@@ -495,15 +481,14 @@ export default function StudyMode() {
                                   minHeight: '38px',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  justifyContent: 'center',
-                                  flex: isMobile ? 1 : 'none'
+                                  justifyContent: 'center'
                                 }}
                               >
                                 Réviser (Max 10)
                               </button>
                             </div>
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', width: '100%', justifyContent: isMobile ? 'space-between' : 'flex-end' }}>
+                            <div className="exam-card-premium-action-row">
                               <div style={{ 
                                 background: 'rgba(16, 185, 129, 0.05)', color: 'var(--emerald)', 
                                 padding: '0.25rem 0.65rem', borderRadius: '6px', fontSize: '0.62rem', fontWeight: 900,
@@ -522,8 +507,7 @@ export default function StudyMode() {
                                   minHeight: '38px',
                                   display: 'flex',
                                   alignItems: 'center',
-                                  justifyContent: 'center',
-                                  flex: isMobile ? 1 : 'none'
+                                  justifyContent: 'center'
                                 }}
                               >
                                 Entraînement

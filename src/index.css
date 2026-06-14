@@ -1708,12 +1708,26 @@ body.light-theme .astuce-tabs {
   border: 1px solid var(--border);
   border-radius: 1.25rem;
   transition: all 0.3s ease;
+  gap: 1.25rem;
 }
 .exam-card-premium:hover {
   background: rgba(255, 255, 255, 0.03);
   border-color: var(--violet);
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(99, 102, 241, 0.08);
+}
+.exam-card-premium-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+.exam-card-premium-action-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  justify-content: flex-end;
 }
 
 .school-modal-grid {
@@ -1798,18 +1812,18 @@ body.light-theme .astuce-tabs {
     min-width: 0 !important;
     flex: 1 !important;
   }
-  .exam-card-premium > div:last-child {
+  .exam-card-premium-actions {
+    width: 100% !important;
     flex-direction: row !important;
     justify-content: space-between !important;
     align-items: center !important;
-    width: 100%;
     gap: 1rem !important;
   }
-  .exam-card-premium > div:last-child > div {
+  .exam-card-premium-action-row {
     width: 100% !important;
     justify-content: space-between !important;
   }
-  .exam-card-premium > div:last-child button {
+  .exam-card-premium button {
     padding: 0.5rem 1rem !important;
   }
 

@@ -7,7 +7,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 
 export default function BottomNav() {
-  const { user, logout, theme, toggleTheme, getStudentStats } = useAuth();
+  const { user, logout, theme, toggleTheme, dueTodayCount } = useAuth();
   const navigate  = useNavigate();
   const location  = useLocation();
   const indicatorRef = useRef(null);
@@ -15,8 +15,7 @@ export default function BottomNav() {
   const [showSheet, setShowSheet] = useState(false);
 
   const isStudent = user?.role === 'student';
-  const stats = isStudent && getStudentStats ? getStudentStats() : null;
-  const dueToday = stats ? stats.dueToday : 0;
+  const dueToday = isStudent ? (dueTodayCount || 0) : 0;
 
   const studentItems = [
     { to: '/dashboard', icon: LayoutDashboard, label: 'Accueil'  },

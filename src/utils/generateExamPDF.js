@@ -3263,21 +3263,37 @@ printWhenReady();
 };
 
 export const openPrintWindow = (html, title, targetWindow) => {
-  try {
-    localStorage.setItem('print_html', html);
-  } catch (e) {
-    console.error('Failed to write print HTML to localStorage:', e);
-  }
-
-  if (targetWindow) {
-    // If window reference was pre-opened (to bypass mobile popup blocker), it is already navigating to /print.
-    // The targetWindow will detect the HTML in localStorage.
-  } else {
-    // If not pre-opened, open it now on the secure same-origin route.
-    // This avoids blocking window.print() inside sandboxed blob URLs on HTTPS/Vercel.
-    const win = window.open('/print', '_blank');
+  const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+  
+  if (isMobile || targetWindow) {
+    const win = targetWindow || window.open('', '_blank');
     if (!win) {
-      alert('Veuillez autoriser les popups pour ce site.');
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url  = URL.createObjectURL(blob);
+      window.location.href = url;
+      return;
     }
+    
+    try {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } catch (err) {
+      console.error('Error writing to print window:', err);
+      // Fallback: redirect if writing fails
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const url  = URL.createObjectURL(blob);
+      win.location.href = url;
+    }
+  } else {
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url  = URL.createObjectURL(blob);
+    const win  = window.open(url, '_blank', 'width=960,height=720,scrollbars=yes');
+    if (!win) {
+      URL.revokeObjectURL(url);
+      alert('Veuillez autoriser les popups pour ce site.');
+      return;
+    }
+    win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
   }
 };

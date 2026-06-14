@@ -79,53 +79,63 @@ export default function PrintView() {
       }
     };
 
-    // Orchestrate flow control
-    if (checkAndPrintLocal()) {
-      return;
-    }
+    let fallbackTimeoutId = null;
+    let intervalId = null;
+    let timeoutId = null;
 
-    if (examId) {
-      fetchAndPrintRemote();
-      return;
-    }
+    const cleanup = () => {
+      if (intervalId) clearInterval(intervalId);
+      if (timeoutId) clearTimeout(timeoutId);
+      if (fallbackTimeoutId) clearTimeout(fallbackTimeoutId);
+      window.removeEventListener('storage', handleStorage);
+    };
 
-    // No local data and no examId -> wait for storage event or timeout
-    setStatus('Attente du document...');
-    
-    let intervalId;
     const handleStorage = (e) => {
       if (e.key === 'print_html' && e.newValue) {
         if (checkAndPrintLocal()) {
-          clearInterval(intervalId);
-          clearTimeout(timeoutId);
-          window.removeEventListener('storage', handleStorage);
+          cleanup();
         }
       }
     };
 
+    // Orchestrate flow control
+    // 1. Immediately check if it's already in localStorage
+    if (checkAndPrintLocal()) {
+      return;
+    }
+
+    // 2. Set up interval and storage listener to wait for local compilation
+    setStatus('Attente du document...');
+    
     intervalId = setInterval(() => {
       if (checkAndPrintLocal()) {
-        clearInterval(intervalId);
-        clearTimeout(timeoutId);
-        window.removeEventListener('storage', handleStorage);
+        cleanup();
       }
     }, 150);
     window.addEventListener('storage', handleStorage);
 
-    const timeoutId = setTimeout(() => {
-      clearInterval(intervalId);
-      window.removeEventListener('storage', handleStorage);
-      try {
-        window.close();
-      } catch (e) {
-        window.location.href = '/';
-      }
-    }, 15000);
+    // 3. Fallback logic:
+    if (examId) {
+      // If we have an examId, wait up to 1.5 seconds for the parent page to write to localStorage.
+      // If it doesn't write in time, fall back to remote fetch.
+      fallbackTimeoutId = setTimeout(() => {
+        cleanup();
+        fetchAndPrintRemote();
+      }, 1500);
+    } else {
+      // If no examId, time out and close/redirect after 15 seconds.
+      timeoutId = setTimeout(() => {
+        cleanup();
+        try {
+          window.close();
+        } catch (e) {
+          window.location.href = '/';
+        }
+      }, 15000);
+    }
 
     return () => {
-      clearInterval(intervalId);
-      clearTimeout(timeoutId);
-      window.removeEventListener('storage', handleStorage);
+      cleanup();
     };
   }, []);
 

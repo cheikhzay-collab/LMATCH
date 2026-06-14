@@ -128,6 +128,148 @@ const loadAndMigrateExams = () => {
   }
 };
 
+const computeStudentStats = (exams, progress, leaderboard, user) => {
+  if (!user) {
+    return {
+      totalCards: 0, masteredCards: 0, learningCards: 0, newCards: 0,
+      dueToday: 0, globalMasteryPct: 0, weakTopics: [], strongTopics: [],
+      weeklyActivity: [], streak: 0, rank: 1200, totalStudents: 1200,
+    };
+  }
+
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0];
+  const activeExams = exams.filter(e => e.isActive !== false && e.isArchived !== true);
+
+  let totalCards = 0;
+  let masteredCards = 0;
+  let learningCards = 0;
+  let dueToday = 0;
+  let totalWeightedMasterySum = 0;
+  let studiedQuestionsCount = 0;
+  const topicMap = {}; // topic -> { totalEF, count, weightedMasterySum, total }
+
+  activeExams.forEach(e => {
+    if (!e.questions) return;
+    totalCards += e.questions.length;
+
+    e.questions.forEach(q => {
+      const p = progress[q.id];
+      const topic = q.topic || 'Général';
+      if (!topicMap[topic]) topicMap[topic] = { totalEF: 0, count: 0, weightedMasterySum: 0, total: 0 };
+      topicMap[topic].total++;
+      if (!p) return;
+      const { repetitions, easeFactor, nextReviewDate, stability } = p;
+      
+      // Calculate question mastery weight
+      let weight = 0;
+      
+      // Fallback stability calculation for older card records
+      const cardStability = stability !== undefined && stability !== null
+        ? stability
+        : (repetitions > 0 ? Math.max(1.0, 2.0 * Math.pow(3, repetitions - 1)) : 2.0);
+
+      if (repetitions >= 3) {
+        weight = 1.0;
+        masteredCards++;
+      } else if (repetitions === 2) {
+        weight = 0.7;
+        learningCards++;
+      } else if (repetitions === 1) {
+        if (cardStability > 1.0) {
+          weight = 0.4;
+        } else {
+          weight = 0.0;
+        }
+        learningCards++;
+      }
+
+      topicMap[topic].weightedMasterySum += weight;
+      totalWeightedMasterySum += weight;
+      studiedQuestionsCount++;
+
+      topicMap[topic].totalEF += easeFactor;
+      topicMap[topic].count++;
+      if (new Date(nextReviewDate) <= now) dueToday++;
+    });
+  });
+
+  // Topics sorted by mastery (weakest first)
+  const topicsArr = Object.entries(topicMap)
+    .map(([name, s]) => {
+      const masteryPct = s.total > 0 ? Math.round((s.weightedMasterySum / s.total) * 100) : 0;
+      return {
+        name,
+        avgEF: s.count > 0 ? s.totalEF / s.count : 2.5,
+        masteryPct,
+        mastered: s.weightedMasterySum,
+        total: s.total,
+        count: s.count
+      };
+    });
+
+  const weakTopics = [...topicsArr]
+    .filter(t => t.count > 0 && t.masteryPct < 85)
+    .sort((a, b) => a.masteryPct - b.masteryPct)
+    .slice(0, 4);
+
+  const strongTopics = [...topicsArr]
+    .filter(t => t.count > 0 && t.masteryPct >= 70)
+    .sort((a, b) => b.masteryPct - a.masteryPct)
+    .slice(0, 3);
+
+  // Weekly activity from dailyActivity store
+  const dailyActivity = JSON.parse(localStorage.getItem('dailyActivity') || '{}');
+  const weeklyActivity = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - (6 - i));
+    const key = d.toISOString().split('T')[0];
+    const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    return { name: dayNames[d.getDay()], count: dailyActivity[key] || 0, isToday: key === todayStr };
+  });
+
+  // Streak: consecutive days with at least 1 review ending today or yesterday
+  const reviewDates = JSON.parse(localStorage.getItem('reviewDates') || '[]');
+  let streak = 0;
+  let checkDate = new Date(now);
+  for (let i = 0; i < 365; i++) {
+    const ds = checkDate.toISOString().split('T')[0];
+    if (reviewDates.includes(ds)) { streak++; checkDate.setDate(checkDate.getDate() - 1); }
+    else break;
+  }
+
+  // Global mastery percentage is relative to totalCards in active exams (curriculum coverage)
+  const globalMasteryPct = totalCards > 0 
+    ? Math.round((totalWeightedMasterySum / totalCards) * 100) 
+    : 0;
+
+  // Dynamic live rank based on real leaderboard or XP fallback
+  let totalStudents = user?.totalStudents || 1200;
+  let rank = 1200;
+  const userXp = user?.xp || 0;
+
+  if (SUPABASE_ENABLED && leaderboard && leaderboard.length > 0) {
+    totalStudents = leaderboard.length;
+    const userIndex = leaderboard.findIndex(u => u.name === user?.name || u.email === user?.email);
+    if (userIndex !== -1) {
+      rank = userIndex + 1;
+    } else {
+      const higherXpCount = leaderboard.filter(u => u.xp > userXp).length;
+      rank = higherXpCount + 1;
+    }
+  } else {
+    totalStudents = user?.totalStudents || 1200;
+    rank = Math.max(1, Math.min(totalStudents, Math.round(totalStudents * Math.pow(0.9992, userXp))));
+  }
+
+  return {
+    totalCards, masteredCards, learningCards,
+    newCards: totalCards - masteredCards - learningCards,
+    dueToday, globalMasteryPct, weakTopics, strongTopics,
+    weeklyActivity, streak, rank, totalStudents,
+  };
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     const saved = localStorage.getItem('user');
@@ -348,27 +490,72 @@ export function AuthProvider({ children }) {
       let migrated = false;
       const migratedProgress = {};
       Object.entries(parsed).forEach(([id, card]) => {
-        if (card && card.repetitions !== undefined && card.difficulty === undefined) {
-          migrated = true;
-          const easeFactor = card.easeFactor || 2.5;
-          const interval = card.interval || 1;
-          const difficulty = Math.max(1.0, Math.min(10.0, 12.0 - 4.0 * easeFactor));
-          const stability = Math.max(0.5, interval);
-          const nextReviewDate = card.nextReviewDate || new Date().toISOString();
-          const lastReview = new Date(nextReviewDate);
-          lastReview.setDate(lastReview.getDate() - Math.round(stability));
+        if (!card) return;
+        
+        let difficulty = card.difficulty;
+        let stability = card.stability;
+        let repetitions = card.repetitions;
+        let easeFactor = card.easeFactor;
+        let lastReviewDate = card.lastReviewDate;
+        let nextReviewDate = card.nextReviewDate;
 
-          migratedProgress[id] = {
-            difficulty,
-            stability,
-            repetitions: card.repetitions,
-            easeFactor, // keep stored for stats backward-compatibility
-            lastReviewDate: lastReview.toISOString(),
-            nextReviewDate
-          };
-        } else {
-          migratedProgress[id] = card;
+        // Migrate legacy card
+        if (card.repetitions !== undefined && card.difficulty === undefined) {
+          migrated = true;
+          const ef = card.easeFactor || 2.5;
+          const interval = card.interval || 1;
+          difficulty = Math.max(1.0, Math.min(10.0, 12.0 - 4.0 * ef));
+          stability = Math.max(0.5, interval);
+          const nextDate = card.nextReviewDate || new Date().toISOString();
+          const lastDateObj = new Date(nextDate);
+          lastDateObj.setDate(lastDateObj.getDate() - Math.round(stability));
+          lastReviewDate = lastDateObj.toISOString();
+          nextReviewDate = nextDate;
+          easeFactor = ef;
         }
+
+        // Healing corrupt/NaN values
+        if (difficulty === undefined || difficulty === null || isNaN(difficulty)) {
+          const ef = easeFactor || 2.5;
+          difficulty = Math.max(1.0, Math.min(10.0, 1.0 + 4.5 * (3.0 - ef)));
+          if (isNaN(difficulty)) difficulty = 5.0;
+          migrated = true;
+        }
+        if (stability === undefined || stability === null || isNaN(stability) || stability <= 0) {
+          stability = repetitions > 0 ? Math.max(1.0, 2.0 * Math.pow(3, repetitions - 1)) : 2.0;
+          if (isNaN(stability) || stability <= 0) stability = 2.0;
+          migrated = true;
+        }
+        if (repetitions === undefined || repetitions === null || isNaN(repetitions)) {
+          repetitions = 0;
+          migrated = true;
+        }
+        if (easeFactor === undefined || easeFactor === null || isNaN(easeFactor)) {
+          easeFactor = 3.0 - (difficulty - 1.0) / 4.5;
+          if (isNaN(easeFactor)) easeFactor = 2.5;
+          migrated = true;
+        }
+        
+        // Date checks
+        const checkLastDate = new Date(lastReviewDate);
+        if (!lastReviewDate || isNaN(checkLastDate.getTime())) {
+          lastReviewDate = new Date().toISOString();
+          migrated = true;
+        }
+        const checkNextDate = new Date(nextReviewDate);
+        if (!nextReviewDate || isNaN(checkNextDate.getTime())) {
+          nextReviewDate = new Date().toISOString();
+          migrated = true;
+        }
+
+        migratedProgress[id] = {
+          difficulty,
+          stability,
+          repetitions,
+          easeFactor,
+          lastReviewDate,
+          nextReviewDate
+        };
       });
       if (migrated) {
         safeSetItem('progress', JSON.stringify(migratedProgress));
@@ -379,8 +566,24 @@ export function AuthProvider({ children }) {
     }
   });
 
+  const [dueTodayCount, setDueTodayCount] = useState(0);
+
   useEffect(() => {
-    safeSetItem('progress', JSON.stringify(progress));
+    const now = new Date();
+    let count = 0;
+    Object.values(progress).forEach(p => {
+      if (p && p.nextReviewDate && new Date(p.nextReviewDate) <= now) {
+        count++;
+      }
+    });
+    setDueTodayCount(count);
+  }, [progress]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      safeSetItem('progress', JSON.stringify(progress));
+    }, 1000);
+    return () => clearTimeout(timer);
   }, [progress]);
 
   // Mock Exam History state: [ { id, date, examId, examName, school, score, maxScore, pct, correctCount, wrongCount, emptyCount, mode } ]
@@ -1086,16 +1289,26 @@ export function AuthProvider({ children }) {
         } else {
           // Succeeded
           const hardBonus = quality === 3 ? 0.75 : quality === 4 ? 1.0 : 1.5;
-          const factor = 1.0 + Math.pow(9.0 - difficulty, 0.4) * Math.pow(stability, -0.15) * (Math.exp(Math.pow(1.0 - retrievability, 0.45)) - 0.45) * hardBonus;
+          const factor = 1.0 + Math.pow(Math.max(0, 9.0 - difficulty), 0.4) * Math.pow(stability, -0.15) * (Math.exp(Math.pow(1.0 - retrievability, 0.45)) - 0.45) * hardBonus;
           stability = Math.max(stability + 1.0, stability * factor);
           repetitions += 1;
         }
       }
 
+      if (isNaN(difficulty)) difficulty = 5.0;
+      if (isNaN(stability) || stability <= 0) stability = 2.0;
+      if (isNaN(repetitions)) repetitions = 1;
+
       // 3. Compute Interval
-      const interval = Math.round(stability);
-      const nextReviewDate = new Date();
+      let interval = Math.round(stability);
+      if (isNaN(interval) || interval <= 0) interval = 1;
+
+      let nextReviewDate = new Date();
       nextReviewDate.setDate(nextReviewDate.getDate() + interval);
+      if (isNaN(nextReviewDate.getTime())) {
+        nextReviewDate = new Date();
+        nextReviewDate.setDate(nextReviewDate.getDate() + 1);
+      }
 
       // Map difficulty back to easeFactor equivalent for stats backward-compatibility
       const easeFactor = 3.0 - (difficulty - 1.0) / 4.5;
@@ -1104,7 +1317,7 @@ export function AuthProvider({ children }) {
         difficulty,
         stability,
         repetitions,
-        easeFactor,
+        easeFactor: isNaN(easeFactor) ? 2.5 : easeFactor,
         lastReviewDate: now.toISOString(),
         nextReviewDate: nextReviewDate.toISOString()
       };
@@ -1153,152 +1366,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // ── Student Statistics (computed from real progress data - cached for performance) ─────────────────
-  const studentStats = React.useMemo(() => {
-    if (!user) {
-      return {
-        totalCards: 0, masteredCards: 0, learningCards: 0, newCards: 0,
-        dueToday: 0, globalMasteryPct: 0, weakTopics: [], strongTopics: [],
-        weeklyActivity: [], streak: 0, rank: 1200, totalStudents: 1200,
-      };
-    }
-
-    const now = new Date();
-    const todayStr = now.toISOString().split('T')[0];
-    const activeExams = exams.filter(e => e.isActive !== false && e.isArchived !== true);
-
-    let totalCards = 0;
-    let masteredCards = 0;
-    let learningCards = 0;
-    let dueToday = 0;
-    let totalWeightedMasterySum = 0;
-    let studiedQuestionsCount = 0;
-    const topicMap = {}; // topic -> { totalEF, count, weightedMasterySum, total }
-
-    activeExams.forEach(e => {
-      if (!e.questions) return;
-      totalCards += e.questions.length;
-
-      e.questions.forEach(q => {
-        const p = progress[q.id];
-        const topic = q.topic || 'Général';
-        if (!topicMap[topic]) topicMap[topic] = { totalEF: 0, count: 0, weightedMasterySum: 0, total: 0 };
-        topicMap[topic].total++;
-        if (!p) return;
-        const { repetitions, easeFactor, nextReviewDate, stability } = p;
-        
-        // Calculate question mastery weight
-        let weight = 0;
-        
-        // Fallback stability calculation for older card records
-        const cardStability = stability !== undefined && stability !== null
-          ? stability
-          : (repetitions > 0 ? Math.max(1.0, 2.0 * Math.pow(3, repetitions - 1)) : 2.0);
-
-        if (repetitions >= 3) {
-          weight = 1.0;
-          masteredCards++;
-        } else if (repetitions === 2) {
-          weight = 0.7;
-          learningCards++;
-        } else if (repetitions === 1) {
-          if (cardStability > 1.0) {
-            weight = 0.4;
-          } else {
-            weight = 0.0;
-          }
-          learningCards++;
-        }
-
-        topicMap[topic].weightedMasterySum += weight;
-        totalWeightedMasterySum += weight;
-        studiedQuestionsCount++;
-
-        topicMap[topic].totalEF += easeFactor;
-        topicMap[topic].count++;
-        if (new Date(nextReviewDate) <= now) dueToday++;
-      });
-    });
-
-    // Topics sorted by mastery (weakest first)
-    const topicsArr = Object.entries(topicMap)
-      .map(([name, s]) => {
-        const masteryPct = s.total > 0 ? Math.round((s.weightedMasterySum / s.total) * 100) : 0;
-        return {
-          name,
-          avgEF: s.count > 0 ? s.totalEF / s.count : 2.5,
-          masteryPct,
-          mastered: s.weightedMasterySum,
-          total: s.total,
-          count: s.count
-        };
-      });
-
-    const weakTopics = [...topicsArr]
-      .filter(t => t.count > 0 && t.masteryPct < 85)
-      .sort((a, b) => a.masteryPct - b.masteryPct)
-      .slice(0, 4);
-
-    const strongTopics = [...topicsArr]
-      .filter(t => t.count > 0 && t.masteryPct >= 70)
-      .sort((a, b) => b.masteryPct - a.masteryPct)
-      .slice(0, 3);
-
-    // Weekly activity from dailyActivity store
-    const dailyActivity = JSON.parse(localStorage.getItem('dailyActivity') || '{}');
-    const weeklyActivity = Array.from({ length: 7 }, (_, i) => {
-      const d = new Date(now);
-      d.setDate(d.getDate() - (6 - i));
-      const key = d.toISOString().split('T')[0];
-      const dayNames = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
-      return { name: dayNames[d.getDay()], count: dailyActivity[key] || 0, isToday: key === todayStr };
-    });
-
-    // Streak: consecutive days with at least 1 review ending today or yesterday
-    const reviewDates = JSON.parse(localStorage.getItem('reviewDates') || '[]');
-    let streak = 0;
-    let checkDate = new Date(now);
-    for (let i = 0; i < 365; i++) {
-      const ds = checkDate.toISOString().split('T')[0];
-      if (reviewDates.includes(ds)) { streak++; checkDate.setDate(checkDate.getDate() - 1); }
-      else break;
-    }
-
-    // Global mastery percentage is relative to totalCards in active exams (curriculum coverage)
-    const globalMasteryPct = totalCards > 0 
-      ? Math.round((totalWeightedMasterySum / totalCards) * 100) 
-      : 0;
-
-    // Dynamic live rank based on real leaderboard or XP fallback
-    let totalStudents = user?.totalStudents || 1200;
-    let rank = 1200;
-    const userXp = user?.xp || 0;
-
-    if (SUPABASE_ENABLED && leaderboard && leaderboard.length > 0) {
-      totalStudents = leaderboard.length;
-      const userIndex = leaderboard.findIndex(u => u.name === user?.name || u.email === user?.email);
-      if (userIndex !== -1) {
-        rank = userIndex + 1;
-      } else {
-        const higherXpCount = leaderboard.filter(u => u.xp > userXp).length;
-        rank = higherXpCount + 1;
-      }
-    } else {
-      totalStudents = user?.totalStudents || 1200;
-      rank = Math.max(1, Math.min(totalStudents, Math.round(totalStudents * Math.pow(0.9992, userXp))));
-    }
-
-    return {
-      totalCards, masteredCards, learningCards,
-      newCards: totalCards - masteredCards - learningCards,
-      dueToday, globalMasteryPct, weakTopics, strongTopics,
-      weeklyActivity, streak, rank, totalStudents,
-    };
-  }, [exams, progress, leaderboard, user]);
-
   const getStudentStats = React.useCallback(() => {
-    return studentStats;
-  }, [studentStats]);
+    return computeStudentStats(exams, progress, leaderboard, user);
+  }, [exams, progress, leaderboard, user]);
 
   const [schools, setSchools] = useState(() => {
     const saved = localStorage.getItem('schools');
@@ -1587,7 +1657,7 @@ export function AuthProvider({ children }) {
       toggleExamStatus, updateExamDetails, deleteExam, toggleArchiveExam,
       plans, activateSubscription, cancelSubscription, addPlan, removePlan, updatePlan,
       activationCodes, generateActivationCodes, redeemActivationCode,
-      progress, updateCardProgress, getStudentStats,
+      progress, updateCardProgress, getStudentStats, dueTodayCount,
       theme, toggleTheme,
       schools, addSchool, removeSchool, renameSchool,
       schoolBranding, updateSchoolBranding,

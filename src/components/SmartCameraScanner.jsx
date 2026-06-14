@@ -298,14 +298,15 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
       }
       setHasPermission(true);
     } catch (err) {
-      console.error("Camera access error:", err);
-      setHasPermission(false);
-      setScannerStatus('initializing');
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+        console.warn("Camera access denied by user:", err);
         setErrorMessage("Accès à la caméra refusé. Veuillez autoriser la caméra dans les paramètres de votre navigateur.");
       } else {
+        console.error("Camera access error:", err);
         setErrorMessage(`Impossible d'accéder à la caméra arrière: ${err.message}`);
       }
+      setHasPermission(false);
+      setScannerStatus('initializing');
     }
   };
 

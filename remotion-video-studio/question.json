@@ -16,9 +16,9 @@
     }
   },
   "metadata": {
-    "examName": "UIYRI",
+    "examName": "BEEEEEEEEEEEE",
     "subject": "Analyse",
-    "id": "ikj6fvw4k"
+    "id": "4adda921-47a9-472e-b22a-f98ce3da98e9"
   },
   "timeline": [
     {
@@ -28,7 +28,7 @@
         "end": 5
       },
       "assets": {
-        "text": "Soit la fonction numérique définie par: $f(x) = x + \\sqrt{x^2 + 2x}$. $C_f$ est la courbe représentant $f(x)$ dans un repère orthonormé.",
+        "text": "$\\lim_{n \\to +\\infty} \\frac{(-1)^n n + 1}{n + \\sqrt{n}} =$",
         "context": null,
         "audioEffect": "whoosh-in-cinematic",
         "visualStyle": {
@@ -50,28 +50,23 @@
         "options": [
           {
             "id": "A",
-            "text": "A) A. Le domaine de définition de $f(x)$ est $\\mathbb{R}$",
+            "text": "A) 0",
             "revealAt": 6
           },
           {
             "id": "B",
-            "text": "B) B. La fonction $f(x)$ est dérivable à gauche de $x_0 = -2$",
+            "text": "B) 1",
             "revealAt": 8
           },
           {
             "id": "C",
-            "text": "C) C. La courbe représentant $f$ possède une asymptote oblique au voisinage de $+\\infty$ d'équation $y = 2x + 1$",
+            "text": "C) -1",
             "revealAt": 10
           },
           {
             "id": "D",
-            "text": "D) D. La fonction $f(x)$ est strictement décroissante dans le domaine $[0, +\\infty[$",
+            "text": "D) n'a pas de limite",
             "revealAt": 12
-          },
-          {
-            "id": "E",
-            "text": "E) E. $\\lim_{x \\to -\\infty} f(x) = -\\infty$",
-            "revealAt": 14
           }
         ],
         "countdown": {
@@ -93,7 +88,7 @@
         "end": 22
       },
       "assets": {
-        "correctOption": "C",
+        "correctOption": "D",
         "audioEffect": "ping-success-bell",
         "visualStyle": {
           "glowColor": "#10B981",
@@ -109,8 +104,8 @@
         "end": 30
       },
       "assets": {
-        "solution": "**Méthode: Étude de fonction avec racine — Programme Bac SE/SM** **Domaine de définition:** $x^2 + 2x \\geq 0 \\Rightarrow x(x+2) \\geq 0 \\Rightarrow x \\in ]-\\infty, -2] \\cup [0, +\\infty[$ — donc A est faux. **Dérivabilité en $x_0 = -2$:** À gauche de $-2$, la fonction n'est pas définie, donc B est faux. **Asymptote oblique:** Pour $x \\to +\\infty$: $$f(x) = x + \\sqrt{x^2(1 + \\frac{2}{x})} = x + |x|\\sqrt{1 + \\frac{2}{x}} = x + x\\sqrt{1 + \\frac{2}{x}}$$ Développement limité: $\\sqrt{1 + \\frac{2}{x}} \\approx 1 + \\frac{1}{x}$ $$f(x) \\approx x(1 + 1 + \\frac{1}{x}) = 2x + 1$$ Donc asymptote $y = 2x + 1$ ✓ **Réponse: C**",
-        "astuce": "⚡ ⚡ Tester $x = 0$: $f(0) = 0 + 0 = 0$. Tester $x = 2$: $f(2) = 2 + \\sqrt{8} \\approx 4{,}8$. Fonction croissante sur $[0, +\\infty[$ — élimine D. Pour l'asymptote, factoriser: $f(x) \\approx 2x$ pour grand $x$ — seule C propose $2x$.",
+        "solution": "**Suites numériques — Limites de suites alternées (Programme Bac)**\n Étape 1 — Exprimer la suite sous la forme $u_n = \\frac{(-1)^n n + 1}{n + \\sqrt{n}}$ et étudier ses sous-suites d'indices pairs et impairs. \nÉtape 2 — Calculer la limite de la sous-suite paire $u_{2k}$: $$u_{2k} = \\frac{2k+1}{2k+\\sqrt{2k}} = \\frac{2k\\left(1 + \\frac{1}{2k}\\right)}{2k\\left(1 + \\frac{1}{\\sqrt{2k}}\\right)} = \\frac{1+\\frac{1}{2k}}{1+\\frac{1}{\\sqrt{2k}}}$$ Or $\\lim_{k \\to +\\infty} \\frac{1}{2k} = 0$ et $\\lim_{k \\to +\\infty} \\frac{1}{\\sqrt{2k}} = 0$, d'où $\\lim_{k \\to +\\infty} u_{2k} = 1$. \nÉtape 3 — Calculer la limite de la sous-suite impaire $u_{2k+1}$: $$u_{2k+1} = \\frac{-(2k+1)+1}{2k+1+\\sqrt{2k+1}} = \\frac{-2k}{2k\\left(1 + \\frac{1}{2k} + \\frac{\\sqrt{2k+1}}{2k}\\right)} = \\frac{-1}{1+\\frac{1}{2k}+\\frac{\\sqrt{2k+1}}{2k}}$$ Or $\\lim_{k \\to +\\infty} u_{2k+1} = -1$. \nÉtape 4 — Conclure: Les deux sous-suites convergent vers des limites distinctes ($1 \\neq -1$), par conséquent la suite $(u_n)$ n'admet pas de limite. \n**Réponse: D) n'a pas de limite**",
+        "astuce": "⚡ ⚡ Le terme prédominant au numérateur oscille entre $+n$ et $-n$ en raison du $(-1)^n$. Le dénominateur se comporte comme $n$. Ainsi, la suite oscille indéfiniment entre $1$ et $-1$. Élimine immédiatement A, B, C.",
         "audioEffect": "laser-reveal-whoosh",
         "visualStyle": {
           "fontSize": "36px",
