@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { BrainCircuit } from 'lucide-react';
+import LconqLogo from '../components/LconqLogo';
 
 /**
  * AuthCallback page — handles the redirect from Supabase OAuth (Google, etc.)
@@ -79,17 +80,7 @@ export default function AuthCallback() {
       background: 'var(--bg-base)',
       gap: '1.5rem',
     }}>
-      <div style={{
-        width: 64,
-        height: 64,
-        borderRadius: '18px',
-        background: 'linear-gradient(135deg, var(--violet), #818cf8)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-        <BrainCircuit size={32} color="#fff" />
-      </div>
+      <LconqLogo size={64} iconOnly={true} />
 
       {error ? (
         <>

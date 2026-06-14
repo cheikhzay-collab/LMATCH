@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { BrainCircuit, Zap, CheckCircle2, Trophy, ArrowRight, Sparkles, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import LconqLogo from '../components/LconqLogo';
 
 function XIcon() {
   return (
@@ -59,18 +60,7 @@ export default function LandingPage() {
         boxSizing: 'border-box',
         transition: 'background 0.3s, box-shadow 0.3s',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: '8px',
-            background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-          }}>
-            <BrainCircuit size={16} color="#fff" />
-          </div>
-          <span style={{ fontWeight: 800, fontSize: '0.95rem', letterSpacing: '-0.02em' }}>
-            L'<span style={{ background: 'linear-gradient(135deg, var(--violet), var(--emerald))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>CONQ</span>
-          </span>
-        </div>
+        <LconqLogo size={30} textSize="1.05rem" />
         <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
           {/* Theme toggle */}
           <button

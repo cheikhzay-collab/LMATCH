@@ -5,6 +5,7 @@ import {
   LogOut, Trophy, Library, Users, Settings, Zap, Sun, Moon, GraduationCap, Sparkles, BookMarked, Camera, Megaphone, Crown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import LconqLogo from './LconqLogo';
 
 export default function Sidebar() {
   const { user, logout, theme, toggleTheme } = useAuth();
@@ -18,19 +19,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '2.5rem', padding: '0 0.25rem' }}>
-        <div style={{
-          width: 36, height: 36, borderRadius: '10px',
-          background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          flexShrink: 0
-        }}>
-          <BrainCircuit size={20} color="#fff" />
-        </div>
-        <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.02em' }}>
-          L'<span style={{ background: 'linear-gradient(135deg, var(--violet), var(--emerald))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>CONQ</span>
-        </span>
-      </div>
+      <LconqLogo size={36} textSize="1.25rem" style={{ marginBottom: '2.5rem', padding: '0 0.25rem', cursor: 'pointer' }} onClick={() => navigate('/')} />
 
       {/* Navigation */}
       <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
