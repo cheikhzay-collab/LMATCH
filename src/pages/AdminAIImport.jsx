@@ -300,7 +300,7 @@ export default function AdminAIImport() {
   // Setup state
   const [provider, setProvider] = useState(() => draft?.provider || localStorage.getItem('aiImportProvider') || 'gemini');
   const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('geminiApiKey') || '');
-  const [geminiModel, setGeminiModel] = useState(() => draft?.geminiModel || localStorage.getItem('geminiModel') || 'gemini-2.0-flash');
+  const [geminiModel, setGeminiModel] = useState(() => draft?.geminiModel || localStorage.getItem('geminiModel') || 'gemini-1.5-flash');
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('claudeApiKey') || '');
   const [proxyUrl, setProxyUrl] = useState(() => localStorage.getItem('claudeProxyUrl') || '');
   const [claudeModel, setClaudeModel] = useState(() => localStorage.getItem('claudeModel') || 'claude-opus-4-5');
@@ -373,7 +373,7 @@ export default function AdminAIImport() {
     setCorrectionPageFrom(1);
     setCorrectionPageTo(1);
     setProvider('gemini');
-    setGeminiModel('gemini-2.0-flash');
+    setGeminiModel('gemini-1.5-flash');
     setError('');
     setProgress('');
   };
@@ -1123,7 +1123,7 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
             <div className="input-group" style={{ marginBottom: '1.5rem' }}>
               <label>Modèle Gemini <span style={{fontWeight:400, color:'var(--text-muted)'}}>— ID exact de l'API</span></label>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                {['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-2.0-pro-exp'].map(m => (
+                {['gemini-1.5-flash', 'gemini-3.5-flash', 'gemini-1.5-pro', 'gemini-3.5-pro'].map(m => (
                   <button key={m} type="button"
                     onClick={() => { setGeminiModel(m); localStorage.setItem('geminiModel', m); }}
                     style={{ padding: '0.3rem 0.65rem', borderRadius: 8, border: '1px solid', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
@@ -1138,13 +1138,13 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
                 className="input-control"
                 value={geminiModel}
                 onChange={e => { setGeminiModel(e.target.value); localStorage.setItem('geminiModel', e.target.value); }}
-                placeholder="ex: gemini-2.0-flash"
+                placeholder="ex: gemini-1.5-flash"
                 style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
               />
               <p style={{ marginTop: '0.4rem', fontSize: '0.73rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                 💡 Vérifiez les IDs disponibles sur{' '}
                 <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#4285F4', fontWeight: 600 }}>aistudio.google.com</a>.
-                Le modèle <strong>gemini-2.0-flash</strong> est recommandé pour sa rapidité et son respect strict du schéma de sortie.
+                Le modèle <strong>gemini-1.5-flash</strong> ou <strong>gemini-3.5-flash</strong> est recommandé pour sa rapidité et son respect strict du schéma de sortie.
               </p>
             </div>
           )}
