@@ -3265,25 +3265,35 @@ printWhenReady();
 export const openPrintWindow = (html, title, targetWindow) => {
   const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
   
-  if (isMobile || targetWindow) {
-    const win = targetWindow || window.open('', '_blank');
-    if (!win) {
-      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-      const url  = URL.createObjectURL(blob);
-      window.location.href = url;
-      return;
+  if (isMobile) {
+    // Close target window if it was opened pre-emptively on mobile
+    if (targetWindow) {
+      try { targetWindow.close(); } catch (e) {}
     }
-    
+    // Download document directly (same method as Grille) to avoid popup blockers and browser bugs
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${title || 'document'}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    return;
+  }
+  
+  if (targetWindow) {
     try {
-      win.document.open();
-      win.document.write(html);
-      win.document.close();
+      targetWindow.document.open();
+      targetWindow.document.write(html);
+      targetWindow.document.close();
     } catch (err) {
       console.error('Error writing to print window:', err);
       // Fallback: redirect if writing fails
       const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
       const url  = URL.createObjectURL(blob);
-      win.location.href = url;
+      targetWindow.location.href = url;
     }
   } else {
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });

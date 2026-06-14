@@ -375,10 +375,21 @@ export default function SchoolExamsPage() {
                         return;
                       }
                       if (exam.pdfUrl) {
-                        window.open(exam.pdfUrl, '_blank');
+                        if (isMobile) {
+                          const a = document.createElement('a');
+                          a.href = exam.pdfUrl;
+                          a.download = `${exam.name || 'examen'}.pdf`;
+                          a.target = '_blank';
+                          a.rel = 'noopener noreferrer';
+                          document.body.appendChild(a);
+                          a.click();
+                          document.body.removeChild(a);
+                        } else {
+                          window.open(exam.pdfUrl, '_blank');
+                        }
                       } else {
-                        // Open the print window synchronously to avoid mobile popup blockers
-                        const win = window.open('', '_blank');
+                        // Open the print window synchronously only on desktop to avoid popup blockers
+                        const win = isMobile ? null : window.open('', '_blank');
                         if (win) {
                           win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre sujet PDF en cours...</p></div></body></html>');
                         }
@@ -425,8 +436,8 @@ export default function SchoolExamsPage() {
                         navigate(user ? '/subscription' : '/login');
                         return;
                       }
-                      // Open the print window synchronously to avoid mobile popup blockers
-                      const win = window.open('', '_blank');
+                      // Open the print window synchronously only on desktop to avoid popup blockers
+                      const win = isMobile ? null : window.open('', '_blank');
                       if (win) {
                         win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre corrigé PDF en cours...</p></div></body></html>');
                       }
