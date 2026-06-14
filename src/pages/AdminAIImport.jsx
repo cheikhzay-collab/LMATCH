@@ -300,7 +300,10 @@ export default function AdminAIImport() {
   // Setup state
   const [provider, setProvider] = useState(() => draft?.provider || localStorage.getItem('aiImportProvider') || 'gemini');
   const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('geminiApiKey') || '');
-  const [geminiModel, setGeminiModel] = useState(() => draft?.geminiModel || localStorage.getItem('geminiModel') || 'gemini-1.5-flash');
+  const [geminiModel, setGeminiModel] = useState(() => {
+    const m = draft?.geminiModel || localStorage.getItem('geminiModel') || 'gemini-1.5-flash';
+    return m === 'gemini-2.0-flash' ? 'gemini-1.5-flash' : m;
+  });
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('claudeApiKey') || '');
   const [proxyUrl, setProxyUrl] = useState(() => localStorage.getItem('claudeProxyUrl') || '');
   const [claudeModel, setClaudeModel] = useState(() => localStorage.getItem('claudeModel') || 'claude-opus-4-5');
