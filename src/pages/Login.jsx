@@ -101,7 +101,7 @@ export default function Login() {
           <LconqLogo 
             size={64} 
             textSize="2.2rem" 
-            textColor="#fff" 
+            variant="light"
             style={{ 
               flexDirection: 'column', 
               gap: '1rem', 

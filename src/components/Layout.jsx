@@ -87,13 +87,15 @@ export default function Layout() {
         <h2 style={{
           fontFamily: "'Plus Jakarta Sans', 'Inter', sans-serif",
           fontSize: '1.8rem',
-          fontWeight: 800,
+          fontWeight: 900,
           letterSpacing: '-0.03em',
-          color: '#ffffff',
+          background: 'linear-gradient(135deg, #ffffff 30%, #a1a1aa 100%)',
+          WebkitBackgroundClip: 'text',
+          WebkitTextFillColor: 'transparent',
           margin: '0 0 0.5rem 0',
           animation: 'pulse 2.2s ease-in-out infinite'
         }}>
-          lconq
+          L'CONQ
         </h2>
         
         <p style={{
