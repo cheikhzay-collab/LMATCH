@@ -301,8 +301,12 @@ export default function AdminAIImport() {
   const [provider, setProvider] = useState(() => draft?.provider || localStorage.getItem('aiImportProvider') || 'gemini');
   const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('geminiApiKey') || '');
   const [geminiModel, setGeminiModel] = useState(() => {
-    const m = draft?.geminiModel || localStorage.getItem('geminiModel') || 'gemini-1.5-flash';
-    return m === 'gemini-2.0-flash' ? 'gemini-1.5-flash' : m;
+    let m = draft?.geminiModel || localStorage.getItem('geminiModel') || 'gemini-1.5-flash';
+    if (typeof m === 'string' && (m.includes('2.0-flash') || m.includes('2.0'))) {
+      m = 'gemini-1.5-flash';
+      localStorage.setItem('geminiModel', 'gemini-1.5-flash');
+    }
+    return m;
   });
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('claudeApiKey') || '');
   const [proxyUrl, setProxyUrl] = useState(() => localStorage.getItem('claudeProxyUrl') || '');
@@ -422,7 +426,10 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
       userPromptText = `${pageNote}Extrais TOUTES les questions QCM de ce document et retourne le JSON demandé.`;
     }
 
-    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiKey}`;
+    const modelToUse = (geminiModel && (geminiModel.includes('2.0-flash') || geminiModel.includes('2.0')))
+      ? 'gemini-1.5-flash'
+      : geminiModel;
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${geminiKey}`;
     
     // Create fresh AbortController for this request
     abortRef.current = new AbortController();
