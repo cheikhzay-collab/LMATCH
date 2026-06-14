@@ -205,8 +205,11 @@ function tokenizeMath(text) {
 const LATEX_COMMAND_RE = /\\(?:lim|frac|dfrac|left|right|cdot|sqrt|sum|int|prod|infty|to|ln|log|exp|sin|cos|tan|arcsin|arccos|arctan|alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|mathbb|mathcal|mathbf|mathrm|text|vec|hat|bar|tilde|overline|underline|widehat|widetilde|dot|ddot|pm|mp|times|div|cap|cup|in|notin|subset|supset|leq|geq|le|ge|neq|approx|equiv|sim|forall|exists|partial|nabla|rightarrow|leftarrow|Rightarrow|Leftarrow|Leftrightarrow|iff|implies|quad|qquad|ell|Re|Im|max|min|sup|inf|det|dim|ker|rank|mod|circ|bullet|star|oplus|otimes|begin|end)\b/;
 
 function autoWrapLatex(text) {
-  if (text.includes('$') || !LATEX_COMMAND_RE.test(text)) return text;
-  return `$${text}$`;
+  if (text.includes('$')) return text;
+  if (/[\\^_{}]/.test(text) || LATEX_COMMAND_RE.test(text)) {
+    return `$${text}$`;
+  }
+  return text;
 }
 
 function renderTextWithBold(text) {
@@ -288,7 +291,24 @@ export function renderWithMath(text) {
     .replace(/\r/g, '\n');                 // lone CR → LF
   
   const normalised = normalisedTemp.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g)
-    .map((part, idx) => (idx % 2 === 1 ? part : part.replace(/\\n/g, '\n')))
+    .map((part, idx) => {
+      if (idx % 2 === 1) return part;
+      let cleanedPart = part.replace(/\\n/g, '\n');
+      
+      // Force line break before "Étape" / "Step" / "الخطوة" outside math blocks (case-insensitive)
+      if (idx > 0) {
+        cleanedPart = cleanedPart.replace(/^\s*(\*\*)?(étape|etape|step|الخطوة)\b/gi, '\n$1$2');
+      }
+      cleanedPart = cleanedPart.replace(/(?<=[.!?$;:\-)\]}»*])\s+(\*\*)?(étape|etape|step|الخطوة)\b/gi, '\n$1$2');
+
+      // Force line break before Response / Attention blocks (case-insensitive)
+      if (idx > 0) {
+        cleanedPart = cleanedPart.replace(/^\s*(\*\*)?(réponse|reponse|attention)\b/gi, '\n$1$2');
+      }
+      cleanedPart = cleanedPart.replace(/(?<=[.!?$;:\-)\]}»*])\s+(\*\*)?(réponse|reponse|attention)\b/gi, '\n$1$2');
+      
+      return cleanedPart;
+    })
     .join('');
 
   const hasNewlines = normalised.includes('\n');

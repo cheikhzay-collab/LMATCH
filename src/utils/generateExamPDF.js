@@ -149,14 +149,27 @@ const repairCorruptedLatex = (text) => {
     .replace(/(?<![a-zA-Z\\])rac\{/g, '\\frac{');
 };
 
+const LATEX_COMMAND_RE = /\\(?:lim|frac|dfrac|left|right|cdot|sqrt|sum|int|prod|infty|to|ln|log|exp|sin|cos|tan|arcsin|arccos|arctan|alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega|Gamma|Delta|Theta|Lambda|Xi|Pi|Sigma|Upsilon|Phi|Psi|Omega|mathbb|mathcal|mathbf|mathrm|text|vec|hat|bar|tilde|overline|underline|widehat|widetilde|dot|ddot|pm|mp|times|div|cap|cup|in|notin|subset|supset|leq|geq|le|ge|neq|approx|equiv|sim|forall|exists|partial|nabla|rightarrow|leftarrow|Rightarrow|Leftarrow|Leftrightarrow|iff|implies|quad|qquad|ell|Re|Im|max|min|sup|inf|det|dim|ker|rank|mod|circ|bullet|star|oplus|otimes|begin|end)\b/;
+
+function autoWrapLatex(text) {
+  if (text.includes('$')) return text;
+  if (/[\\^_{}]/.test(text) || LATEX_COMMAND_RE.test(text)) {
+    return `$${text}$`;
+  }
+  return text;
+}
+
 /* ── Math renderer: LaTeX → HTML string ── */
 const renderMath = (text) => {
   if (!text) return '';
   
   const repairedText = repairCorruptedLatex(text);
+  const toParse = autoWrapLatex(repairedText);
   
-  // Format steps automatically by inserting newlines before Step/Étape/الخطوة
-  const formattedText = repairedText.replace(/(?<!^)\s*(Étape \d+|Step \d+|الخطوة \d+)/gi, '\n$1');
+  // Format steps and response/attention automatically by inserting newlines before keywords
+  let formattedText = toParse
+    .replace(/(?<=[.!?$;:\-)\]}»*])\s+(\*\*)?(étape|etape|step|الخطوة)\b/gi, '\n$1$2')
+    .replace(/(?<=[.!?$;:\-)\]}»*])\s+(\*\*)?(réponse|reponse|attention)\b/gi, '\n$1$2');
   
   const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   
@@ -338,8 +351,6 @@ export const generateSubjectHTML = async (examTitle, school, year, questions, se
     premiumQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(premiumQrPayload)}&ecc=H&margin=4`;
   }
 
-  const groups = groupBySubject(questions);
-
   /* Compact OMR Grid rows */
   const cHalf = Math.ceil(questions.length / 2);
   const cCol1 = questions.slice(0, cHalf);
@@ -461,40 +472,44 @@ export const generateSubjectHTML = async (examTitle, school, year, questions, se
   </div>
 </div>` : '';
 
+  // Sort questions by question_number if present
+  const sortedQuestions = [...questions].sort((a, b) => {
+    const numA = parseInt(a.question_number) || 0;
+    const numB = parseInt(b.question_number) || 0;
+    return numA - numB;
+  });
+
   /* Questions HTML */
-  let sectionIndex = 0;
-  const questionsHtml = Object.entries(groups).map(([subject, qs]) => {
-    sectionIndex++;
+  const questionsHtml = sortedQuestions.map((q, idx) => {
+    const num = q.question_number || (idx + 1);
+    const subject = q.subject || q.topic || 'Général';
     const themeClass = getThemeClass(subject);
+    const optionsHtml = (q.options || []).map((opt, oi) => {
+      const letter = LETTERS[oi] || String(oi + 1);
+      return `<div class="ws-opt">
+        <span class="ws-opt-letter">${letter}</span>
+        <span class="ws-opt-text">${renderMath(optText(opt))}</span>
+      </div>`;
+    }).join('');
+
     return `
     <div class="ws-section ${themeClass}">
-      ${qs.map((q, idx) => {
-        const num = q.question_number || (idx + 1);
-        const optionsHtml = (q.options || []).map((opt, oi) => {
-          const letter = LETTERS[oi] || String(oi + 1);
-          return `<div class="ws-opt">
-            <span class="ws-opt-letter">${letter}</span>
-            <span class="ws-opt-text">${renderMath(optText(opt))}</span>
-          </div>`;
-        }).join('');
-
-        return `<div class="ws-exercise">
-          <div class="ws-ex-header">
-            <div class="ws-ex-pill">
-              <span class="ws-ex-pill-label">Question N°</span>
-              <span class="ws-ex-num">${num}</span>
-            </div>
-            <span class="ws-ans-tag">${subject.toUpperCase()}</span>
+      <div class="ws-exercise">
+        <div class="ws-ex-header">
+          <div class="ws-ex-pill">
+            <span class="ws-ex-pill-label">Question N°</span>
+            <span class="ws-ex-num">${num}</span>
           </div>
-          <div class="ws-ex-body">
-            ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)}</div>` : ''}
-            ${renderQuestionImageHTML(q, 'above')}
-            <div class="ws-qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
-            ${renderQuestionImageHTML(q, 'below')}
-            <div class="ws-opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
-          </div>
-        </div>`;
-      }).join('')}
+          <span class="ws-ans-tag">${subject.toUpperCase()}</span>
+        </div>
+        <div class="ws-ex-body">
+          ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)}</div>` : ''}
+          ${renderQuestionImageHTML(q, 'above')}
+          <div class="ws-qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
+          ${renderQuestionImageHTML(q, 'below')}
+          <div class="ws-opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
+        </div>
+      </div>
     </div>`;
   }).join('');
 
@@ -1527,8 +1542,6 @@ printWhenReady();
     ? `© ${new Date().getFullYear()} L'CONQ × ${profName}. Tous droits réservés.`
     : `© ${new Date().getFullYear()} L'CONQ. Tous droits réservés.`;
 
-  const groups = groupBySubject(questions);
-
   const LETTERS = ['A', 'B', 'C', 'D', 'E'];
 
   const coverHtml = shouldShowCover ? `
@@ -1575,58 +1588,62 @@ printWhenReady();
   </div>
 </div>` : '';
 
+  // Sort questions by question_number if present
+  const sortedQuestions = [...questions].sort((a, b) => {
+    const numA = parseInt(a.question_number) || 0;
+    const numB = parseInt(b.question_number) || 0;
+    return numA - numB;
+  });
+
   /* Questions HTML */
-  let sectionIndex = 0;
-  const questionsHtml = Object.entries(groups).map(([subject, qs]) => {
-    sectionIndex++;
+  const questionsHtml = sortedQuestions.map((q, idx) => {
+    const num = q.question_number || (idx + 1);
+    const subject = q.subject || q.topic || 'Général';
     const themeClass = getThemeClass(subject);
+    const optionsHtml = (q.options || []).map((opt, oi) => {
+      const letter = LETTERS[oi] || String(oi + 1);
+      const isCorrect = q.correct_answer === letter;
+      return `<div class="ws-opt${isCorrect ? ' ws-opt-correct' : ''}">
+        <span class="ws-opt-letter${isCorrect ? ' ws-opt-letter-correct' : ''}">${letter}</span>
+        <span class="ws-opt-text">${renderMath(optText(opt))}</span>
+        ${isCorrect ? '<span class="ws-check">✓</span>' : ''}
+      </div>`;
+    }).join('');
+
     return `
     <div class="ws-section ${themeClass}">
-      ${qs.map((q, idx) => {
-        const num = q.question_number || (idx + 1);
-        const optionsHtml = (q.options || []).map((opt, oi) => {
-          const letter = LETTERS[oi] || String(oi + 1);
-          const isCorrect = q.correct_answer === letter;
-          return `<div class="ws-opt${isCorrect ? ' ws-opt-correct' : ''}">
-            <span class="ws-opt-letter${isCorrect ? ' ws-opt-letter-correct' : ''}">${letter}</span>
-            <span class="ws-opt-text">${renderMath(optText(opt))}</span>
-            ${isCorrect ? '<span class="ws-check">✓</span>' : ''}
-          </div>`;
-        }).join('');
-
-        return `<div class="ws-exercise">
-          <div class="ws-ex-header">
-            <div class="ws-ex-pill">
-              <span class="ws-ex-pill-label">Question N°</span>
-              <span class="ws-ex-num">${num}</span>
-            </div>
-            <span class="ws-ans-tag">👁️ Réponse : <strong>${q.correct_answer || '?'}</strong></span>
+      <div class="ws-exercise">
+        <div class="ws-ex-header">
+          <div class="ws-ex-pill">
+            <span class="ws-ex-pill-label">Question N°</span>
+            <span class="ws-ex-num">${num}</span>
           </div>
-          <div class="ws-ex-body">
-            ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)}</div>` : ''}
-            ${renderQuestionImageHTML(q, 'above')}
-            <div class="ws-qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
-            ${renderQuestionImageHTML(q, 'below')}
-            <div class="ws-opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
-          </div>
-          ${q.astuce ? `<div class="ws-tip-card">
-            <div class="ws-tip-header">
-              <span class="ws-tip-icon">💡</span>
-              <span class="ws-tip-title">Règle de l'Art</span>
-              <span class="ws-tip-accent">Astuce & Méthode Rapide</span>
-            </div>
-            <div class="ws-tip-body">${renderMath(q.astuce)}</div>
-          </div>` : ''}
-          ${showTricks && q.trick ? `<div class="ws-trick-card">
-            <div class="ws-trick-header">
-              <span class="ws-trick-icon">⚡</span>
-              <span class="ws-trick-title">Coup de Grâce</span>
-              <span class="ws-trick-accent">Technique d'Élimination</span>
-            </div>
-            <div class="ws-trick-body">${renderMath(q.trick)}</div>
-          </div>` : ''}
-        </div>`;
-      }).join('')}
+          <span class="ws-ans-tag">👁️ Réponse : <strong>${q.correct_answer || '?'}</strong></span>
+        </div>
+        <div class="ws-ex-body">
+          ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)}</div>` : ''}
+          ${renderQuestionImageHTML(q, 'above')}
+          <div class="ws-qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
+          ${renderQuestionImageHTML(q, 'below')}
+          <div class="ws-opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
+        </div>
+      </div>
+      ${q.astuce ? `<div class="ws-tip-card">
+        <div class="ws-tip-header">
+          <span class="ws-tip-icon">💡</span>
+          <span class="ws-tip-title">Règle de l'Art</span>
+          <span class="ws-tip-accent">Astuce & Méthode Rapide</span>
+        </div>
+        <div class="ws-tip-body">${renderMath(q.astuce)}</div>
+      </div>` : ''}
+      ${showTricks && q.trick ? `<div class="ws-trick-card">
+        <div class="ws-trick-header">
+          <span class="ws-trick-icon">⚡</span>
+          <span class="ws-trick-title">Coup de Grâce</span>
+          <span class="ws-trick-accent">Technique d'Élimination</span>
+        </div>
+        <div class="ws-trick-body">${renderMath(q.trick)}</div>
+      </div>` : ''}
     </div>`;
   }).join('');
 
