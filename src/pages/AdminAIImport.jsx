@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { UploadCloud, Sparkles, Loader2, CheckCircle2, Trash2, Plus, Send, AlertCircle, FileText, StopCircle } from 'lucide-react';
@@ -399,8 +399,8 @@ export default function AdminAIImport() {
 
   // Helper to fetch QCM from Gemini API with schema enforcement
   const fetchGeminiWithPdf = async (base64Pdf) => {
-    let pageNote = '';
-    let userPromptText = '';
+    let pageNote;
+    let userPromptText;
 
     if (mode === 'with_correction') {
       pageNote = `IMPORTANT : Le fichier PDF fourni contient à la fois les questions de l'examen et la correction officielle/grille de réponses.
@@ -512,17 +512,17 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
         try {
           return JSON.parse(jsonMatch[0]);
         } catch (e) {
-          throw new Error(`Erreur lors du décodage du JSON de Gemini: ${err.message}`);
+          throw new Error(`Erreur lors du décodage du JSON de Gemini: ${err.message}`, { cause: e });
         }
       }
-      throw new Error(`Erreur lors du décodage du JSON de Gemini: ${err.message}`);
+      throw new Error(`Erreur lors du décodage du JSON de Gemini: ${err.message}`, { cause: err });
     }
   };
 
   // Stream PDF to Claude using SSE streaming API
   const streamClaudeWithPdf = async (base64Pdf) => {
-    let pageNote = '';
-    let userPromptText = '';
+    let pageNote;
+    let userPromptText;
 
     if (mode === 'with_correction') {
       pageNote = `IMPORTANT : Le fichier PDF fourni contient à la fois les questions de l'examen et la correction officielle/grille de réponses.
@@ -592,7 +592,6 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let accumulated = '';
-    let charCount = 0;
 
     while (true) {
       const { done, value } = await reader.read();
@@ -609,10 +608,9 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
           const evt = JSON.parse(data);
           if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
             accumulated += evt.delta.text;
-            charCount = accumulated.length;
             // Update progress with live stats
             const qCount = (accumulated.match(/"question_number"/g) || []).length;
-            setProgress(`⚡ Réception en cours... ${qCount > 0 ? `${qCount} questions détectées` : ''} (${(charCount/1000).toFixed(1)}k caractères)`);
+            setProgress(`⚡ Réception en cours... ${qCount > 0 ? `${qCount} questions détectées` : ''} (${(accumulated.length/1000).toFixed(1)}k caractères)`);
           }
         } catch { /* skip malformed SSE lines */ }
       }
@@ -664,10 +662,12 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
     if (extracted.length > 0) return extracted;
 
     // Strategy 4: sanitize control chars then re-parse
+    /* eslint-disable no-control-regex */
     const sanitized = cleanJson
       .replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, '') // strip control chars except \n
       .replace(/\n/g, '\\n')
       .replace(/,\s*([\]}])/g, '$1');
+    /* eslint-enable no-control-regex */
     try { return JSON.parse(sanitized); } catch { /* give up */ }
     try { return JSON.parse(repairTruncated(sanitized)); } catch { /* give up */ }
 

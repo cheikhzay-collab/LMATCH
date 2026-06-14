@@ -11,7 +11,7 @@
  *   6. Swipe to rate (left=hard, right=easy)
  */
 
-import React, { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { renderWithMath } from '../utils/mathRenderer';
 import {
   ChevronDown, ChevronUp,
@@ -19,8 +19,6 @@ import {
   Frown, Meh, Smile,
   BrainCircuit, Zap, Clock, Lightbulb,
 } from 'lucide-react';
-
-const OPTION_LABELS = ['A', 'B', 'C', 'D', 'E'];
 
 export default function MobileFlashcard({ card, onNext }) {
   /* ── State ── */
@@ -46,7 +44,7 @@ export default function MobileFlashcard({ card, onNext }) {
   const swipeActive = cardSwipeEnabled && !isInstantMode;
 
   // Reset scroll container to top when card mounts (next card) or when tab changes
-  React.useEffect(() => {
+  useEffect(() => {
     const scrollContainer = document.querySelector('.study-scroll-container');
     if (scrollContainer) {
       scrollContainer.scrollTop = 0;
@@ -148,7 +146,7 @@ export default function MobileFlashcard({ card, onNext }) {
         : swiping
           ? `translateX(${swipeDX}px) rotate(${swipeDX * 0.03}deg) ${isFlipMode && isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'}`
           : `translateX(0px) rotate(0deg) ${isFlipMode && isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)'}`,
-    transition: (swiping && axis.current === 'h') ? 'none'
+    transition: swiping ? 'none'
       : exitDir ? 'transform 0.32s cubic-bezier(0.4, 0, 0.6, 1), opacity 0.32s'
         : 'transform 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.35s ease',
     opacity: exitDir ? 0 : 1,

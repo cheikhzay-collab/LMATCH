@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Papa from 'papaparse';
 import { useAuth } from '../context/AuthContext';
-import { UploadCloud, CheckCircle2, Copy, Check, ChevronDown, ChevronUp, Sparkles, Zap } from 'lucide-react';
+import { UploadCloud, CheckCircle2, Copy, Check, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminUpload() {

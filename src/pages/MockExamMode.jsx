@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Timer, ArrowLeft, CheckCircle2, Zap, ChevronLeft, ChevronRight, LayoutGrid, Flame } from 'lucide-react';
+import { Timer, ArrowLeft, CheckCircle2, Zap, ChevronLeft, ChevronRight, LayoutGrid } from 'lucide-react';
 
 import { renderWithMath } from '../utils/mathRenderer';
 import CircularTimer from '../components/CircularTimer';
@@ -12,7 +12,7 @@ function renderOptionText(text) {
 }
 
 export default function MockExamMode() {
-  const { exams, saveMockExamResult, schoolBranding, isExamLocked, updateCardProgress, user } = useAuth();
+  const { exams, saveMockExamResult, schoolBranding, isExamLocked, updateCardProgress, user, loading } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const navigate = useNavigate();
@@ -25,7 +25,6 @@ export default function MockExamMode() {
   const [timeLeft, setTimeLeft]         = useState(TOTAL_TIME);
   const [isFinished, setIsFinished]     = useState(false);
   const [answers, setAnswers]           = useState({});
-  const [combo, setCombo]               = useState(0);
   const [selectedImageZoom, setSelectedImageZoom] = useState(null);
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
   const [showMobileContext, setShowMobileContext] = useState(false);
@@ -102,6 +101,40 @@ export default function MockExamMode() {
 
   const onReturn = useCallback(() => navigate(user ? '/dashboard' : '/schools'), [navigate, user]);
 
+  if (loading || (currentExam && !questions.length)) {
+    return (
+      <div className="focus-layout" style={{
+        height: '100vh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'radial-gradient(circle at center, #18181B 0%, #09090B 100%)'
+      }}>
+        <div style={{ position: 'relative', width: '60px', height: '60px', marginBottom: '1.2rem' }}>
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            borderRadius: '50%',
+            border: '3px solid rgba(113, 109, 242, 0.15)',
+            borderTop: '3px solid var(--violet)',
+            borderRight: '3px solid var(--emerald)',
+            animation: 'spinApp 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite'
+          }} />
+        </div>
+        <h3 style={{ color: '#fff', fontSize: '1.1rem', fontWeight: 800, margin: 0, letterSpacing: '0.05em' }}>
+          Chargement de l'examen...
+        </h3>
+        <style dangerouslySetInnerHTML={{__html: `
+          @keyframes spinApp {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        `}} />
+      </div>
+    );
+  }
+
   if (!currentExam) {
     return (
       <div className="focus-layout flex items-center justify-center" style={{ height: '100vh' }}>
@@ -171,11 +204,6 @@ export default function MockExamMode() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          {combo >= 2 && (
-            <div className="combo-badge" style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem' }}>
-              ✦ {combo}x Combo
-            </div>
-          )}
           <div className={`timer-pill ${isCritical ? 'critical' : ''}`} style={{ padding: '0.35rem 0.8rem', fontSize: '0.85rem' }}>
             <Timer size={14} />
             {Math.floor(timeLeft / 3600) > 0

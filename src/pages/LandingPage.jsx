@@ -1,4 +1,3 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import { BrainCircuit, Zap, CheckCircle2, Trophy, ArrowRight, Sparkles, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -233,7 +232,7 @@ export default function LandingPage() {
           </div>
 
           {/* Dynamic Premium Plans */}
-          {plans && plans.map((plan, index) => {
+          {plans && plans.map((plan) => {
             const isRecommended = !!plan.isRecommended;
             const formatPriceLabel = (price, days) => {
               if (days === 30 || days === 31) return 'Dh/mois';

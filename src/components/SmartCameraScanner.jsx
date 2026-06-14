@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Camera, Zap, ZapOff, Upload, RotateCw, AlertCircle, X, ShieldAlert } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Camera, Zap, ZapOff, Upload, RotateCw, AlertCircle, ShieldAlert } from 'lucide-react';
 import jsQR from 'jsqr';
 
 // Helper to parse QR data with backward compatibility
@@ -11,7 +11,7 @@ function parseQRData(dataStr) {
   }
   try {
     return JSON.parse(trimmed);
-  } catch (e) {
+  } catch {
     if (trimmed.length >= 8 && /^[a-fA-F0-9-]+$/.test(trimmed)) {
       return { examId: trimmed };
     }
@@ -256,7 +256,7 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
   }, [activeExam, captureHighRes]);
 
   // Initialize camera stream
-  const initCamera = async () => {
+  const initCamera = useCallback(async () => {
     setScannerStatus('initializing');
     setErrorMessage('');
     
@@ -308,10 +308,12 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
       setHasPermission(false);
       setScannerStatus('initializing');
     }
-  };
+  }, [startAnalysis]);
 
   useEffect(() => {
-    initCamera();
+    const timer = setTimeout(() => {
+      initCamera();
+    }, 0);
 
     // Option 5: Device Orientation listener
     const handleOrientation = (e) => {
@@ -323,6 +325,7 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
     window.addEventListener('deviceorientation', handleOrientation);
 
     return () => {
+      clearTimeout(timer);
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
       }
@@ -331,7 +334,7 @@ export default function SmartCameraScanner({ onCapture, onCancel, activeExam }) 
       }
       window.removeEventListener('deviceorientation', handleOrientation);
     };
-  }, []);
+  }, [initCamera]);
 
   const toggleTorch = async () => {
     if (!streamRef.current) return;

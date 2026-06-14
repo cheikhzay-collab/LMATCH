@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   ArrowLeft, BrainCircuit, Play, Zap, Lock,
-  BookOpen, Clock, GraduationCap, FileDown, ScanLine,
+  BookOpen, Clock, GraduationCap, FileDown,
   Stethoscope, Cpu, Wrench, BarChart3, Wifi, TrendingUp, Compass
 } from 'lucide-react';
 import { generateAnswerSheet } from '../utils/generateAnswerSheet';

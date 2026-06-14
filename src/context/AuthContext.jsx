@@ -1,9 +1,9 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
-import { getUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard } from '../services/userService';
-import { getAllExams, getActiveExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam } from '../services/examService';
+import { getUserDoc, createUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard } from '../services/userService';
+import { getAllExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam } from '../services/examService';
 import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig } from '../services/schoolService';
-import { getPlans, savePlans, getAllCodes, saveActivationCodes, markCodeUsed, getCode, redeemCodeViaRPC } from '../services/planService';
+import { getPlans, savePlans, getAllCodes, saveActivationCodes, redeemCodeViaRPC } from '../services/planService';
 import { sanitizeInputString, validatePhoneNumber } from '../utils/security';
 
 
@@ -36,6 +36,7 @@ const SCHEMA_VERSION = 3;
  */
 const sanitizeText = (s) => {
   if (typeof s !== 'string') return s;
+  /* eslint-disable no-control-regex */
   return s
     .replace(/\r\n/g, ' ')   // Windows CRLF
     .replace(/[\r\n]/g, ' ') // lone CR or LF
@@ -44,6 +45,7 @@ const sanitizeText = (s) => {
     .replace(/[\u200B-\u200D\uFEFF]/g, '')              // zero-width / BOM
     .replace(/ {2,}/g, ' ')  // collapse spaces
     .trim();
+  /* eslint-enable no-control-regex */
 };
 
 /**
@@ -146,7 +148,6 @@ const computeStudentStats = (exams, progress, leaderboard, user) => {
   let learningCards = 0;
   let dueToday = 0;
   let totalWeightedMasterySum = 0;
-  let studiedQuestionsCount = 0;
   const topicMap = {}; // topic -> { totalEF, count, weightedMasterySum, total }
 
   activeExams.forEach(e => {
@@ -186,7 +187,6 @@ const computeStudentStats = (exams, progress, leaderboard, user) => {
 
       topicMap[topic].weightedMasterySum += weight;
       totalWeightedMasterySum += weight;
-      studiedQuestionsCount++;
 
       topicMap[topic].totalEF += easeFactor;
       topicMap[topic].count++;
@@ -244,8 +244,8 @@ const computeStudentStats = (exams, progress, leaderboard, user) => {
     : 0;
 
   // Dynamic live rank based on real leaderboard or XP fallback
-  let totalStudents = user?.totalStudents || 1200;
-  let rank = 1200;
+  let totalStudents;
+  let rank;
   const userXp = user?.xp || 0;
 
   if (SUPABASE_ENABLED && leaderboard && leaderboard.length > 0) {
@@ -346,7 +346,7 @@ export function AuthProvider({ children }) {
   // On sign-in, enriches the local user state with database profile data.
   useEffect(() => {
     if (!SUPABASE_ENABLED) {
-      setLoading(false);
+      setTimeout(() => setLoading(false), 0);
       return;
     }
 
@@ -428,13 +428,12 @@ export function AuthProvider({ children }) {
   const [exams, setExams] = useState(initialExams);
 
   // Persist migration result immediately if schema was upgraded
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(() => {
     if (needsSave) {
       safeSetItem('exams', JSON.stringify(initialExams));
       safeSetItem('examsSchemaVersion', String(SCHEMA_VERSION));
     }
-  }, []); // run once on mount
+  }, [initialExams, needsSave]);
 
   useEffect(() => {
     safeSetItem('user', JSON.stringify(user));
@@ -561,14 +560,12 @@ export function AuthProvider({ children }) {
         safeSetItem('progress', JSON.stringify(migratedProgress));
       }
       return migratedProgress;
-    } catch (e) {
+    } catch {
       return {};
     }
   });
 
-  const [dueTodayCount, setDueTodayCount] = useState(0);
-
-  useEffect(() => {
+  const dueTodayCount = useMemo(() => {
     const now = new Date();
     let count = 0;
     Object.values(progress).forEach(p => {
@@ -576,7 +573,7 @@ export function AuthProvider({ children }) {
         count++;
       }
     });
-    setDueTodayCount(count);
+    return count;
   }, [progress]);
 
   useEffect(() => {
@@ -663,17 +660,19 @@ export function AuthProvider({ children }) {
     });
 
     if (changed) {
-      setUsers(checkedUsers);
-      if (user && user.subscription && new Date(user.subscription.endDate) < now && user.subscription.status === 'active') {
-        setUser(u => ({
-          ...u,
-          tier: 'freemium',
-          subscription: {
-            ...u.subscription,
-            status: 'expired'
-          }
-        }));
-      }
+      setTimeout(() => {
+        setUsers(checkedUsers);
+        if (user && user.subscription && new Date(user.subscription.endDate) < now && user.subscription.status === 'active') {
+          setUser(u => ({
+            ...u,
+            tier: 'freemium',
+            subscription: {
+              ...u.subscription,
+              status: 'expired'
+            }
+          }));
+        }
+      }, 0);
     }
   }, [users, user]);
 
@@ -758,7 +757,7 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
-      try { await logoutUser(); } catch (e) { /* ignore */ }
+      try { await logoutUser(); } catch { /* ignore */ }
     }
     setUser(null);
   };
@@ -912,7 +911,7 @@ export function AuthProvider({ children }) {
     if (saved) {
       try {
         parsed = JSON.parse(saved);
-      } catch (e) {
+      } catch {
         parsed = null;
       }
     }
@@ -1105,7 +1104,7 @@ export function AuthProvider({ children }) {
     if (saved) {
       try {
         return JSON.parse(saved);
-      } catch (e) {
+      } catch {
         return [];
       }
     }
@@ -1518,7 +1517,7 @@ export function AuthProvider({ children }) {
     };
 
     loadConfigAndExams();
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch User-specific data (progress, history, activity, leaderboard) when a student logs in
   useEffect(() => {
@@ -1548,7 +1547,7 @@ export function AuthProvider({ children }) {
     };
 
     loadStudentData();
-  }, [user?.id, user?.uid]);
+  }, [user]);
 
   const refreshAdminData = useCallback(async () => {
     if (!SUPABASE_ENABLED || user?.role !== 'admin') return;
@@ -1564,12 +1563,16 @@ export function AuthProvider({ children }) {
     } catch (e) {
       console.warn('[Supabase] Error loading admin users/codes:', e.message);
     }
-  }, [user?.id, user?.uid, user?.role]);
+  }, [user?.role]);
 
   // Fetch all registered users for Admin Dashboard when Admin is logged in
   useEffect(() => {
-    refreshAdminData();
-  }, [refreshAdminData]);
+    if (user?.role === 'admin') {
+      setTimeout(() => {
+        refreshAdminData();
+      }, 0);
+    }
+  }, [user?.role, refreshAdminData]);
 
 
   const addSchool = async (name) => {
@@ -1637,10 +1640,14 @@ export function AuthProvider({ children }) {
   const isExamLocked = (exam) => {
     if (!exam) return true;
     if (user?.role === 'admin') return false;
+    
+    // If not logged in, lock it (visitors must log in to access anything)
+    if (!user) return true;
+    
     if (exam.tier === 'freemium') return false;
     
-    // If not logged in or not premium, lock it
-    if (!user || user.tier !== 'premium') return true;
+    // If not premium, lock it
+    if (user.tier !== 'premium') return true;
     
     // Premium tier checks: verify plan allows this exam's school
     if (!user.subscription || user.subscription.status !== 'active') return true;
@@ -1674,4 +1681,5 @@ export function AuthProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => useContext(AuthContext) || {};

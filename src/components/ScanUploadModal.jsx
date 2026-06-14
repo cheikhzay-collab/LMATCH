@@ -1,8 +1,8 @@
-import React, { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Upload, Camera, CheckCircle2, XCircle, AlertCircle,
-  BrainCircuit, Zap, RotateCcw, X, Loader2, Edit3, Check, TrendingUp
+  BrainCircuit, Zap, RotateCcw, X, Loader2, Check, TrendingUp
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { scanAnswerSheet, readQRCodeFromImage } from '../utils/OMRScanner';

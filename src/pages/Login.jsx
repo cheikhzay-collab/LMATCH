@@ -1,14 +1,13 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { BrainCircuit, Eye, EyeOff, Zap, AlertCircle, Check } from 'lucide-react';
+import { Eye, EyeOff, Zap, AlertCircle, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import LconqLogo from '../components/LconqLogo';
 
 
 export default function Login() {
   const { pathname }                      = useLocation();
-  const isRegisterRoute                   = pathname === '/register';
-  const [isRegistering, setIsRegistering] = useState(isRegisterRoute);
+  const isRegistering                     = pathname === '/register';
   const [name, setName]                   = useState('');
   const [email, setEmail]                 = useState('');
   const [password, setPassword]           = useState('');
@@ -19,11 +18,6 @@ export default function Login() {
 
   const { login, register, loginWithGoogle } = useAuth();
   const navigate                          = useNavigate();
-
-  // Sync state with location path changes
-  React.useEffect(() => {
-    setIsRegistering(pathname === '/register');
-  }, [pathname]);
 
   const handleAuthSubmit = async (e) => {
     e.preventDefault();

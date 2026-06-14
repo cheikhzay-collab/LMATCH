@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   CheckCircle2, AlertTriangle, Zap, Award, BookOpen, 
-  ArrowRight, RefreshCw, LayoutDashboard, Brain 
+  RefreshCw, LayoutDashboard, Brain 
 } from 'lucide-react';
 
 export default function SessionSummary({ 

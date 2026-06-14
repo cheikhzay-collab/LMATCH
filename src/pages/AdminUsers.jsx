@@ -1,23 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { deleteUser } from '../services/userService';
-import { Users, Crown, Activity, TrendingUp, RefreshCw, Search, User, ChevronRight, Trash } from 'lucide-react';
+import { Users, Crown, Activity, TrendingUp, RefreshCw, Search, User, ChevronRight } from 'lucide-react';
 
 export default function AdminUsers() {
-  const { users, updateUserTier, refreshAdminData } = useAuth();
+  const { users, refreshAdminData } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const navigate = useNavigate();
-
-  const handleDelete = async (uid, e) => {
-    e.stopPropagation();
-    if (!window.confirm('هل تريد حذف هذا المستخدم بشكل دائم؟')) return;
-    const success = await deleteUser(uid);
-    if (success) {
-      await refreshAdminData();
-    }
-  };
 
   useEffect(() => {
     if (refreshAdminData) {
@@ -33,11 +23,6 @@ export default function AdminUsers() {
     } finally {
       setIsRefreshing(false);
     }
-  };
-
-  const toggleTier = (userId, currentTier) => {
-    const newTier = currentTier === 'premium' ? 'freemium' : 'premium';
-    updateUserTier(userId, newTier);
   };
 
   const filteredUsers = users.filter(u => 

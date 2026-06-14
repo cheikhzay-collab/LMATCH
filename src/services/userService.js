@@ -287,10 +287,15 @@ export const incrementDailyActivity = async (uid) => {
  */
 export const getRecentActivity = async (uid, days = 90) => {
   if (!supabase) return {};
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - days);
+  const cutoffStr = cutoffDate.toISOString().split('T')[0];
+
   const { data, error } = await supabase
     .from('activity')
     .select('*')
-    .eq('user_id', uid);
+    .eq('user_id', uid)
+    .gte('date', cutoffStr);
   if (error) {
     console.error('[Supabase] Failed to fetch recent activity:', error);
     return {};

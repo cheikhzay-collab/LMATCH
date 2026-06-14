@@ -1,8 +1,7 @@
-import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, BrainCircuit, BookOpen, UploadCloud,
-  LogOut, Trophy, Library, Users, Settings, Zap, Sun, Moon, GraduationCap, Sparkles, BookMarked, Camera, Megaphone, Crown
+  LayoutDashboard, BookOpen, UploadCloud,
+  LogOut, Trophy, Library, Users, Settings, Zap, Sun, Moon, GraduationCap, Sparkles, BookMarked, Camera, Crown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import LconqLogo from './LconqLogo';

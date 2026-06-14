@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Upload, Camera, CheckCircle2, XCircle, AlertCircle,
-  BrainCircuit, Zap, RotateCcw, Loader2, Check, TrendingUp, Sparkles, BookOpen, Printer
+  BrainCircuit, Zap, RotateCcw, Loader2, Check, TrendingUp, Printer
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { scanAnswerSheet, readQRCodeFromImage } from '../utils/OMRScanner';
@@ -213,7 +213,7 @@ export default function OMRScannerPage() {
       setScanError(e.message);
       setPhase('upload');
     }
-  }, [exams]);
+  }, [exams, isExamLocked]);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -500,7 +500,7 @@ export default function OMRScannerPage() {
               <h3 style={{ fontWeight:800, marginBottom:'0.5rem' }}>Analyse OMR intelligente…</h3>
               <p style={{ color: 'var(--text-muted)', fontSize:'0.88rem', marginBottom: '2rem' }}>L'IA calibre la feuille et extrait les repères.</p>
 
-              <div style={{ display:'flex', display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+              <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
                 {[
                   'Traitement numérique & contraste',
                   "Lecture du QR Code & identification QCM",

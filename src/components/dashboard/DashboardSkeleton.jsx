@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function DashboardSkeleton() {
   return (
     <div className="animate-pulse-subtle">
@@ -70,7 +68,7 @@ export default function DashboardSkeleton() {
             <div className="shimmer-bg" style={{ width: 140, height: 16, borderRadius: '4px' }} />
             <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', height: '120px', padding: '0 0.5rem' }}>
               {[1, 2, 3, 4, 5, 6, 7].map((day) => (
-                <div key={day} className="shimmer-bg" style={{ width: '10%', height: `${20 + Math.random() * 60}%`, borderRadius: '4px 4px 0 0' }} />
+                <div key={day} className="shimmer-bg" style={{ width: '10%', height: `${20 + ((day * 17) % 61)}%`, borderRadius: '4px 4px 0 0' }} />
               ))}
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 0.2rem' }}>

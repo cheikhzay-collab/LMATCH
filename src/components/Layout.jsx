@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import { Suspense } from 'react';
 import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';

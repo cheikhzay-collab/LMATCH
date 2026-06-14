@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
-  Trophy, Flame, Target, BrainCircuit, Play, Lock,
-  Zap, TrendingUp, BookOpen, Clock, Camera, LayoutDashboard,
-  CheckCircle2, Award, History, FileText, Printer
+  Trophy, Flame, Target, BrainCircuit,
+  Zap, Clock, Camera, LayoutDashboard,
+  CheckCircle2, FileText
 } from 'lucide-react';
 
 import StatCard from '../components/dashboard/StatCard';
@@ -18,7 +18,6 @@ export default function StudentDashboard() {
   const { 
     user, 
     exams, 
-    progress, 
     getStudentStats, 
     mockExamHistory, 
     profName, 
@@ -33,16 +32,20 @@ export default function StudentDashboard() {
   
   const stats = useMemo(() => getStudentStats(), [getStudentStats]);
   const [toastMessage, setToastMessage] = useState(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    return !!(user && user.role === 'student' && (!user.phone || !user.city));
+  });
 
   // Auto-trigger onboarding if fields are empty
   useEffect(() => {
-    if (user && user.role === 'student' && (!user.phone || !user.city)) {
-      setShowOnboarding(true);
-    } else {
-      setShowOnboarding(false);
+    const shouldShow = !!(user && user.role === 'student' && (!user.phone || !user.city));
+    if (shouldShow !== showOnboarding) {
+      const timer = setTimeout(() => {
+        setShowOnboarding(shouldShow);
+      }, 0);
+      return () => clearTimeout(timer);
     }
-  }, [user]);
+  }, [user, showOnboarding]);
 
   const handleOnboardingSubmit = useCallback(async ({ phone, city }) => {
     await updateProfile({ phone, city });
@@ -52,15 +55,21 @@ export default function StudentDashboard() {
   useEffect(() => {
     if (location.state?.partialSave) {
       const count = location.state.count || 0;
-      setToastMessage(`Session enregistrée ! Votre progression sur les ${count} fiches révisées a été sauvegardée avec succès.`);
-      
-      navigate(location.pathname, { replace: true, state: {} });
+      const message = `Session enregistrée ! Votre progression sur les ${count} fiches révisées a été sauvegardée avec succès.`;
       
       const timer = setTimeout(() => {
+        setToastMessage(message);
+        navigate(location.pathname, { replace: true, state: {} });
+      }, 0);
+      
+      const dismissTimer = setTimeout(() => {
         setToastMessage(null);
       }, 5000);
       
-      return () => clearTimeout(timer);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(dismissTimer);
+      };
     }
   }, [location, navigate]);
 

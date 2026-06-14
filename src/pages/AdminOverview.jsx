@@ -1,14 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, BookOpen, CircleDollarSign, TrendingUp, Camera, 
-  Sparkles, AlertTriangle, Activity, CheckCircle, RefreshCw, X, ArrowUpRight, Phone, Award, FileText
+  Sparkles, AlertTriangle, CheckCircle, RefreshCw, Phone
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
+const CustomTooltip = ({ active, payload, label, showDerivative }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{ 
+        background: 'rgba(15, 23, 42, 0.95)', 
+        backdropFilter: 'blur(16px)', 
+        border: '1px solid rgba(255,255,255,0.08)', 
+        padding: '0.8rem 1.2rem', 
+        borderRadius: '12px', 
+        boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
+        color: '#fff',
+        fontFamily: 'inherit'
+      }}>
+        <p style={{ margin: '0 0 0.5rem 0', fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{label}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+          <p style={{ margin: 0, fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', gap: '1.5rem', alignItems: 'center' }}>
+            <span>Moyenne f(t) :</span>
+            <strong style={{ color: '#E2B874', fontSize: '1rem' }}>{payload[0].value}/100</strong>
+          </p>
+          {showDerivative && payload[1] && (
+            <p style={{ margin: 0, fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', gap: '1.5rem', alignItems: 'center' }}>
+              <span>Vitesse f'(t) :</span>
+              <strong style={{ color: 'var(--violet)', fontSize: '1rem' }}>
+                {payload[1].value > 0 ? `+${payload[1].value}` : payload[1].value}% / sem
+              </strong>
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
+  return null;
+};
+
 export default function AdminOverview() {
-  const { users, exams, activationCodes, refreshAdminData } = useAuth();
+  const { users, exams, refreshAdminData } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -131,41 +165,6 @@ export default function AdminOverview() {
     setActionItems(prev => prev.filter(item => item.id !== id));
   };
 
-
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div style={{ 
-          background: 'rgba(15, 23, 42, 0.95)', 
-          backdropFilter: 'blur(16px)', 
-          border: '1px solid rgba(255,255,255,0.08)', 
-          padding: '0.8rem 1.2rem', 
-          borderRadius: '12px', 
-          boxShadow: '0 12px 40px rgba(0,0,0,0.4)',
-          color: '#fff',
-          fontFamily: 'inherit'
-        }}>
-          <p style={{ margin: '0 0 0.5rem 0', fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{label}</p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
-            <p style={{ margin: 0, fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', gap: '1.5rem', alignItems: 'center' }}>
-              <span>Moyenne f(t) :</span>
-              <strong style={{ color: '#E2B874', fontSize: '1rem' }}>{payload[0].value}/100</strong>
-            </p>
-            {showDerivative && payload[1] && (
-              <p style={{ margin: 0, fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', gap: '1.5rem', alignItems: 'center' }}>
-                <span>Vitesse f'(t) :</span>
-                <strong style={{ color: 'var(--violet)', fontSize: '1rem' }}>
-                  {payload[1].value > 0 ? `+${payload[1].value}` : payload[1].value}% / sem
-                </strong>
-              </p>
-            )}
-          </div>
-        </div>
-      );
-    }
-    return null;
-  };
 
   return (
     <div className="animate-fade-in" style={{ direction: 'ltr', textAlign: 'left', position: 'relative' }}>
@@ -407,7 +406,7 @@ export default function AdminOverview() {
                   {showDerivative && (
                     <YAxis yAxisId="right" orientation="right" stroke="var(--violet)" fontSize={11} tickLine={false} axisLine={false} domain={[-5, 15]} />
                   )}
-                  <Tooltip content={<CustomTooltip />} />
+                  <Tooltip content={<CustomTooltip showDerivative={showDerivative} />} />
                   
                   {/* Main spline f(t) */}
                   <Area 

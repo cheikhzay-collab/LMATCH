@@ -18,7 +18,6 @@ import {
 } from 'workbox-precaching';
 import { registerRoute, NavigationRoute } from 'workbox-routing';
 import {
-  NetworkFirst,
   CacheFirst,
   StaleWhileRevalidate,
 } from 'workbox-strategies';

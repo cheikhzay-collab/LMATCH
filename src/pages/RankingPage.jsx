@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getLeaderboard } from '../services/userService';
 import { Trophy, Flame, Crown, Medal, Award, Search, School, Zap, ChevronUp, ChevronDown } from 'lucide-react';
 
 function useIsMobile() {
@@ -32,16 +31,12 @@ export default function RankingPage() {
     return parts[0].slice(0, 2).toUpperCase();
   };
 
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
     const fetchLeaderboardData = async () => {
       try {
         await refreshLeaderboard();
       } catch (err) {
         console.error('[Ranking] Failed to load real leaderboard:', err);
-      } finally {
-        setLoading(false);
       }
     };
     fetchLeaderboardData();
@@ -492,7 +487,7 @@ export default function RankingPage() {
             <span>Aucun élève ne correspond à votre recherche.</span>
           </div>
         ) : (
-          filteredLeaderboard.map((item, idx) => {
+          filteredLeaderboard.map((item) => {
             if (item.isSpacer) {
               return (
                 <div 

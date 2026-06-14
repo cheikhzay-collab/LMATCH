@@ -17,7 +17,7 @@ export const uploadAsset = async (file, path) => {
   }
 
   // Upload file to 'gima-assets' bucket
-  const { data, error } = await supabase.storage
+  const { error } = await supabase.storage
     .from('gima-assets')
     .upload(path, file, {
       cacheControl: '3600',

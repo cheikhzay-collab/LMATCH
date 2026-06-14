@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, Zap, RefreshCw, Layers, MousePointerClick, Crown, Download, Sliders, FileText } from 'lucide-react';
+import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, RefreshCw, Layers, MousePointerClick, Crown, Download, Sliders, FileText } from 'lucide-react';
 
 export default function AdminSettings() {
   const { 

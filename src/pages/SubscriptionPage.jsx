@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
   Crown, CheckCircle2, Zap, AlertCircle, Key, CreditCard, 
-  ChevronRight, Sparkles, X, ShieldCheck, HelpCircle 
+  ChevronRight, X, ShieldCheck, HelpCircle 
 } from 'lucide-react';
 import { sanitizeInputString } from '../utils/security';
 
@@ -19,7 +19,7 @@ function useIsMobile() {
 }
 
 export default function SubscriptionPage() {
-  const { user, plans, activateSubscription, activationCodes, redeemActivationCode, profPhone } = useAuth();
+  const { user, plans, activateSubscription, redeemActivationCode, profPhone } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -69,11 +69,6 @@ export default function SubscriptionPage() {
     setErrorMsg('');
     setSuccessMsg('');
 
-    const cleanCardName = sanitizeInputString(cardName);
-    const cleanCardNumber = sanitizeInputString(cardNumber);
-    const cleanCardExpiry = sanitizeInputString(cardExpiry);
-    const cleanCardCvc = sanitizeInputString(cardCvc);
-
     // Simulate standard credit card processing lag
     setTimeout(async () => {
       try {
@@ -83,7 +78,7 @@ export default function SubscriptionPage() {
         setIsProcessing(false);
         // Clear message after 5 seconds
         setTimeout(() => setSuccessMsg(''), 6000);
-      } catch (err) {
+      } catch {
         setErrorMsg("Échec de la simulation de paiement.");
         setIsProcessing(false);
       }

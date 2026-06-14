@@ -1,5 +1,4 @@
 import { useCurrentFrame, interpolate, spring } from "remotion";
-import React from "react";
 import katex from "katex";
 
 // Helper to render inline/display math formulas using KaTeX
@@ -12,7 +11,7 @@ const renderWithMath = (text) => {
       try {
         const html = katex.renderToString(math, { displayMode: true, throwOnError: false });
         return <div key={index} style={{ margin: '15px 0' }} dangerouslySetInnerHTML={{ __html: html }} />;
-      } catch (err) {
+      } catch {
         return <span key={index}>{part}</span>;
       }
     } else if (part.startsWith('$') && part.endsWith('$')) {
@@ -20,7 +19,7 @@ const renderWithMath = (text) => {
       try {
         const html = katex.renderToString(math, { displayMode: false, throwOnError: false });
         return <span key={index} dangerouslySetInnerHTML={{ __html: html }} />;
-      } catch (err) {
+      } catch {
         return <span key={index}>{part}</span>;
       }
     }

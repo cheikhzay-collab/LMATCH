@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Unlock, Library, Eye, EyeOff, Edit, X, FileText, Download, Search, BookOpen, Trash2, Archive } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';

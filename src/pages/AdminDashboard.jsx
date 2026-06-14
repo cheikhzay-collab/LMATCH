@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Papa from 'papaparse';
 import { useAuth } from '../context/AuthContext';
 import { UploadCloud, CheckCircle2, Lock } from 'lucide-react';

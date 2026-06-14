@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getAllProgress, getMockHistory } from '../services/userService';
 import { 
-  ArrowLeft, Crown, User, Calendar, Target, Award, 
+  ArrowLeft, Crown, User, Calendar, Target, 
   BarChart3, Clock, BookOpen, TrendingUp, Loader2,
   Phone, MapPin
 } from 'lucide-react';
@@ -74,7 +74,10 @@ export default function AdminStudentDetail() {
 
   useEffect(() => {
     if (plans && plans.length > 0 && !selectedPlanId) {
-      setSelectedPlanId(plans[0].id);
+      const timer = setTimeout(() => {
+        setSelectedPlanId(plans[0].id);
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [plans, selectedPlanId]);
 

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { generateSubjectHTML, generateCorrectionHTML } from '../utils/generateExamPDF';
 
@@ -82,11 +82,13 @@ export default function PrintView() {
     let fallbackTimeoutId = null;
     let intervalId = null;
     let timeoutId = null;
+    let statusTimer = null;
 
     const cleanup = () => {
       if (intervalId) clearInterval(intervalId);
       if (timeoutId) clearTimeout(timeoutId);
       if (fallbackTimeoutId) clearTimeout(fallbackTimeoutId);
+      if (statusTimer) clearTimeout(statusTimer);
       window.removeEventListener('storage', handleStorage);
     };
 
@@ -105,7 +107,9 @@ export default function PrintView() {
     }
 
     // 2. Set up interval and storage listener to wait for local compilation
-    setStatus('Attente du document...');
+    statusTimer = setTimeout(() => {
+      setStatus('Attente du document...');
+    }, 0);
     
     intervalId = setInterval(() => {
       if (checkAndPrintLocal()) {
@@ -128,7 +132,7 @@ export default function PrintView() {
         cleanup();
         try {
           window.close();
-        } catch (e) {
+        } catch {
           window.location.href = '/';
         }
       }, 15000);

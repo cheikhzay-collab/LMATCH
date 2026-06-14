@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   ArrowLeft, Save, FileText, Image, BrainCircuit,
   CheckCircle2, Lightbulb, Zap, Upload, Trash2,
-  Plus, GripVertical, Eye, Lock, Unlock, AlertCircle,
+  Plus, Eye, Lock, Unlock, AlertCircle,
   ChevronLeft, ChevronRight, X, Layers, Download, FileUp,
   ChevronUp, ChevronDown
 } from 'lucide-react';
@@ -258,11 +258,17 @@ export default function AdminExamEdit() {
 
   useEffect(() => {
     if (exam) {
-      setLocalQuestions(exam.questions || []);
-      setEditName(exam.name || '');
-      setEditSchool(exam.school || '');
-      setEditYear(exam.year || '');
-      setEditTier(exam.tier || 'freemium');
+      const timer = setTimeout(() => {
+        setLocalQuestions(prev => {
+          const next = exam.questions || [];
+          return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
+        });
+        setEditName(prev => prev === exam.name ? prev : (exam.name || ''));
+        setEditSchool(prev => prev === exam.school ? prev : (exam.school || ''));
+        setEditYear(prev => prev === exam.year ? prev : (exam.year || ''));
+        setEditTier(prev => prev === exam.tier ? prev : (exam.tier || 'freemium'));
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [exam]);
 
@@ -328,10 +334,9 @@ export default function AdminExamEdit() {
       const s = String(v).replace(/"/g, '""');
       return /[,"\n\r]/.test(s) ? `"${s}"` : s;
     };
-    const LETTERS = ['A','B','C','D','E'];
     const header = ['Question','Topic','OptionA','OptionB','OptionC','OptionD','OptionE','ReponseCorrecte','Astuce','Trick'];
     const rows = localQuestions.map(q => {
-      const opts = (q.options || []).map((o, i) => typeof o === 'string' ? o : (o.text || ''));
+      const opts = (q.options || []).map((o) => typeof o === 'string' ? o : (o.text || ''));
       return [
         esc(q.question || ''),
         esc(q.topic || q.subject || ''),

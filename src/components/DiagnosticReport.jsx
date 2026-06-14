@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BrainCircuit, Zap, TrendingUp, AlertTriangle,
@@ -11,7 +11,7 @@ import {
  * @param {Array} corrected  [{ q, question, correct, detected, result, topic }]
  * @returns {Object} { topicName: { total, correct, wrong, pct, questions[] } }
  */
-export function buildTopicMap(corrected) {
+function buildTopicMap(corrected) {
   const map = {};
   corrected.forEach(row => {
     const t = row.topic || 'Général';
@@ -61,7 +61,7 @@ function RadialRing({ pct, size = 64, stroke = 6 }) {
 }
 
 /* ── Topic card ──────────────────────────────────────────────────── */
-function TopicCard({ topic, data, examId, onStudy }) {
+function TopicCard({ topic, data, onStudy }) {
   const level = getLevel(data.pct);
   const barW  = `${data.pct}%`;
 
@@ -262,7 +262,6 @@ export default function DiagnosticReport({ corrected, exam, onClose }) {
             key={topic}
             topic={topic}
             data={data}
-            examId={exam?.id}
             onStudy={handleStudy}
           />
         ))}

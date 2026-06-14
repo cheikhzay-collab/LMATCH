@@ -38,7 +38,7 @@ const getFontFamilyStyle = (font) => {
 };
 
 
-const getTemplateStyles = (style, fontFamilyCSS) => {
+const getTemplateStyles = (style) => {
   if (style === 'modern_minimalist') {
     return `
       /* === MODERN MINIMALIST OVERRIDES === */
@@ -213,16 +213,7 @@ const renderMath = (text) => {
   return finalHtml;
 };
 
-/* ── Group questions by subject ── */
-const groupBySubject = (questions) => {
-  const groups = {};
-  questions.forEach(q => {
-    const s = q.subject || q.topic || 'Général';
-    if (!groups[s]) groups[s] = [];
-    groups[s].push(q);
-  });
-  return groups;
-};
+
 
 const renderQuestionImageHTML = (q, placement) => {
   if (!q.image) return '';
@@ -257,7 +248,7 @@ const optText = (opt) => {
   return raw.replace(/^[A-E][).]\s*/i, '');
 };
 
-const LETTERS = ['A','B','C','D','E'];
+
 
 const getThemeClass = (subj) => {
   const norm = (subj || '').toLowerCase().trim();
@@ -307,7 +298,7 @@ export const generateSubjectHTML = async (examTitle, school, year, questions, se
   const examId = settings.examId || 'PREVIEW';
 
   const templateStyle = pdfConf.templateStyle || 'classic_latex';
-  const templateCSS = getTemplateStyles(templateStyle, fontFamilyCSS);
+  const templateCSS = getTemplateStyles(templateStyle);
   const shouldShowCover = templateStyle === 'compact_eco' ? false : showCover;
 
   let schools = settings.schoolsList || ['ENSA', 'ENSAM', 'ENCG', 'Médecine / Pharmacie', 'INPT', 'INSEA'];
@@ -338,7 +329,7 @@ export const generateSubjectHTML = async (examTitle, school, year, questions, se
     : `© ${new Date().getFullYear()} L'CONQ. Tous droits réservés.`;
 
   const premiumQrPayload = `LCQ:${examId.slice(0, 8)}`;
-  let premiumQrUrl = '';
+  let premiumQrUrl;
   try {
     premiumQrUrl = await QRCode.toDataURL(premiumQrPayload, {
       errorCorrectionLevel: 'H',
@@ -351,21 +342,7 @@ export const generateSubjectHTML = async (examTitle, school, year, questions, se
     premiumQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(premiumQrPayload)}&ecc=H&margin=4`;
   }
 
-  /* Compact OMR Grid rows */
-  const cHalf = Math.ceil(questions.length / 2);
-  const cCol1 = questions.slice(0, cHalf);
-  const cCol2 = questions.slice(cHalf);
-  const compactOmrRows = cCol1.map((q, i) => {
-    const q2 = cCol2[i];
-    const num1 = String(q.question_number || (i + 1)).padStart(2, '0');
-    const num2 = q2 ? String(q2.question_number || (cHalf + i + 1)).padStart(2, '0') : '';
-    const bubbles = '<td><div class="c-b"></div></td><td><div class="c-b"></div></td><td><div class="c-b"></div></td><td><div class="c-b"></div></td>';
-    return `<tr>
-      <td class="c-nn">${num1}</td>${bubbles}
-      <td class="c-sep"></td>
-      ${q2 ? `<td class="c-nn">${num2}</td>${bubbles}` : '<td colspan="5"></td>'}
-    </tr>`;
-  }).join('');
+
 
   /* Premium OMR Sheet rows */
   const pCount = questions.length;
@@ -1512,7 +1489,7 @@ printWhenReady();
   const showTricks = settings.showTricks !== undefined ? settings.showTricks : true;
 
   const templateStyle = pdfConf.templateStyle || 'classic_latex';
-  const templateCSS = getTemplateStyles(templateStyle, fontFamilyCSS);
+  const templateCSS = getTemplateStyles(templateStyle);
   const shouldShowCover = templateStyle === 'compact_eco' ? false : showCover;
 
   let schools = settings.schoolsList || ['ENSA', 'ENSAM', 'ENCG', 'Médecine / Pharmacie', 'INPT', 'INSEA'];
@@ -2301,7 +2278,7 @@ printWhenReady();
   } = settings;
 
   const templateStyle = pdfConf.templateStyle || 'classic_latex';
-  const templateCSS = getTemplateStyles(templateStyle, fontFamilyCSS);
+  const templateCSS = getTemplateStyles(templateStyle);
   const shouldShowCover = templateStyle === 'compact_eco' ? false : showCover;
 
   const compactHeaderHtml = templateStyle === 'compact_eco' ? `
@@ -3285,7 +3262,7 @@ export const openPrintWindow = (html, title, targetWindow) => {
   if (isMobile) {
     // Close target window if it was opened pre-emptively on mobile
     if (targetWindow) {
-      try { targetWindow.close(); } catch (e) {}
+      try { targetWindow.close(); } catch { /* ignore */ }
     }
     // Download document directly (same method as Grille) to avoid popup blockers and browser bugs
     const blob = new Blob([html], { type: 'text/html;charset=utf-8' });

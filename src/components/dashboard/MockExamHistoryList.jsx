@@ -1,6 +1,6 @@
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
-import { History, PrinterCheck, CheckCircle2, Printer } from 'lucide-react';
+import { History, Printer } from 'lucide-react';
 
 const formatDate = (dateStr) => {
   if (!dateStr) return '—';
@@ -13,7 +13,7 @@ const formatDate = (dateStr) => {
     const hours = d.getHours().toString().padStart(2, '0');
     const minutes = d.getMinutes().toString().padStart(2, '0');
     return `${day} ${month} ${year} à ${hours}:${minutes}`;
-  } catch (e) {
+  } catch {
     return dateStr;
   }
 };
@@ -58,7 +58,7 @@ const ProgressTooltip = React.memo(({ active, payload }) => {
 });
 ProgressTooltip.displayName = 'ProgressTooltip';
 
-const MockExamHistoryList = React.memo(({ mockExamHistory = [], exams = [], onDownloadReport, onNavigateToSchools, onNavigateToScanner }) => {
+const MockExamHistoryList = React.memo(({ mockExamHistory = [], onDownloadReport, onNavigateToSchools, onNavigateToScanner }) => {
   
   const chronologicalHistory = React.useMemo(() => {
     return [...mockExamHistory]

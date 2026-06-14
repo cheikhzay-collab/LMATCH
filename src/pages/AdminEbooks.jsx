@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { BookOpen, RefreshCw, Download, Settings, ChevronDown, ChevronUp, BookMarked, Layers, FileText, Eye } from 'lucide-react';
 import { generateEbookHTML, openPrintWindow } from '../utils/generateExamPDF';
@@ -49,7 +49,7 @@ export default function AdminEbooks() {
   const totalQ = useMemo(() => Object.values(topicMap).reduce((s, a) => s + a.length, 0), [topicMap]);
   const totalSources = useMemo(() => new Set(exams.filter(e => e.isArchived !== true).map(e => e.name)).size, [exams]);
 
-  const getSettings = (topic) => ({ ...defaultSettings(), ...(allSettings[topic] || {}) });
+  const getSettings = useCallback((topic) => ({ ...defaultSettings(), ...(allSettings[topic] || {}) }), [allSettings]);
 
   const updateSetting = (topic, key, value) => {
     const next = { ...allSettings, [topic]: { ...getSettings(topic), [key]: value } };
@@ -66,7 +66,7 @@ export default function AdminEbooks() {
     const html = generateEbookHTML(topic, questions, s);
     openPrintWindow(html, `ebook-${topic}`);
     setGenerated(prev => ({ ...prev, [topic]: Date.now() }));
-  }, [allSettings, profName, profPhone, profSite]);
+  }, [getSettings, profName, profPhone, profSite]);
 
   const fmtDate = (ts) => ts
     ? new Date(ts).toLocaleString('fr-MA', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })

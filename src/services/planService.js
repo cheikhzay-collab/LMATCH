@@ -79,7 +79,8 @@ export const getAllCodes = async () => {
   const { data, error } = await supabase
     .from('activation_codes')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .limit(200);
 
   if (error) {
     console.error('[Supabase] Failed to fetch activation codes:', error);

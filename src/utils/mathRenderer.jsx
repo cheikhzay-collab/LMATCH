@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 /**
  * mathRenderer.jsx — L'CONQ | KaTeX rendering utility (v4 — Direct KaTeX)
  *
@@ -30,6 +31,7 @@ export const cleanControlChars = (text) => {
     .replace(/\r\n/g, ' ')          // Windows CRLF → space
     .replace(/[\r\n]/g, ' ')        // lone CR or LF → space
     .replace(/\t/g, ' ')            // Tab → space
+    // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '') // other control chars → strip
     .replace(/[\u200B-\u200D\uFEFF]/g, '')              // zero-width / BOM → strip
     .replace(/ {2,}/g, ' ')         // collapse multiple spaces
@@ -347,6 +349,7 @@ export function renderWithMath(text) {
   const renderLine = (line, key) => {
     const cleaned = line
       .replace(/\t/g, ' ')
+      // eslint-disable-next-line no-control-regex
       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
       .replace(/[\u200B-\u200D\uFEFF]/g, '')
       .replace(/ {2,}/g, ' ')

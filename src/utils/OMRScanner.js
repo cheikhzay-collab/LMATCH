@@ -17,7 +17,7 @@ function parseQRData(dataStr) {
   }
   try {
     return JSON.parse(trimmed);
-  } catch (e) {
+  } catch {
     // Graceful fallback for plain IDs
     if (trimmed.length >= 8 && /^[a-fA-F0-9-]+$/.test(trimmed)) {
       return { examId: trimmed };
@@ -205,87 +205,7 @@ export function solvePerspective(src, dst) {
   };
 }
 
-/** Search locally around a projected coordinate for the centroid of a crop marker using connected components */
-function findFineMarker(data, coarsePx, searchRadius, W, H) {
-  const cx = Math.round(coarsePx.x);
-  const cy = Math.round(coarsePx.y);
 
-  // 1. Find the black pixel closest to (cx, cy) within searchRadius
-  let seedX = -1;
-  let seedY = -1;
-  let minBoxDist = Infinity;
-
-  const r = searchRadius;
-  const xStart = Math.max(0, cx - r);
-  const xEnd = Math.min(W - 1, cx + r);
-  const yStart = Math.max(0, cy - r);
-  const yEnd = Math.min(H - 1, cy + r);
-
-  for (let y = yStart; y <= yEnd; y++) {
-    for (let x = xStart; x <= xEnd; x++) {
-      const idx = (y * W + x) * 4;
-      if (data[idx] < 128) { // Black pixel in binarized image
-        const dist = Math.abs(x - cx) + Math.abs(y - cy);
-        if (dist < minBoxDist) {
-          minBoxDist = dist;
-          seedX = x;
-          seedY = y;
-        }
-      }
-    }
-  }
-
-  // If no seed black pixel is found, return coarsePx
-  if (seedX === -1) {
-    return coarsePx;
-  }
-
-  // 2. Perform BFS to collect the connected component of black pixels representing the marker
-  const queue = [{ x: seedX, y: seedY }];
-  const visited = new Uint8Array(W * H);
-  visited[seedY * W + seedX] = 1;
-
-  let sumX = 0;
-  let sumY = 0;
-  let count = 0;
-
-  let head = 0;
-  while (head < queue.length) {
-    const { x, y } = queue[head++];
-    sumX += x;
-    sumY += y;
-    count++;
-
-    // Prevent runaway flood filling on extremely large structures (e.g. boundary shadows)
-    if (count > 800) break; 
-
-    // Check 4-connected neighbors
-    const neighbors = [
-      { x: x + 1, y },
-      { x: x - 1, y },
-      { x, y: y + 1 },
-      { x, y: y - 1 }
-    ];
-
-    for (const n of neighbors) {
-      if (n.x >= xStart && n.x <= xEnd && n.y >= yStart && n.y <= yEnd) {
-        const nIdx = n.y * W + n.x;
-        if (!visited[nIdx]) {
-          visited[nIdx] = 1;
-          const pixelIdx = nIdx * 4;
-          if (data[pixelIdx] < 128) {
-            queue.push({ x: n.x, y: n.y });
-          }
-        }
-      }
-    }
-  }
-
-  if (count > 0) {
-    return { x: sumX / count, y: sumY / count };
-  }
-  return coarsePx;
-}
 
 /** Sample inner center core and overall bubble darkness */
 function sampleBubbleDetail(data, cx, cy, r, W, H) {

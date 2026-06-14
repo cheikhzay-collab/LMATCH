@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { renderWithMath } from '../utils/mathRenderer';
 import { Lightbulb, CheckCircle2, XCircle, Frown, Meh, Smile, BrainCircuit, Zap, Clock } from 'lucide-react';
 

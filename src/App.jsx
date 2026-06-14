@@ -1,6 +1,7 @@
 import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Core pages kept statically for instant initial render
 import LandingPage from './pages/LandingPage';
@@ -51,8 +52,6 @@ function OAuthRedirectGuard() {
   React.useEffect(() => {
     // If we landed here with a hash token AND now the user is authenticated,
     // redirect them to the dashboard
-    const hash = window.location.hash;
-    const alreadyCleared = !hash.includes('access_token=');
     const wasOAuthRedirect = sessionStorage.getItem('_oauth_in_progress') === '1';
 
     if (user && wasOAuthRedirect) {
@@ -201,11 +200,13 @@ const LoadingFallback = () => (
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <AppContent />
-      </Router>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <Router>
+          <AppContent />
+        </Router>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
