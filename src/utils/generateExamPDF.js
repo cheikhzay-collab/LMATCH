@@ -171,57 +171,229 @@ function autoWrapLatex(text) {
 }
 
 /* ── Math renderer: LaTeX → HTML string ── */
-const renderMath = (text) => {
-  if (!text) return '';
-  
-  const repairedText = repairCorruptedLatex(text);
-  const toParse = autoWrapLatex(repairedText);
-  
-  // Format steps and response/attention automatically by inserting newlines before keywords
-  let formattedText = toParse
-    .replace(/(?<=[.!?$;:\-)\]}»*])\s+(\*\*)?(étape|etape|step|الخطوة)\b/gi, '\n$1$2')
-    .replace(/(?<=[.!?$;:\-)\]}»*])\s+(\*\*)?(réponse|reponse|attention)\b/gi, '\n$1$2');
-  
-  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  
-  // 1. Extract all math blocks
-  const mathBlocks = [];
-  const mathRegex = /(\$\$[\s\S]+?\$\$|\$[^$\n]+?\$)/g;
-  
-  let placeholderIndex = 0;
-  const textWithPlaceholders = formattedText.replace(mathRegex, (match) => {
-    const placeholder = `___MATH_BLOCK_PLACEHOLDER_${placeholderIndex}___`;
-    mathBlocks.push({ placeholder, original: match });
-    placeholderIndex++;
-    return placeholder;
-  });
-  
-  // 2. Escape HTML and render markdown on text containing placeholders
-  let escapedText = esc(textWithPlaceholders);
-  escapedText = escapedText.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
-  escapedText = escapedText.replace(/\*([\s\S]+?)\*/g, '<em>$1</em>');
-  
-  // 3. Restore and render KaTeX for each placeholder
-  let finalHtml = escapedText;
-  mathBlocks.forEach(({ placeholder, original }) => {
-    let renderedMath = '';
-    if (original.startsWith('$$') && original.endsWith('$$')) {
-      try {
-        renderedMath = katex.renderToString(original.slice(2, -2), { displayMode: true, throwOnError: false });
-      } catch {
-        renderedMath = `<code>${original}</code>`;
+// Tokenizer for $...$ and $$...$$ matching mathRenderer.jsx
+function tokenizeMath(text) {
+  const tokens = [];
+  let i = 0;
+  let buf = '';
+
+  while (i < text.length) {
+    // ── Block math $$…$$
+    if (text[i] === '$' && text[i + 1] === '$') {
+      if (buf) { tokens.push({ type: 'text', content: buf }); buf = ''; }
+      const start = i + 2;
+      const end = text.indexOf('$$', start);
+      if (end === -1) {
+        buf += text.slice(i);
+        i = text.length;
+      } else {
+        tokens.push({ type: 'block', content: text.slice(start, end) });
+        i = end + 2;
       }
-    } else if (original.startsWith('$') && original.endsWith('$')) {
-      try {
-        renderedMath = katex.renderToString(original.slice(1, -1), { displayMode: false, throwOnError: false });
-      } catch {
-        renderedMath = `<code>${original}</code>`;
-      }
+      continue;
     }
-    finalHtml = finalHtml.replace(placeholder, () => renderedMath);
-  });
+
+    // ── Escaped dollar \$ → literal $
+    if (text[i] === '\\' && text[i + 1] === '$') {
+      buf += '$';
+      i += 2;
+      continue;
+    }
+
+    // ── Inline math $…$
+    if (text[i] === '$') {
+      let j = i + 1;
+      let found = false;
+      while (j < text.length) {
+        if (text[j] === '\\') { j += 2; continue; }
+        if (text[j] === '$') { found = true; break; }
+        j++;
+      }
+      if (!found || j === i + 1) {
+        buf += '$';
+        i++;
+      } else {
+        if (buf) { tokens.push({ type: 'text', content: buf }); buf = ''; }
+        tokens.push({ type: 'inline', content: text.slice(i + 1, j) });
+        i = j + 1;
+      }
+      continue;
+    }
+
+    buf += text[i];
+    i++;
+  }
+  if (buf) tokens.push({ type: 'text', content: buf });
+  return tokens;
+}
+
+const KATEX_OPTIONS = {
+  strict: 'ignore',
+  throwOnError: false,
+  trust: false,
+};
+
+const esc = (s) => {
+  if (typeof s !== 'string') return String(s ?? '');
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+};
+
+const renderInlineKatex = (latex) => {
+  try {
+    return katex.renderToString(latex, { ...KATEX_OPTIONS, displayMode: false });
+  } catch {
+    return `<span style="font-style:italic;opacity:0.75">${esc(latex)}</span>`;
+  }
+};
+
+const renderBlockKatex = (latex) => {
+  try {
+    return katex.renderToString(latex, { ...KATEX_OPTIONS, displayMode: true });
+  } catch {
+    return `<span style="font-style:italic;opacity:0.75;display:block">${esc(latex)}</span>`;
+  }
+};
+
+const renderTextWithBold = (text) => {
+  let html = esc(text);
+  html = html.replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*([\s\S]+?)\*/g, '<em>$1</em>');
+  return html;
+};
+
+const renderLineContent = (text) => {
+  const toParse = autoWrapLatex(text);
+  const tokens = tokenizeMath(toParse);
+  if (tokens.length === 1 && tokens[0].type === 'text') {
+    return renderTextWithBold(tokens[0].content);
+  }
+  return tokens.map((tok) => {
+    if (tok.type === 'block')  return renderBlockKatex(tok.content);
+    if (tok.type === 'inline') return renderInlineKatex(tok.content);
+    return renderTextWithBold(tok.content);
+  }).join('');
+};
+
+const renderLine = (line) => {
+  const cleaned = line
+    .replace(/\t/g, ' ')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '')
+    .replace(/ {2,}/g, ' ')
+    .trim();
+  if (!cleaned) return '';
+
+  // Response Block (Réponse :)
+  if (cleaned.toLowerCase().startsWith('**réponse') || cleaned.toLowerCase().startsWith('réponse') ||
+      cleaned.toLowerCase().startsWith('**reponse') || cleaned.toLowerCase().startsWith('reponse')) {
+    const contentText = cleaned.replace(/^(\*\*)?r[eé]ponse\s*:?\s*/i, '').replace(/\*\*$/, '');
+    return `<span style="display: block; line-height: 1.75;"><strong>Réponse :</strong> ${renderLineContent(contentText)}</span>`;
+  }
+
+  // Attention/Warning Block (Attention :)
+  if (cleaned.toLowerCase().startsWith('**attention') || cleaned.toLowerCase().startsWith('attention')) {
+    const contentText = cleaned.replace(/^(\*\*)?attention\s*:?\s*/i, '').replace(/\*\*$/, '');
+    return `<span style="display: block; line-height: 1.75;"><strong>Attention :</strong> ${renderLineContent(contentText)}</span>`;
+  }
+
+  // Step Block (Étape N / Step N / الخطوة N)
+  const stepRegex = /^(\*\*)?(Étape|Step|الخطوة)\s*(\d+)\s*(?:—|-|:)?\s*(.*)$/i;
+  const stepMatch = cleaned.match(stepRegex);
+  if (stepMatch) {
+    const stepLabel = stepMatch[2];
+    const stepNum = stepMatch[3];
+    const stepText = stepMatch[4].replace(/\*\*$/, '');
+    const formattedLabel = stepLabel.toLowerCase().includes('خطوة') ? `الخطوة ${stepNum}` : `${stepLabel} ${stepNum}`;
+    return `<span style="display: block; line-height: 1.75; margin-top: 0.5rem;"><strong>${formattedLabel} :</strong> ${stepText ? renderLineContent(stepText) : ''}</span>`;
+  }
+
+  const content = renderLineContent(cleaned);
+  return `<span style="display: block; line-height: 1.75;">${content}</span>`;
+};
+
+const renderMath = (text) => {
+  if (text === null || text === undefined) return '';
+  const repaired = repairCorruptedLatex(String(text));
+  const raw = repaired;
+  if (!raw.trim()) return '';
+
+  // ── Image shorthand ──
+  if (raw.trim().startsWith('img:')) {
+    const url = raw.trim().slice(4).trim();
+    return `<div style="text-align: center; margin: 1rem 0;"><img src="${url}" alt="Question illustration" style="max-width: 100%; max-height: 240px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); object-fit: contain;" /></div>`;
+  }
+
+  // ── Normalise line endings ──
+  const normalisedTemp = raw
+    .replace(/\r\n/g, '\n')                // Windows CRLF → LF
+    .replace(/\r/g, '\n');                 // lone CR → LF
   
-  return finalHtml;
+  const normalised = normalisedTemp.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g)
+    .map((part, idx) => {
+      if (idx % 2 === 1) return part;
+      let cleanedPart = part.replace(/\\n/g, '\n');
+      
+      // Force line break before "Étape" / "Step" / "الخطوة" outside math blocks (case-insensitive)
+      if (idx > 0) {
+        cleanedPart = cleanedPart.replace(/^\s*(\*\*)?(étape|etape|step|الخطوة)\b/gi, '\n$1$2');
+      }
+      cleanedPart = cleanedPart.replace(/(?<=[.!?$;:\-)\]}»*])\s+(\*\*)?(étape|etape|step|الخطوة)\b/gi, '\n$1$2');
+
+      // Force line break before Response / Attention blocks (case-insensitive)
+      if (idx > 0) {
+        cleanedPart = cleanedPart.replace(/^\s*(\*\*)?(réponse|reponse|attention)\b/gi, '\n$1$2');
+      }
+      cleanedPart = cleanedPart.replace(/(?<=[.!?$;:\-)\]}»*])\s+(\*\*)?(réponse|reponse|attention)\b/gi, '\n$1$2');
+      
+      return cleanedPart;
+    })
+    .join('');
+
+  const hasNewlines = normalised.includes('\n');
+
+  // ── Single-line fast path (questions, options, short text) ──
+  if (!hasNewlines) {
+    const cleaned = normalised
+      .replace(/\r\n/g, ' ')
+      .replace(/[\r\n]/g, ' ')
+      .replace(/\t/g, ' ')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .replace(/ {2,}/g, ' ')
+      .trim();
+    if (!cleaned) return '';
+    const toParse = autoWrapLatex(cleaned);
+    const tokens = tokenizeMath(toParse);
+    if (tokens.length === 1 && tokens[0].type === 'text') {
+      return `<span>${renderTextWithBold(tokens[0].content)}</span>`;
+    }
+    return tokens.map((tok) => {
+      if (tok.type === 'block')  return renderBlockKatex(tok.content);
+      if (tok.type === 'inline') return renderInlineKatex(tok.content);
+      return `<span>${renderTextWithBold(tok.content)}</span>`;
+    }).join('');
+  }
+
+  // ── Multi-line path: render each line, group by paragraphs ──
+  // Split into paragraphs (double newline), then lines within each paragraph
+  const paragraphs = normalised.split(/\n{2,}/);
+
+  if (paragraphs.length === 1) {
+    // Single paragraph with line breaks
+    const lines = normalised.split('\n');
+    return `<span style="display: block;">${lines.map(line => renderLine(line)).join('')}</span>`;
+  }
+
+  return paragraphs.map(para => {
+    const lines = para.split('\n');
+    return `<p style="margin: 0.35em 0; line-height: 1.75;">${lines.map(line => renderLine(line)).join('')}</p>`;
+  }).join('');
 };
 
 
@@ -460,16 +632,12 @@ export const generateSubjectHTML = async (examTitle, school, year, questions, se
   </div>
 </div>` : '';
 
-  // Sort questions by question_number if present
-  const sortedQuestions = [...questions].sort((a, b) => {
-    const numA = parseInt(a.question_number) || 0;
-    const numB = parseInt(b.question_number) || 0;
-    return numA - numB;
-  });
+  // Keep the order of questions exactly as they appear in the array (following CSV and editor order)
+  const sortedQuestions = [...questions];
 
   /* Questions HTML */
   const questionsHtml = sortedQuestions.map((q, idx) => {
-    const num = q.question_number || (idx + 1);
+    const num = idx + 1;
     const subject = q.subject || q.topic || 'Général';
     const themeClass = getThemeClass(subject);
     const optionsHtml = (q.options || []).map((opt, oi) => {
@@ -1574,16 +1742,12 @@ printWhenReady();
   </div>
 </div>` : '';
 
-  // Sort questions by question_number if present
-  const sortedQuestions = [...questions].sort((a, b) => {
-    const numA = parseInt(a.question_number) || 0;
-    const numB = parseInt(b.question_number) || 0;
-    return numA - numB;
-  });
+  // Keep the order of questions exactly as they appear in the array (following CSV and editor order)
+  const sortedQuestions = [...questions];
 
   /* Questions HTML */
   const questionsHtml = sortedQuestions.map((q, idx) => {
-    const num = q.question_number || (idx + 1);
+    const num = idx + 1;
     const subject = q.subject || q.topic || 'Général';
     const themeClass = getThemeClass(subject);
     const optionsHtml = (q.options || []).map((opt, oi) => {
