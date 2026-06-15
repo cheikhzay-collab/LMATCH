@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 
 // Core pages kept statically for instant initial render
 import LandingPage from './pages/LandingPage';
@@ -204,6 +205,7 @@ function App() {
       <AuthProvider>
         <Router>
           <AppContent />
+          <SpeedInsights />
         </Router>
       </AuthProvider>
     </ErrorBoundary>
