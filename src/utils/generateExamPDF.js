@@ -26,6 +26,15 @@ const getPdfSettings = (settings = {}) => {
   };
 };
 
+const getFontImportLinks = () => {
+  return `
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css">
+  `.trim();
+};
+
 const getMarginStyle = (margin) => {
   if (margin === 'compact') return '0.3cm 0.8cm 0.2cm';
   if (margin === 'wide') return '0.8cm 1.8cm 0.4cm';
@@ -495,13 +504,11 @@ export const generateSubjectHTML = async (examTitle, school, year, questions, se
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
 <title>${examTitle} — Sujet</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+${getFontImportLinks()}
 <style>
 *{box-decoration-break:clone;-webkit-box-decoration-break:clone;box-sizing:border-box;margin:0;padding:0}
 body{
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: ${fontFamilyCSS};
   color:#1e293b;background:#f8fafc;font-size:${fontSizeCSS};line-height:1.65;
   padding-bottom:1.2cm;
   print-color-adjust:exact;-webkit-print-color-adjust:exact;
@@ -513,7 +520,7 @@ body{
   ${showPageNumbers ? `
   @bottom-left {
     content: "⚡ L'CONQ   |   ${examTitle}   |   ${copyrightLine}";
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: ${fontFamilyCSS};
     font-size: 7.5pt;
     font-weight: 500;
     color: #64748b;
@@ -522,7 +529,7 @@ body{
   }
   @bottom-right {
     content: "${profPhone ? profPhone + '   ·   ' : ''}${siteUrl}   |   Sujet Blanc   |   " counter(page) " / " counter(pages);
-    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-family: ${fontFamilyCSS};
     font-size: 7.5pt;
     font-weight: 600;
     color: #0f172a;
@@ -576,7 +583,7 @@ html{counter-reset:page ${startPage - 1}}
   box-shadow: 0 10px 40px rgba(15, 23, 42, 0.04);
 }
 .cover-logo{
-  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-family: ${fontFamilyCSS};
   font-size:2.4rem;
   font-weight:900;
   letter-spacing:8px;
@@ -585,7 +592,7 @@ html{counter-reset:page ${startPage - 1}}
   color:#005086;
 }
 .cover-subtitle{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:'Inter',sans-serif;
   font-size:0.85rem;
   font-weight:700;
   color:#64748b;
@@ -605,7 +612,7 @@ html{counter-reset:page ${startPage - 1}}
   max-width: 90%;
 }
 .cover-tag{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:'Inter',sans-serif;
   font-size:0.8rem;
   font-weight:800;
   letter-spacing:3px;
@@ -618,7 +625,7 @@ html{counter-reset:page ${startPage - 1}}
   margin-bottom:1.2rem;
 }
 .cover-topic{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:${fontFamilyCSS};
   font-size:2.8rem;
   font-weight:800;
   line-height:1.2;
@@ -649,13 +656,13 @@ html{counter-reset:page ${startPage - 1}}
   background:#f8fafc;
 }
 .cover-stat .num{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:${fontFamilyCSS};
   font-size:1.8rem;
   font-weight:800;
   color:#005086;
 }
 .cover-stat .lbl{
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:'Inter',sans-serif;
   font-size:0.75rem;
   color:#64748b;
   text-transform:uppercase;
@@ -672,7 +679,7 @@ html{counter-reset:page ${startPage - 1}}
   width:100%;
   max-width:550px;
   margin:1rem auto;
-  font-family:'Plus Jakarta Sans',sans-serif;
+  font-family:${fontFamilyCSS};
   font-size:9pt;
   line-height:1.6;
 }
@@ -2349,9 +2356,7 @@ printWhenReady();
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>E-Book — ${topic}</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+${getFontImportLinks()}
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{
@@ -2368,7 +2373,7 @@ body{
   ${showPageNumbers ? `
   @bottom-left {
     content: "⚡ L'CONQ   |   ${topic}   |   ${copyrightLine}";
-    font-family: 'Inter', sans-serif;
+    font-family: ${fontFamilyCSS};
     font-size: 7pt;
     font-weight: 500;
     color: #6b7280;
@@ -2377,7 +2382,7 @@ body{
   }
   @bottom-right {
     content: "${profPhone ? profPhone + '   ·   ' : ''}${siteUrl}   |   " counter(page) " / " counter(pages);
-    font-family: 'Inter', sans-serif;
+    font-family: ${fontFamilyCSS};
     font-size: 7pt;
     font-weight: 600;
     color: #4b5563;
@@ -3003,8 +3008,7 @@ export const generateStudentReportHTML = (exam, score, corrected, settings = {})
 <head>
 <meta charset="utf-8">
 <title>Rapport de Performance OMR - ${exam.name}</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/dreampulse/computer-modern-web-font@master/fonts.css">
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=STIX+Two+Text:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap" rel="stylesheet">
+${getFontImportLinks()}
 <style>
 html { font-size: 9.5pt; }
 body {
