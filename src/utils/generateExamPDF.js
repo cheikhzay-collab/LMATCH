@@ -11,6 +11,7 @@ const getPdfSettings = (settings = {}) => {
       fontFamily: settings.fontFamily || 'Computer Modern Serif',
       pageMargins: settings.pageMargins || 'standard',
       templateStyle: settings.templateStyle || 'classic_latex',
+      showSidebar: settings.showSidebar !== undefined ? settings.showSidebar : true,
     };
   }
 
@@ -21,6 +22,7 @@ const getPdfSettings = (settings = {}) => {
     fontFamily: settings.fontFamily || (localStorage.getItem('pdf_font_family') || 'Computer Modern Serif'),
     pageMargins: settings.pageMargins || (localStorage.getItem('pdf_page_margins') || 'standard'),
     templateStyle: settings.templateStyle || (localStorage.getItem('pdf_template_style') || 'classic_latex'),
+    showSidebar: settings.showSidebar !== undefined ? settings.showSidebar : (localStorage.getItem('pdf_show_sidebar') !== 'false'),
   };
 };
 
@@ -1211,7 +1213,7 @@ html{counter-reset:page ${startPage - 1}}
 /* ── Content offset for sidebar ── */
 .ws-content {
   padding: ${marginCSS};
-  margin-left: 85px;
+  margin-left: ${pdfConf.showSidebar ? '85px' : '0'};
 }
 
 /* ── Section Header ── */
@@ -1372,7 +1374,7 @@ ${templateCSS}
 </head><body>
 
 <!-- Sidebar -->
-<div class="ws-sidebar">${sidebarTabsHtml}</div>
+${pdfConf.showSidebar ? `<div class="ws-sidebar">${sidebarTabsHtml}</div>` : ''}
 
 <div class="print-hint" id="printHint">
   <div class="print-hint-msg">
@@ -1935,7 +1937,7 @@ html{counter-reset:page ${startPage - 1}}
 /* ── Content offset for sidebar ── */
 .ws-content {
   padding: ${marginCSS};
-  margin-left: 85px;
+  margin-left: ${pdfConf.showSidebar ? '85px' : '0'};
 }
 
 /* ── Section Header ── */
@@ -2221,7 +2223,7 @@ ${templateCSS}
 </head><body>
 
 <!-- Sidebar -->
-<div class="ws-sidebar">${sidebarTabsHtml}</div>
+${pdfConf.showSidebar ? `<div class="ws-sidebar">${sidebarTabsHtml}</div>` : ''}
 
 <div class="print-hint" id="printHint">
   <div class="print-hint-msg">

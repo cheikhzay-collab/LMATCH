@@ -339,6 +339,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('pdf_template_style', settings.pdfTemplateStyle);
     localStorage.setItem('pdf_avoid_page_breaks', String(settings.pdfAvoidPageBreaks));
     localStorage.setItem('pdf_force_print_colors', String(settings.pdfForcePrintColors));
+    localStorage.setItem('pdf_show_sidebar', String(settings.pdfShowSidebar));
   };
 
   // ── Supabase Auth listener ───────────────────────────────────────────────
@@ -1474,6 +1475,7 @@ export function AuthProvider({ children }) {
           localStorage.setItem('pdf_template_style', pdfConfig.pdfTemplateStyle || 'classic_latex');
           localStorage.setItem('pdf_avoid_page_breaks', String(pdfConfig.pdfAvoidPageBreaks !== false));
           localStorage.setItem('pdf_force_print_colors', String(pdfConfig.pdfForcePrintColors !== false));
+          localStorage.setItem('pdf_show_sidebar', String(pdfConfig.pdfShowSidebar !== false));
         } else {
           const defaultPdf = {
             pdfPageMargins: 'standard',
@@ -1481,7 +1483,8 @@ export function AuthProvider({ children }) {
             pdfFontFamily: 'Computer Modern Serif',
             pdfTemplateStyle: 'classic_latex',
             pdfAvoidPageBreaks: true,
-            pdfForcePrintColors: true
+            pdfForcePrintColors: true,
+            pdfShowSidebar: true
           };
           await savePdfSettingsConfig(defaultPdf);
           localStorage.setItem('pdf_page_margins', defaultPdf.pdfPageMargins);
@@ -1490,6 +1493,7 @@ export function AuthProvider({ children }) {
           localStorage.setItem('pdf_template_style', defaultPdf.pdfTemplateStyle);
           localStorage.setItem('pdf_avoid_page_breaks', String(defaultPdf.pdfAvoidPageBreaks));
           localStorage.setItem('pdf_force_print_colors', String(defaultPdf.pdfForcePrintColors));
+          localStorage.setItem('pdf_show_sidebar', String(defaultPdf.pdfShowSidebar));
         }
 
         // Process Plans

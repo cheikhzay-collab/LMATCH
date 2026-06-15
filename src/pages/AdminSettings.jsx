@@ -111,6 +111,7 @@ export default function AdminSettings() {
   const [pdfTemplateStyle, setPdfTemplateStyle] = useState(() => localStorage.getItem('pdf_template_style') || 'classic_latex');
   const [pdfAvoidPageBreaks, setPdfAvoidPageBreaks] = useState(() => localStorage.getItem('pdf_avoid_page_breaks') !== 'false');
   const [pdfForcePrintColors, setPdfForcePrintColors] = useState(() => localStorage.getItem('pdf_force_print_colors') !== 'false');
+  const [pdfShowSidebar, setPdfShowSidebar] = useState(() => localStorage.getItem('pdf_show_sidebar') !== 'false');
   const [pdfSaved, setPdfSaved] = useState(false);
 
   const savePdfSettings = async () => {
@@ -120,7 +121,8 @@ export default function AdminSettings() {
       pdfFontFamily,
       pdfTemplateStyle,
       pdfAvoidPageBreaks,
-      pdfForcePrintColors
+      pdfForcePrintColors,
+      pdfShowSidebar
     });
     setPdfSaved(true);
     setTimeout(() => setPdfSaved(false), 2500);
@@ -439,6 +441,33 @@ export default function AdminSettings() {
                   width: 20, height: 20, borderRadius: '50%', background: '#fff',
                   position: 'absolute', top: 3, transition: 'left 0.2s',
                   left: pdfForcePrintColors ? 25 : 3,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                }} />
+              </button>
+            </div>
+
+            {/* Show/Hide Sidebar */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem 1rem', borderRadius: 12, background: 'var(--bg-glass)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <FileText size={18} style={{ color: 'var(--violet)' }} />
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>Bandeau latéral (Sidebar)</p>
+                  <p style={{ fontSize: '0.73rem', color: 'var(--text-subtle)', margin: 0 }}>Afficher la barre latérale verticale des écoles sur les fichiers PDF générés</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPdfShowSidebar(v => !v)}
+                style={{
+                  width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+                  background: pdfShowSidebar ? 'var(--violet)' : 'var(--bg-card)',
+                  position: 'relative', transition: 'background 0.2s',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                }}
+              >
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                  position: 'absolute', top: 3, transition: 'left 0.2s',
+                  left: pdfShowSidebar ? 25 : 3,
                   boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                 }} />
               </button>
