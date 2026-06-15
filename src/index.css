@@ -1579,9 +1579,7 @@ body.light-theme .astuce-tabs {
     left: 0;
     right: 0;
     z-index: 200;
-    background: rgba(15, 23, 42, 0.88);
-    backdrop-filter: blur(30px) saturate(200%);
-    -webkit-backdrop-filter: blur(30px) saturate(200%);
+    background: #09090b; /* Solid dark obsidian background matching --bg-base */
     border-top: 1px solid rgba(255, 255, 255, 0.06);
     box-shadow: 0 -1px 0 rgba(255,255,255,0.04),
                 0 -16px 48px rgba(2, 6, 23, 0.6);
@@ -1591,7 +1589,7 @@ body.light-theme .astuce-tabs {
   }
 
   body.light-theme .mobile-bottom-nav {
-    background: rgba(255, 255, 255, 0.95);
+    background: #ffffff; /* Solid white background matching --bg-card */
     border-top-color: var(--border);
     box-shadow: 0 -1px 0 var(--border), 0 -12px 40px rgba(15,23,42,0.08);
   }
@@ -1678,6 +1676,19 @@ body.light-theme .astuce-tabs {
   }
 
   body.light-theme .mob-nav-item:not(.active) { color: var(--text-muted); }
+}
+
+/* ── Mobile shifting navigation (screens ≤ 480px) ── */
+@media (max-width: 480px) {
+  .mob-nav-item:not(.active) .mob-nav-label {
+    display: none !important;
+  }
+  .mob-nav-item {
+    min-height: 52px;
+  }
+  .mob-nav-item.active .mob-nav-label {
+    font-size: 0.62rem;
+  }
 }
 
 /* ── XS screens (≤ 400px) ────────────────────────────────────────────────── */

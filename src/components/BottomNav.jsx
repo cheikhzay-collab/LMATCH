@@ -48,7 +48,7 @@ export default function BottomNav() {
     if (!activeEl) return;
     const navRect  = nav.getBoundingClientRect();
     const itemRect = activeEl.getBoundingClientRect();
-    indicator.style.transform = `translateX(${itemRect.left - navRect.left + (itemRect.width - 36) / 2}px)`;
+    indicator.style.transform = `translateX(${itemRect.left - navRect.left + (itemRect.width - 40) / 2}px)`;
   }, [location.pathname]);
 
   const handleLogout = () => { logout(); navigate('/'); setShowSheet(false); };

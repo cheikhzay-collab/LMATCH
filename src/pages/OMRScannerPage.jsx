@@ -346,7 +346,7 @@ export default function OMRScannerPage() {
   const phaseLabel = { upload:'Uploader', scanning:'Analyse…', verify:'Vérification', results:'Résultats' };
 
   return (
-    <div className="animate-fade-in" style={{ padding: '0.5rem 0', width: '100%', overflowX: 'hidden' }}>
+    <div className="animate-fade-in" style={{ padding: '0.5rem 0 3rem 0', width: '100%', overflowX: 'hidden' }}>
       {/* Page Title & Phase Indicators */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
