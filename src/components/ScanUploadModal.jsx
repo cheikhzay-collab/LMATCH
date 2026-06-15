@@ -115,7 +115,7 @@ function ResultRow({ row }) {
 
 /* ── Main modal ──────────────────────────────────────────────────── */
 export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
-  const { user, mockExamHistory, updateCardProgress, schoolBranding, exams } = useAuth();
+  const { user, mockExamHistory, updateCardProgress, schoolBranding, exams, loadExamQuestions } = useAuth();
   const navigate = useNavigate();
   
   const [activeExam, setActiveExam] = useState(exam);
@@ -179,18 +179,25 @@ export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
         }
         
         targetExam = found;
-        setActiveExam(found);
       }
 
+      // Ensure questions are loaded for targetExam dynamically
+      let loadedQuestions = targetExam.questions;
+      if (!loadedQuestions || loadedQuestions.length === 0) {
+        loadedQuestions = await loadExamQuestions(targetExam.id);
+      }
+      const updatedExam = { ...targetExam, questions: loadedQuestions };
+      setActiveExam(updatedExam);
+
       // 2. Perform bubbles scanning
-      const results = await scanAnswerSheet(file, targetExam.questions.length);
+      const results = await scanAnswerSheet(file, loadedQuestions.length);
       setScanned(results);
       setPhase('verify');
     } catch (e) {
       setScanError(e.message);
       setPhase('upload');
     }
-  }, [activeExam, exams]);
+  }, [activeExam, exams, loadExamQuestions]);
 
   const handleDrop = (e) => {
     e.preventDefault();

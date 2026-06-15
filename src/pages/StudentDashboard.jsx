@@ -24,6 +24,7 @@ export default function StudentDashboard() {
     profPhone, 
     profSite, 
     updateProfile,
+    loadExamQuestions,
     loading: authLoading
   } = useAuth();
   
@@ -100,7 +101,7 @@ export default function StudentDashboard() {
     }
   }, [stats.dueToday, stats.masteredCards, stats.weakTopics]);
 
-  const handleGenerateWeaknessPDF = useCallback(() => {
+  const handleGenerateWeaknessPDF = useCallback(async () => {
     if (user?.role !== 'admin' && user?.tier !== 'premium') {
       alert("La génération de Cahiers d'Erreurs PDF est réservée aux abonnés Premium.");
       navigate('/subscription');
@@ -110,6 +111,16 @@ export default function StudentDashboard() {
     if (topicsToPrint.length === 0) return;
 
     const activeExams = exams.filter(e => e.isActive !== false && e.isArchived !== true);
+    const examsToLoad = activeExams.filter(e => !e.questions || e.questions.length === 0);
+    if (examsToLoad.length > 0) {
+      try {
+        await Promise.all(examsToLoad.map(e => loadExamQuestions(e.id)));
+      } catch (err) {
+        console.error('Failed to load questions for weakness booklet:', err);
+        return;
+      }
+    }
+
     const questionsToPrint = [];
     activeExams.forEach(exam => {
       (exam.questions || []).forEach(q => {
@@ -143,13 +154,23 @@ export default function StudentDashboard() {
     const title = "Fascicule de Révision Personnalisé";
     const html = generateEbookHTML(title, questionsToPrint, s);
     openPrintWindow(html, `cahier-revision-points-faibles`);
-  }, [stats.weakTopics, exams, profName, profPhone, profSite, user, navigate]);
+  }, [stats.weakTopics, exams, profName, profPhone, profSite, user, navigate, loadExamQuestions]);
 
-  const handleDownloadReport = useCallback((item) => {
+  const handleDownloadReport = useCallback(async (item) => {
     const exam = exams.find(e => e.id === item.examId);
     if (!exam) {
       alert("Examen introuvable dans la bibliothèque.");
       return;
+    }
+    
+    let questions = exam.questions;
+    if (!questions || questions.length === 0) {
+      try {
+        questions = await loadExamQuestions(exam.id);
+      } catch (err) {
+        console.error('Failed to load questions for student report:', err);
+        return;
+      }
     }
     
     const corrected = [];
@@ -157,7 +178,7 @@ export default function StudentDashboard() {
     let wrongLeft = item.wrongCount || 0;
     const LETTERS = ['A', 'B', 'C', 'D', 'E'];
     
-    (exam.questions || []).forEach((q, idx) => {
+    (questions || []).forEach((q, idx) => {
       const correct = q.correct_answer || q.answer || 'A';
       let detected = null;
       let result = 'empty';
@@ -195,9 +216,9 @@ export default function StudentDashboard() {
       profSite: profSite || 'www.lconq.ma'
     };
     
-    const html = generateStudentReportHTML(exam, scoreObj, corrected, settings);
+    const html = generateStudentReportHTML({ ...exam, questions }, scoreObj, corrected, settings);
     openPrintWindow(html);
-  }, [exams, profName, profPhone, profSite]);
+  }, [exams, profName, profPhone, profSite, loadExamQuestions]);
 
   const onNavigateToSchools = useCallback(() => navigate('/schools'), [navigate]);
   const onNavigateToScanner = useCallback(() => navigate('/scanner'), [navigate]);

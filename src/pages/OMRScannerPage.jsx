@@ -36,49 +36,81 @@ function ConfidenceDot({ confidence }) {
 /* ── Verification Row ───────────────────────────────────────────── */
 function VerifyGrid({ scanned, questions, onChange }) {
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', maxHeight:400, overflowY:'auto', paddingRight:'4px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: 420, overflowY: 'auto', paddingRight: '6px' }}>
       {scanned.map((row, idx) => {
         const qTextRaw = questions[idx]?.question || `Question ${row.q}`;
+        const isLowConfidence = row.confidence < 0.35;
         return (
           <div key={row.q} className="verify-grid-row" style={{
-            display:'flex', flexDirection:'column',
-            gap:'0.5rem',
-            padding:'0.6rem 0.8rem',
-            background: row.confidence < 0.3 ? 'var(--warning-soft)' : 'var(--bg-glass)',
-            borderRadius:'0.75rem',
-            border: `1px solid ${row.confidence < 0.3 ? 'var(--warning)33' : 'var(--border)'}`,
+            display: 'flex', 
+            flexDirection: 'column',
+            gap: '0.6rem',
+            padding: '0.75rem 1rem',
+            background: isLowConfidence ? 'rgba(245, 158, 11, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+            borderRadius: '1rem',
+            border: `1.5px solid ${isLowConfidence ? 'rgba(245, 158, 11, 0.25)' : 'var(--border)'}`,
+            transition: 'border-color 0.2s, background-color 0.2s'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-              <span style={{ fontWeight:800, fontSize:'0.9rem', color:'var(--text-main)' }}>Q{row.q}</span>
+              <span style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-main)' }}>Question {row.q}</span>
               <ConfidenceDot confidence={row.confidence} />
             </div>
             
-            <span style={{ fontSize:'0.8rem', color:'var(--text-muted)', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', display:'block', width: '100%' }}>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block', width: '100%' }}>
               {renderMathSnippet(qTextRaw)}
             </span>
 
             {/* Option selection buttons */}
-            <div style={{ display:'flex', gap:'0.25rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.2rem', alignItems: 'center' }}>
               {CHOICES.map(opt => (
-                <button key={opt} onClick={() => onChange(idx, opt)} style={{
-                  width:28, height:28, borderRadius:'50%', fontWeight:800, fontSize:'0.8rem',
-                  cursor:'pointer', transition:'all 0.15s',
-                  background: row.answer === opt ? 'var(--violet)' : 'var(--bg-glass)',
-                  color:      row.answer === opt ? '#fff' : 'var(--text-muted)',
-                  border:     row.answer === opt ? '2px solid var(--violet)' : '1px solid var(--border)',
-                  boxShadow:  row.answer === opt ? '0 2px 8px var(--violet-glow)' : 'none',
-                }}>
+                <button 
+                  key={opt} 
+                  onClick={() => onChange(idx, opt)} 
+                  style={{
+                    width: 32, 
+                    height: 32, 
+                    borderRadius: '50%', 
+                    fontWeight: 800, 
+                    fontSize: '0.85rem',
+                    cursor: 'pointer', 
+                    transition: 'all 0.2s ease',
+                    background: row.answer === opt ? 'var(--violet)' : 'rgba(255,255,255,0.03)',
+                    color: row.answer === opt ? '#fff' : 'var(--text-muted)',
+                    border: row.answer === opt ? '2px solid var(--violet)' : '1px solid var(--border)',
+                    boxShadow: row.answer === opt ? '0 4px 12px var(--violet-glow)' : 'none',
+                  }}
+                  onMouseEnter={e => {
+                    if (row.answer !== opt) {
+                      e.currentTarget.style.borderColor = 'var(--violet)';
+                      e.currentTarget.style.color = 'var(--text-main)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (row.answer !== opt) {
+                      e.currentTarget.style.borderColor = 'var(--border)';
+                      e.currentTarget.style.color = 'var(--text-muted)';
+                    }
+                  }}
+                >
                   {opt}
                 </button>
               ))}
-              <button onClick={() => onChange(idx, null)} style={{
-                  padding:'0 0.5rem', height:28, borderRadius:'6px', fontWeight:700, fontSize:'0.7rem',
-                  cursor:'pointer', transition:'all 0.15s',
-                  background: row.answer === null ? 'var(--danger-soft)' : 'var(--bg-glass)',
-                  color:      row.answer === null ? 'var(--danger)' : 'var(--text-muted)',
-                  border:     `1px solid ${row.answer === null ? 'var(--danger)' : 'var(--border)'}`,
-                }}>
-                Vide
+              <button 
+                onClick={() => onChange(idx, null)} 
+                style={{
+                  padding: '0 0.75rem', 
+                  height: 32, 
+                  borderRadius: '0.5rem', 
+                  fontWeight: 800, 
+                  fontSize: '0.75rem',
+                  cursor: 'pointer', 
+                  transition: 'all 0.2s ease',
+                  background: row.answer === null ? 'var(--danger-soft)' : 'rgba(255,255,255,0.03)',
+                  color: row.answer === null ? 'var(--danger)' : 'var(--text-muted)',
+                  border: `1px solid ${row.answer === null ? 'var(--danger)' : 'var(--border)'}`,
+                }}
+              >
+                Laisser Vide
               </button>
             </div>
           </div>
@@ -91,37 +123,55 @@ function VerifyGrid({ scanned, questions, onChange }) {
 /* ── Correction Result Row ───────────────────────────────────────── */
 function ResultRow({ row }) {
   const cfg = {
-    correct: { bg:'var(--emerald-soft)', border:'var(--emerald)', icon:<CheckCircle2 size={15}/>, label:'Correct', color:'var(--emerald)' },
-    wrong:   { bg:'var(--danger-soft)',  border:'var(--danger)',  icon:<XCircle size={15}/>,      label:'Faux',    color:'var(--danger)'  },
-    empty:   { bg:'var(--bg-glass)',     border:'var(--border)',  icon:<AlertCircle size={15}/>,   label:'Vide',    color:'var(--text-muted)' },
+    correct: { bg: 'var(--emerald-soft)', border: 'var(--emerald)', icon: <CheckCircle2 size={16}/>, label: 'Correct', color: 'var(--emerald)' },
+    wrong: { bg: 'var(--danger-soft)', border: 'var(--danger)', icon: <XCircle size={16}/>, label: 'Incorrect', color: 'var(--danger)' },
+    empty: { bg: 'rgba(255,255,255,0.01)', border: 'var(--border)', icon: <AlertCircle size={16}/>, label: 'Laissé Vide', color: 'var(--text-muted)' },
   };
   const status = row.detected === null ? 'empty' : row.result;
   const c = cfg[status];
   return (
     <div style={{
-      display:'flex', flexDirection: 'column', gap:'0.4rem',
-      padding:'0.6rem 0.8rem',
-      background: c.bg, borderRadius:'0.75rem',
-      borderLeft:`4px solid ${c.border}`,
+      display: 'flex', 
+      flexDirection: 'column', 
+      gap: '0.5rem',
+      padding: '0.85rem 1rem',
+      background: c.bg, 
+      borderRadius: '1rem',
+      borderLeft: `4px solid ${c.border}`,
+      borderTop: '1px solid var(--border)',
+      borderRight: '1px solid var(--border)',
+      borderBottom: '1px solid var(--border)',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
     }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontWeight:800, fontSize:'0.9rem' }}>Q{row.q}</span>
-        <span style={{ display:'inline-flex', alignItems:'center', gap:'0.35rem', color:c.color, fontSize:'0.78rem', fontWeight:700 }}>{c.icon} {c.label}</span>
+        <span style={{ fontWeight: 900, fontSize: '0.95rem', color: 'var(--text-main)' }}>Question {row.q}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: c.color, fontSize: '0.8rem', fontWeight: 800 }}>
+          {c.icon} {c.label}
+        </span>
       </div>
       
-      <span style={{ fontSize:'0.82rem', color:'var(--text-muted)', overflow:'hidden', whiteSpace:'nowrap', textOverflow:'ellipsis', display:'block' }}>
+      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block' }}>
         {renderMathSnippet(row.question)}
       </span>
       
-      <div style={{ display:'flex', gap:'0.5rem', alignItems:'center', fontSize:'0.8rem', marginTop: '0.2rem' }}>
-        <span style={{ color: 'var(--text-muted)' }}>Réponse:</span>
-        <span style={{ padding:'0.15rem 0.5rem', borderRadius:'6px', background: status === 'correct' ? 'var(--emerald-soft)' : status === 'wrong' ? 'var(--danger-soft)' : 'var(--border)', fontWeight:800, color: status === 'correct' ? 'var(--emerald)' : status === 'wrong' ? 'var(--danger)' : 'var(--text-muted)' }}>
+      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', fontSize: '0.82rem', marginTop: '0.2rem' }}>
+        <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Réponse cochée :</span>
+        <span style={{ 
+          padding: '0.2rem 0.6rem', 
+          borderRadius: '0.35rem', 
+          background: status === 'correct' ? 'rgba(16, 185, 129, 0.12)' : status === 'wrong' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255, 255, 255, 0.05)', 
+          fontWeight: 900, 
+          color: status === 'correct' ? 'var(--emerald)' : status === 'wrong' ? 'var(--danger)' : 'var(--text-muted)' 
+        }}>
           {row.detected || '—'}
         </span>
         {status !== 'correct' && (
           <>
-            <span style={{ color: 'var(--text-muted)' }}>→</span>
-            <span style={{ padding:'0.15rem 0.5rem', borderRadius:'6px', background:'var(--emerald-soft)', fontWeight:800, color:'var(--emerald)' }}>{row.correct}</span>
+            <span style={{ color: 'var(--text-subtle)' }}>→</span>
+            <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Réponse attendue :</span>
+            <span style={{ padding: '0.2rem 0.6rem', borderRadius: '0.35rem', background: 'rgba(16, 185, 129, 0.12)', fontWeight: 900, color: 'var(--emerald)' }}>
+              {row.correct}
+            </span>
           </>
         )}
       </div>
@@ -131,7 +181,7 @@ function ResultRow({ row }) {
 
 /* ── Main Global Scanner Page ────────────────────────────────────── */
 export default function OMRScannerPage() {
-  const { user, mockExamHistory, updateCardProgress, saveMockExamResult, schoolBranding, exams, isExamLocked, profName, profPhone, profSite } = useAuth();
+  const { user, mockExamHistory, updateCardProgress, saveMockExamResult, schoolBranding, exams, isExamLocked, profName, profPhone, profSite, loadExamQuestions } = useAuth();
   const navigate = useNavigate();
 
   const [activeExam,   setActiveExam]   = useState(null);
@@ -203,17 +253,20 @@ export default function OMRScannerPage() {
         throw new Error("Cet examen fait partie de l'offre Premium. Veuillez vous abonner pour scanner votre feuille de réponses et obtenir votre correction.");
       }
 
-      setActiveExam(found);
+      // Load questions dynamically if they are not preloaded
+      const loadedQuestions = await loadExamQuestions(found.id);
+      const updatedExam = { ...found, questions: loadedQuestions };
+      setActiveExam(updatedExam);
 
       // 3. Scan the grid bubbles dynamically
-      const results = await scanAnswerSheet(file, found.questions?.length || 0);
+      const results = await scanAnswerSheet(file, loadedQuestions?.length || 0);
       setScanned(results);
       setPhase('verify');
     } catch (e) {
       setScanError(e.message);
       setPhase('upload');
     }
-  }, [exams, isExamLocked]);
+  }, [exams, isExamLocked, loadExamQuestions]);
 
   const handleDrop = (e) => {
     e.preventDefault();
@@ -293,51 +346,134 @@ export default function OMRScannerPage() {
   const phaseLabel = { upload:'Uploader', scanning:'Analyse…', verify:'Vérification', results:'Résultats' };
 
   return (
-    <div className="animate-fade-in" style={{ padding: '0.25rem 0', width: '100%', overflowX: 'hidden' }}>
+    <div className="animate-fade-in" style={{ padding: '0.5rem 0', width: '100%', overflowX: 'hidden' }}>
       {/* Page Title & Phase Indicators */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.4rem' }}>
-            <div style={{ width: 36, height: 36, borderRadius: '10px', background: 'linear-gradient(135deg, var(--violet), var(--emerald))', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Camera size={18} color="#fff" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '0.4rem' }}>
+              <div style={{ 
+                width: 42, 
+                height: 42, 
+                borderRadius: '12px', 
+                background: 'linear-gradient(135deg, var(--violet), var(--emerald))', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center', 
+                flexShrink: 0,
+                boxShadow: '0 4px 14px var(--violet-glow)'
+              }}>
+                <Camera size={20} color="#fff" />
+              </div>
+              <h1 style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.03em', margin: 0, color: 'var(--text-main)' }}>
+                Scanner Intelligent
+              </h1>
             </div>
-            <h1 style={{ fontSize: '1.4rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, color: 'var(--text-main)' }}>Scanner Intelligent</h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
+              Prenez en photo votre feuille de réponses L'Match. L'IA s'occupe du reste.
+            </p>
           </div>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', margin: 0, lineHeight: 1.4 }}>
-            Prenez en photo votre feuille de réponses L'Match. L'IA s'occupe du reste.
-          </p>
         </div>
         
         {/* Phase indicators */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', background: 'var(--bg-glass)', padding: '0.35rem 0.75rem', borderRadius: '1rem', border: '1px solid var(--border)', alignSelf: 'flex-start', width: '100%', justifyContent: 'space-between', overflowX: 'auto' }}>
-          {['upload', 'scanning', 'verify', 'results'].map((p, i) => (
-            <React.Fragment key={p}>
-              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: phase === p ? 'var(--violet)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                {phaseLabel[p]}
-              </span>
-              {i < 3 && <span style={{ color: 'var(--border)', fontSize: '0.65rem' }}>→</span>}
-            </React.Fragment>
-          ))}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          width: '100%', 
+          background: 'rgba(255, 255, 255, 0.02)', 
+          backdropFilter: 'blur(10px)',
+          border: '1px solid var(--border)', 
+          padding: '0.75rem 1.25rem', 
+          borderRadius: '1.25rem',
+          justifyContent: 'space-between',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          {['upload', 'scanning', 'verify', 'results'].map((p, i) => {
+            const isActive = phase === p;
+            const isCompleted = ['upload', 'scanning', 'verify', 'results'].indexOf(phase) > i;
+            return (
+              <div key={p} style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                flex: i === 3 ? 'none' : 1,
+                position: 'relative'
+              }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  width: 24, 
+                  height: 24, 
+                  borderRadius: '50%', 
+                  background: isActive ? 'var(--violet)' : isCompleted ? 'var(--emerald)' : 'rgba(255,255,255,0.05)',
+                  border: `1.5px solid ${isActive ? 'var(--violet)' : isCompleted ? 'var(--emerald)' : 'var(--border)'}`,
+                  color: isActive || isCompleted ? '#fff' : 'var(--text-muted)',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  boxShadow: isActive ? '0 0 10px var(--violet-glow)' : 'none',
+                  transition: 'all 0.3s ease'
+                }}>
+                  {isCompleted ? <Check size={12} strokeWidth={3} /> : i + 1}
+                </div>
+                <span style={{ 
+                  fontSize: '0.8rem', 
+                  fontWeight: isActive ? 800 : 600, 
+                  color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                  whiteSpace: 'nowrap',
+                  transition: 'all 0.3s ease'
+                }}>
+                  {phaseLabel[p]}
+                </span>
+                
+                {i < 3 && (
+                  <div style={{ 
+                    flex: 1, 
+                    height: 2, 
+                    background: isCompleted ? 'var(--emerald)' : 'var(--border)', 
+                    marginLeft: '0.75rem', 
+                    marginRight: '0.75rem',
+                    minWidth: 16
+                  }} />
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1rem', width: '100%' }}>
-        <div className="glass-panel" style={{ padding: '1rem', borderRadius: '1.25rem', border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.25rem', width: '100%' }}>
+        <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '1.5rem', border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }}>
           
           {/* ── UPLOAD PHASE ── */}
           {phase === 'upload' && (
             <div style={{ maxWidth: 640, margin: '0 auto' }}>
               {hasReachedLimit ? (
-                <div style={{ textAlign: 'center', padding: '2rem 1rem' }}>
-                  <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(99,102,241,0.1)', color: 'var(--violet)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', boxShadow: '0 8px 24px rgba(99,102,241,0.15)' }}>
-                    <Zap size={28} fill="currentColor" />
+                <div style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
+                  <div style={{ 
+                    width: 72, 
+                    height: 72, 
+                    borderRadius: '50%', 
+                    background: 'var(--violet-soft)', 
+                    color: 'var(--violet)', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    margin: '0 auto 1.75rem', 
+                    boxShadow: '0 8px 32px var(--violet-glow)',
+                    border: '1.5px solid rgba(113, 109, 242, 0.2)'
+                  }}>
+                    <Zap size={32} fill="currentColor" />
                   </div>
-                  <h3 style={{ fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-main)' }}>Limite de scans atteinte</h3>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', lineHeight: 1.55, maxWidth: '420px', margin: '0 auto 2rem' }}>
+                  <h3 style={{ fontWeight: 900, fontSize: '1.35rem', letterSpacing: '-0.02em', marginBottom: '0.75rem', color: 'var(--text-main)' }}>
+                    Limite de scans gratuite atteinte
+                  </h3>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', lineHeight: 1.6, maxWidth: '440px', margin: '0 auto 2.5rem' }}>
                     Vous avez utilisé vos 3 scans gratuits OMR. Abonnez-vous pour profiter d'analyses de copies et de rapports d'erreurs illimités.
                   </p>
-                  <div style={{ display: 'flex', gap: '0.85rem', flexDirection: 'column', width: '100%', maxWidth: '280px', margin: '0 auto' }}>
-                    <button onClick={() => navigate('/subscription')} className="btn" style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}>
+                  <div style={{ display: 'flex', gap: '1rem', flexDirection: 'column', width: '100%', maxWidth: '300px', margin: '0 auto' }}>
+                    <button onClick={() => navigate('/subscription')} className="btn" style={{ background: 'var(--btn-primary-bg)', boxShadow: 'var(--btn-primary-shadow)' }}>
                       ✦ Passer à l'offre Premium
                     </button>
                     <button onClick={() => navigate('/dashboard')} className="btn-outline">
@@ -348,175 +484,220 @@ export default function OMRScannerPage() {
               ) : (
                 <>
                   {scanError && (
-                    <div style={{ padding:'0.875rem 1.25rem', background:'var(--danger-soft)', border:'1px solid var(--danger)33', borderRadius:'0.875rem', marginBottom:'1.5rem', color:'var(--danger)', fontSize:'0.88rem', fontWeight:600, display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <AlertCircle size={18} style={{ flexShrink: 0 }} />
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', alignItems: 'flex-start' }}>
-                        <span>{scanError}</span>
+                    <div style={{ 
+                      padding: '1rem 1.25rem', 
+                      background: 'var(--danger-soft)', 
+                      border: '1px solid rgba(239, 68, 68, 0.2)', 
+                      borderRadius: '1rem', 
+                      marginBottom: '1.5rem', 
+                      color: 'var(--danger)', 
+                      fontSize: '0.88rem', 
+                      fontWeight: 600, 
+                      display: 'flex', 
+                      gap: '0.75rem', 
+                      alignItems: 'flex-start' 
+                    }}>
+                      <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '0.1rem' }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', alignItems: 'flex-start' }}>
+                        <span style={{ fontWeight: 700 }}>Erreur d'analyse</span>
+                        <span style={{ color: 'var(--text-main)', opacity: 0.95, fontWeight: 500 }}>{scanError}</span>
                         {scanError.includes("Premium") && (
                           <button 
                             onClick={() => navigate('/subscription')} 
-                            style={{ background: 'none', border: 'none', color: 'var(--violet)', padding: 0, fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', textAlign: 'left', textDecoration: 'underline' }}
+                            style={{ background: 'none', border: 'none', color: 'var(--violet)', padding: 0, fontSize: '0.8rem', fontWeight: 800, cursor: 'pointer', textAlign: 'left', textDecoration: 'underline', marginTop: '0.2rem' }}
                           >
-                            Voir les formules d'abonnement
+                            Voir les formules d'abonnement formule Premium
                           </button>
                         )}
                       </div>
                     </div>
                   )}
               
-              {/* Premium Segmented Controller */}
-              <div style={{ 
-                display: 'flex', 
-                background: 'var(--bg-glass)', 
-                border: '1px solid var(--border)', 
-                padding: '0.25rem', 
-                borderRadius: '0.875rem', 
-                width: '100%',
-                marginBottom: '1.5rem'
-              }}>
-                <button 
-                  onClick={() => setScanMethod('camera')}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '0.6rem',
-                    borderRadius: '0.65rem',
-                    border: 'none',
-                    fontWeight: 800,
-                    fontSize: '0.82rem',
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    transition: 'all 0.25s',
-                    background: scanMethod === 'camera' ? 'var(--violet)' : 'transparent',
-                    color: scanMethod === 'camera' ? '#fff' : 'var(--text-muted)',
-                    boxShadow: scanMethod === 'camera' ? '0 4px 12px var(--violet-glow)' : 'none'
-                  }}
-                >
-                  <Camera size={15} />
-                  Utiliser la caméra
-                </button>
-                <button 
-                  onClick={() => setScanMethod('file')}
-                  style={{
-                    flex: 1,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '0.5rem',
-                    padding: '0.6rem',
-                    borderRadius: '0.65rem',
-                    border: 'none',
-                    fontWeight: 800,
-                    fontSize: '0.82rem',
-                    fontFamily: 'inherit',
-                    cursor: 'pointer',
-                    transition: 'all 0.25s',
-                    background: scanMethod === 'file' ? 'var(--violet)' : 'transparent',
-                    color: scanMethod === 'file' ? '#fff' : 'var(--text-muted)',
-                    boxShadow: scanMethod === 'file' ? '0 4px 12px var(--violet-glow)' : 'none'
-                  }}
-                >
-                  <Upload size={15} />
-                  Importer un fichier
-                </button>
-              </div>
-
-              {scanMethod === 'camera' ? (
-                <SmartCameraScanner
-                  onCapture={handleFile}
-                  onCancel={() => setScanMethod('file')}
-                  activeExam={activeExam}
-                />
-              ) : (
-                <div
-                  onDrop={handleDrop} onDragOver={e => e.preventDefault()}
-                  onClick={() => fileRef.current?.click()}
-                  style={{ border:'2px dashed var(--border)', borderRadius:'1.25rem', padding:'2.5rem 1rem', textAlign:'center', cursor:'pointer', transition:'all 0.25s', background:'var(--bg-glass)' }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor='var(--violet)'; e.currentTarget.style.background='var(--violet-soft)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor='var(--border)';  e.currentTarget.style.background='var(--bg-glass)'; }}
-                >
-                  <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={e => handleFile(e.target.files[0])} />
-                  <div style={{ width:54, height:54, borderRadius:'50%', background:'var(--violet-soft)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 1rem' }}>
-                    <Upload size={22} color="var(--violet)" />
+                  {/* Premium Segmented Controller */}
+                  <div style={{ 
+                    display: 'flex', 
+                    background: 'rgba(255, 255, 255, 0.02)', 
+                    border: '1px solid var(--border)', 
+                    padding: '0.3rem', 
+                    borderRadius: '1.25rem', 
+                    width: '100%',
+                    marginBottom: '1.75rem'
+                  }}>
+                    <button 
+                      onClick={() => setScanMethod('camera')}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '1rem',
+                        border: 'none',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        fontFamily: 'inherit',
+                        cursor: 'pointer',
+                        transition: 'all 0.25s',
+                        background: scanMethod === 'camera' ? 'var(--violet)' : 'transparent',
+                        color: scanMethod === 'camera' ? '#fff' : 'var(--text-muted)',
+                        boxShadow: scanMethod === 'camera' ? '0 4px 16px var(--violet-glow)' : 'none'
+                      }}
+                    >
+                      <Camera size={16} />
+                      Utiliser la caméra
+                    </button>
+                    <button 
+                      onClick={() => setScanMethod('file')}
+                      style={{
+                        flex: 1,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '0.5rem',
+                        padding: '0.75rem 1rem',
+                        borderRadius: '1rem',
+                        border: 'none',
+                        fontWeight: 800,
+                        fontSize: '0.85rem',
+                        fontFamily: 'inherit',
+                        cursor: 'pointer',
+                        transition: 'all 0.25s',
+                        background: scanMethod === 'file' ? 'var(--violet)' : 'transparent',
+                        color: scanMethod === 'file' ? '#fff' : 'var(--text-muted)',
+                        boxShadow: scanMethod === 'file' ? '0 4px 16px var(--violet-glow)' : 'none'
+                      }}
+                    >
+                      <Upload size={16} />
+                      Importer un fichier
+                    </button>
                   </div>
-                  <h3 style={{ fontWeight:800, marginBottom:'0.25rem', fontSize: '1rem', color: 'var(--text-main)' }}>Sélectionner une photo</h3>
-                  <p style={{ color:'var(--text-muted)', fontSize:'0.78rem', lineHeight:1.5, maxWidth: 380, margin: '0 auto' }}>
-                    Cliquez pour choisir une photo de votre galerie.<br/>
-                    <span style={{ color:'var(--violet)', fontWeight:700 }}>Détection automatique via QR Code</span>
-                  </p>
-                </div>
-              )}
 
-              {/* Pro Tips */}
-              <div style={{ marginTop:'2rem' }}>
-                <h4 style={{ fontWeight:800, fontSize:'0.82rem', marginBottom:'0.75rem', textTransform:'uppercase', letterSpacing:'0.05em', color:'var(--text-subtle)' }}>💡 Conseils de numérisation :</h4>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:'0.6rem' }}>
-                  {[
-                    ['💡','Éclairage homogène','Évitez les ombres portées et les reflets.'],
-                    ['📐','Cadrage parallèle','Tenez votre caméra bien au-dessus de la feuille.'],
-                    ['🖊️','Bulles foncées','Remplissez les cercles au stylo noir/bleu.'],
-                    ['📷','Repères de coins','Les 4 repères de coins de la feuille doivent être visibles.'],
-                  ].map(([ic,t,d]) => (
-                    <div key={t} style={{ display:'flex', gap:'0.6rem', padding:'0.65rem 0.85rem', background:'var(--bg-glass)', borderRadius:'0.75rem', border:'1px solid var(--border)' }}>
-                      <span style={{ fontSize:'1.1rem', flexShrink:0 }}>{ic}</span>
-                      <div>
-                        <p style={{ fontWeight:800, fontSize:'0.78rem', marginBottom:'0.1rem', color: 'var(--text-main)' }}>{t}</p>
-                        <p style={{ color:'var(--text-muted)', fontSize:'0.72rem', lineHeight:1.3 }}>{d}</p>
+                  {scanMethod === 'camera' ? (
+                    <SmartCameraScanner
+                      onCapture={handleFile}
+                      onCancel={() => setScanMethod('file')}
+                      activeExam={activeExam}
+                    />
+                  ) : (
+                    <div
+                      onDrop={handleDrop} onDragOver={e => e.preventDefault()}
+                      onClick={() => fileRef.current?.click()}
+                      style={{ 
+                        border: '2px dashed var(--border)', 
+                        borderRadius: '1.5rem', 
+                        padding: '3.5rem 1.5rem', 
+                        textAlign: 'center', 
+                        cursor: 'pointer', 
+                        transition: 'all 0.25s', 
+                        background: 'rgba(255, 255, 255, 0.01)',
+                        position: 'relative',
+                        overflow: 'hidden'
+                      }}
+                      onMouseEnter={e => { 
+                        e.currentTarget.style.borderColor = 'var(--violet)'; 
+                        e.currentTarget.style.background = 'var(--violet-soft)'; 
+                      }}
+                      onMouseLeave={e => { 
+                        e.currentTarget.style.borderColor = 'var(--border)';  
+                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.01)'; 
+                      }}
+                    >
+                      <input ref={fileRef} type="file" accept="image/*" style={{ display:'none' }} onChange={e => handleFile(e.target.files[0])} />
+                      <div style={{ 
+                        width: 60, 
+                        height: 60, 
+                        borderRadius: '50%', 
+                        background: 'var(--violet-soft)', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center', 
+                        margin: '0 auto 1.25rem',
+                        border: '1.5px solid rgba(113, 109, 242, 0.15)'
+                      }}>
+                        <Upload size={24} color="var(--violet)" />
                       </div>
+                      <h3 style={{ fontWeight: 800, marginBottom: '0.35rem', fontSize: '1.1rem', color: 'var(--text-main)', letterSpacing: '-0.01em' }}>
+                        Sélectionner une photo
+                      </h3>
+                      <p style={{ color: 'var(--text-muted)', fontSize: '0.82rem', lineHeight: 1.6, maxWidth: 380, margin: '0 auto' }}>
+                        Faites glisser votre feuille de réponses ici ou cliquez pour parcourir vos dossiers.<br/>
+                        <span style={{ color: 'var(--violet)', fontWeight: 700, fontSize: '0.78rem', marginTop: '0.5rem', display: 'inline-block' }}>
+                          ⚡ Identification automatique par QR Code
+                        </span>
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </>
+                  )}
+
+                  {/* Pro Tips */}
+                  <div style={{ marginTop: '2.5rem' }}>
+                    <h4 style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
+                      💡 Conseils pour un scan parfait :
+                    </h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '0.75rem' }}>
+                      {[
+                        ['💡','Éclairage homogène','Évitez les ombres portées et les reflets directs sur la feuille.'],
+                        ['📐','Cadrage parallèle','Tenez votre caméra bien parallèle et au-dessus de la feuille.'],
+                        ['🖊️','Remplissage complet','Remplissez entièrement les cercles de réponses au stylo noir ou bleu.'],
+                        ['📷','Repères visibles','Les 4 repères carrés aux coins de la feuille doivent être parfaitement visibles.'],
+                      ].map(([ic,t,d]) => (
+                        <div key={t} style={{ display: 'flex', gap: '0.85rem', padding: '0.85rem 1rem', background: 'rgba(255,255,255,0.015)', borderRadius: '1rem', border: '1px solid var(--border)' }}>
+                          <span style={{ fontSize: '1.25rem', flexShrink: 0, marginTop: '0.1rem' }}>{ic}</span>
+                          <div>
+                            <p style={{ fontWeight: 800, fontSize: '0.85rem', marginBottom: '0.15rem', color: 'var(--text-main)' }}>{t}</p>
+                            <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', lineHeight: 1.45, margin: 0 }}>{d}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           )}
-        </div>
-      )}
 
           {/* ── SCANNING PHASE ── */}
           {phase === 'scanning' && (
-            <div style={{ textAlign:'center', padding:'2rem 0', maxWidth: 420, margin: '0 auto' }}>
+            <div style={{ textAlign: 'center', padding: '2.5rem 0', maxWidth: 440, margin: '0 auto' }}>
               {imagePreview && (
-                <div style={{ position:'relative', display:'inline-block', marginBottom:'1.5rem' }}>
-                  <img src={imagePreview} alt="scan" style={{ maxHeight:240, borderRadius:'1rem', border:'1px solid var(--border)', maxWidth:'100%', objectFit:'contain' }} />
+                <div style={{ position: 'relative', display: 'inline-block', marginBottom: '2rem', borderRadius: '1.5rem', overflow: 'hidden', border: '1px solid var(--border)', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
+                  <img src={imagePreview} alt="scan" style={{ maxHeight: 250, maxWidth: '100%', objectFit: 'contain', display: 'block' }} />
                   {/* Glowing futuristic scanning beam */}
                   <div style={{
-                    position: 'absolute', left: 0, right: 0, height: '4px',
+                    position: 'absolute', left: 0, right: 0, height: '3px',
                     background: 'linear-gradient(90deg, transparent, var(--violet), transparent)',
-                    boxShadow: '0 0 12px var(--violet)',
+                    boxShadow: '0 0 16px var(--violet)',
                     animation: 'scanBeam 1.8s ease-in-out infinite'
                   }} />
                 </div>
               )}
               
-              <div style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', position:'relative', width:76, height:76, marginBottom:'1.25rem' }}>
-                <svg viewBox="0 0 72 72" style={{ position:'absolute', inset:0, animation:'spin 1.2s linear infinite' }}>
-                  <circle cx="36" cy="36" r="30" fill="none" stroke="var(--violet)" strokeWidth="4" strokeDasharray="60 100" strokeLinecap="round"/>
+              <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', position: 'relative', width: 80, height: 80, marginBottom: '1.5rem' }}>
+                <svg viewBox="0 0 72 72" style={{ position: 'absolute', inset: 0, animation: 'spin 1.2s linear infinite' }}>
+                  <circle cx="36" cy="36" r="30" fill="none" stroke="var(--violet)" strokeWidth="3.5" strokeDasharray="60 100" strokeLinecap="round"/>
                 </svg>
-                <BrainCircuit size={28} color="var(--violet)" />
+                <BrainCircuit size={32} color="var(--violet)" />
               </div>
-              <h3 style={{ fontWeight:800, marginBottom:'0.5rem' }}>Analyse OMR intelligente…</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize:'0.88rem', marginBottom: '2rem' }}>L'IA calibre la feuille et extrait les repères.</p>
+              <h3 style={{ fontWeight: 900, fontSize: '1.3rem', letterSpacing: '-0.02em', marginBottom: '0.5rem' }}>Analyse OMR intelligente…</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginBottom: '2.25rem', lineHeight: 1.5 }}>L'IA calibre la feuille et extrait les réponses détectées.</p>
 
-              <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                 {[
                   'Traitement numérique & contraste',
                   "Lecture du QR Code & identification QCM",
                   'Extraction des réponses cochées',
                 ].map((step, i) => (
                   <div key={step} style={{
-                    display:'flex', alignItems:'center', gap:'0.75rem',
-                    padding:'0.6rem 1rem', borderRadius:'0.75rem',
-                    background: scanStep > i ? 'var(--emerald-soft)' : 'var(--bg-glass)',
-                    border:`1px solid ${scanStep > i ? 'var(--emerald)33' : 'var(--border)'}`,
-                    transition:'all 0.3s ease',
+                    display: 'flex', alignItems: 'center', gap: '0.85rem',
+                    padding: '0.75rem 1.1rem', borderRadius: '1rem',
+                    background: scanStep > i ? 'var(--emerald-soft)' : 'rgba(255, 255, 255, 0.01)',
+                    border: `1px solid ${scanStep > i ? 'rgba(16, 185, 129, 0.2)' : 'var(--border)'}`,
+                    transition: 'all 0.3s ease',
                   }}>
                     {scanStep > i
-                      ? <CheckCircle2 size={16} color="var(--emerald)" style={{ flexShrink:0 }} />
-                      : <Loader2 size={16} color="var(--violet)" style={{ animation:'spin 1s linear infinite', flexShrink:0 }} />}
-                    <span style={{ fontSize:'0.85rem', color: scanStep > i ? 'var(--emerald)' : 'var(--text-muted)', fontWeight: scanStep > i ? 700 : 400 }}>{step}</span>
+                      ? <CheckCircle2 size={16} color="var(--emerald)" style={{ flexShrink: 0 }} />
+                      : <Loader2 size={16} color="var(--violet)" style={{ animation: 'spin 1s linear infinite', flexShrink: 0 }} />}
+                    <span style={{ fontSize: '0.85rem', color: scanStep > i ? 'var(--emerald)' : 'var(--text-muted)', fontWeight: scanStep > i ? 700 : 500 }}>{step}</span>
                   </div>
                 ))}
               </div>
@@ -526,19 +707,26 @@ export default function OMRScannerPage() {
           {/* ── VERIFY PHASE ── */}
           {phase === 'verify' && activeExam && (
             <div style={{ maxWidth: 760, margin: '0 auto' }}>
-              <div style={{ padding:'1rem 1.25rem', borderRadius:'1rem', marginBottom:'1.5rem', display:'flex', gap:'0.875rem', alignItems:'flex-start',
+              <div style={{ 
+                padding: '1.25rem 1.5rem', 
+                borderRadius: '1.25rem', 
+                marginBottom: '1.75rem', 
+                display: 'flex', 
+                gap: '1rem', 
+                alignItems: 'flex-start',
                 background: ambiguousCount > 0 ? 'var(--warning-soft)' : 'var(--emerald-soft)',
-                border:`1px solid ${ambiguousCount > 0 ? 'var(--warning)33' : 'var(--emerald)33'}` }}>
+                border: `1px solid ${ambiguousCount > 0 ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)'}` 
+              }}>
                 {ambiguousCount > 0
-                  ? <AlertCircle size={22} color="var(--warning)" style={{ flexShrink:0, marginTop:2 }} />
-                  : <CheckCircle2 size={22} color="var(--emerald)" style={{ flexShrink:0, marginTop:2 }} />}
+                  ? <AlertCircle size={22} color="var(--warning)" style={{ flexShrink: 0, marginTop: 2 }} />
+                  : <CheckCircle2 size={22} color="var(--emerald)" style={{ flexShrink: 0, marginTop: 2 }} />}
                 <div>
-                  <h4 style={{ fontWeight:800, fontSize:'0.95rem', margin:0 }}>
+                  <h4 style={{ fontWeight: 900, fontSize: '1rem', margin: 0, letterSpacing: '-0.01em' }}>
                     {ambiguousCount > 0
                       ? `${ambiguousCount} réponse${ambiguousCount>1?'s':''} à vérifier`
                       : `Analyse complétée avec succès !`}
                   </h4>
-                  <p style={{ fontSize:'0.82rem', color:'var(--text-muted)', marginTop:'0.25rem', lineHeight: 1.4 }}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.35rem', lineHeight: 1.5, margin: 0 }}>
                     {ambiguousCount > 0
                       ? 'L\'IA a détecté des signaux plus faibles sur les lignes orange. Cliquez sur la lettre correcte pour corriger avant validation.'
                       : `Toutes les ${Q} questions ont été identifiées avec une très haute confiance. Cliquez sur "Confirmer" pour voir vos notes.`}
@@ -547,26 +735,37 @@ export default function OMRScannerPage() {
               </div>
 
               {/* Exam banner */}
-              <div style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: '1rem', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ 
+                background: 'rgba(255, 255, 255, 0.01)', 
+                border: '1px solid var(--border)', 
+                borderRadius: '1.25rem', 
+                padding: '1.25rem 1.5rem', 
+                marginBottom: '1.75rem', 
+                display: 'flex', 
+                justifyContent: 'space-between', 
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '1rem'
+              }}>
                 <div>
-                  <span style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--violet)', letterSpacing: '0.1em' }}>Examen Identifié</span>
-                  <h3 style={{ fontWeight: 800, fontSize: '1.1rem', margin: '2px 0 0 0' }}>{activeExam.name}</h3>
-                  <p style={{ color:'var(--text-muted)', fontSize: '0.8rem', margin: '4px 0 0 0' }}>{activeExam.school} · {activeExam.year}</p>
+                  <span style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--violet)', letterSpacing: '0.12em' }}>Examen Identifié</span>
+                  <h3 style={{ fontWeight: 900, fontSize: '1.25rem', margin: '4px 0 0 0', letterSpacing: '-0.02em', color: 'var(--text-main)' }}>{activeExam.name}</h3>
+                  <p style={{ color:'var(--text-muted)', fontSize: '0.82rem', margin: '4px 0 0 0', fontWeight: 500 }}>{activeExam.school} · {activeExam.year}</p>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <span style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-main)' }}>{Q}</span>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: 0 }}>Questions lues</p>
+                  <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-main)' }}>{Q}</span>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: 0, fontWeight: 500 }}>Questions lues</p>
                 </div>
               </div>
 
               <VerifyGrid scanned={scanned} questions={questions} onChange={handleVerifyChange} />
 
-              <div style={{ display:'flex', gap:'0.75rem', marginTop:'2rem', justifyContent:'flex-end' }}>
-                <button className="btn-outline" onClick={reset} style={{ display:'flex', alignItems:'center', gap:'0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.85rem', marginTop: '2.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                <button className="btn-outline" onClick={reset} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '0.875rem' }}>
                   <RotateCcw size={15} /> Rescanner
                 </button>
-                <button className="btn-emerald" onClick={handleConfirmVerify} style={{ display:'flex', alignItems:'center', gap: '0.5rem', padding: '0.75rem 2rem' }}>
-                  <Check size={16} /> Confirmer & calcul du score
+                <button className="btn" onClick={handleConfirmVerify} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 2rem', borderRadius: '0.875rem', background: 'var(--emerald)', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.2)' }}>
+                  <Check size={16} strokeWidth={2.5} /> Confirmer & Calculer la note
                 </button>
               </div>
             </div>
@@ -575,103 +774,174 @@ export default function OMRScannerPage() {
           {/* ── RESULTS PHASE ── */}
           {phase === 'results' && score && activeExam && (
             <div style={{ maxWidth: 840, margin: '0 auto' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '2rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
                 
-                {/* Left col: score card & quick stats */}
-                <div>
-                  <div style={{ borderRadius:'1.5rem', overflow:'hidden', border:'1px solid var(--border)', marginBottom:'1.5rem', boxShadow: '0 8px 32px rgba(0,0,0,0.15)' }}>
-                    <div style={{ background:`linear-gradient(135deg,${score.pct>=70?'#065F46,#022C22':score.pct>=50?'#92400E,#451A03':'#7F1D1D,#3B0000'})`, padding:'2rem', textAlign:'center' }}>
-                      <p style={{ color:'rgba(255,255,255,0.7)', fontSize:'0.75rem', fontWeight:800, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:'0.5rem' }}>NOTE SUR 20</p>
-                      <h2 style={{ color:'#fff', fontSize:'3.5rem', fontWeight:900, lineHeight:1, margin: 0 }}>
-                        {((score.pts / Q) * 20).toFixed(2)}
-                      </h2>
-                      <p style={{ color:'rgba(255,255,255,0.6)', fontSize:'0.82rem', marginTop:'0.5rem', fontWeight: 600 }}>
-                        Score brut: {score.pts.toFixed(2)} / {Q} pts
-                      </p>
-                      <p style={{ color:'rgba(255,255,255,0.5)', fontSize:'0.72rem', marginTop:'0.5rem', fontStyle: 'italic' }}>
-                        Pénalité: {score.neg.toFixed(2)} pts (faux: {wrongCount})
-                      </p>
-                    </div>
-                    
-                    <div style={{ display:'flex', background:'var(--bg-glass)', borderTop:'1px solid var(--border)' }}>
-                      {[{l:'Correctes',v:correctCount,c:'var(--emerald)'},{l:'Fausses',v:wrongCount,c:'var(--danger)'}].map(s=>(
-                        <div key={s.l} style={{ flex:1, padding:'1rem', textAlign:'center', borderRight:'1px solid var(--border)' }}>
-                          <p style={{ fontWeight:900, fontSize:'1.5rem', color:s.c, margin: 0 }}>{s.v}</p>
-                          <p style={{ fontSize:'0.75rem', color:'var(--text-muted)', fontWeight:700, marginTop: '2px' }}>{s.l}</p>
-                        </div>
-                      ))}
-                    </div>
+                {/* Visual scorecard header */}
+                <div style={{ 
+                  borderRadius: '1.5rem', 
+                  overflow: 'hidden', 
+                  border: '1px solid var(--border)', 
+                  boxShadow: 'var(--shadow-card)',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  mdDirection: 'row',
+                  background: 'rgba(255, 255, 255, 0.01)'
+                }}>
+                  {/* Left part: glowing glass badge with dynamic gradients based on score */}
+                  <div style={{ 
+                    background: `linear-gradient(135deg, ${score.pct >= 70 ? 'rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05)' : score.pct >= 50 ? 'rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.05)' : 'rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.05)'})`, 
+                    padding: '2.5rem 2rem', 
+                    textAlign: 'center',
+                    flex: '1.2',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    borderRight: '1px solid var(--border)',
+                    position: 'relative'
+                  }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' }}>NOTE SUR 20</p>
+                    <h2 style={{ 
+                      color: score.pct >= 70 ? 'var(--emerald)' : score.pct >= 50 ? 'var(--warning)' : 'var(--danger)', 
+                      fontSize: '4.2rem', 
+                      fontWeight: 900, 
+                      lineHeight: 1, 
+                      margin: 0,
+                      letterSpacing: '-0.03em',
+                      textShadow: `0 0 20px ${score.pct >= 70 ? 'rgba(16,185,129,0.3)' : score.pct >= 50 ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)'}`
+                    }}>
+                      {((score.pts / Q) * 20).toFixed(2)}
+                    </h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.75rem', fontWeight: 600 }}>
+                      Score : <strong style={{ color: 'var(--text-main)' }}>{score.pts.toFixed(2)}</strong> / {Q} pts
+                    </p>
+                    <p style={{ color: 'var(--text-subtle)', fontSize: '0.75rem', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                      Pénalités : -{score.neg.toFixed(2)} pts (Faux: {wrongCount})
+                    </p>
                   </div>
+                  
+                  {/* Right part: stats breakdown list */}
+                  <div style={{ flex: '1', display: 'flex', background: 'rgba(255, 255, 255, 0.015)' }}>
+                    {[{l:'Correctes',v:correctCount,c:'var(--emerald)',bg:'var(--emerald-soft)'},{l:'Fausses',v:wrongCount,c:'var(--danger)',bg:'var(--danger-soft)'}].map((s, sIdx)=>(
+                      <div key={s.l} style={{ flex: 1, padding: '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: sIdx === 0 ? '1px solid var(--border)' : 'none' }}>
+                        <div style={{ 
+                          width: 44, 
+                          height: 44, 
+                          borderRadius: '50%', 
+                          background: s.bg, 
+                          color: s.c, 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          justifyContent: 'center',
+                          marginBottom: '0.75rem',
+                          fontWeight: 800
+                        }}>
+                          {sIdx === 0 ? <Check size={18} strokeWidth={2.5} /> : <XCircle size={18} />}
+                        </div>
+                        <p style={{ fontWeight: 900, fontSize: '1.75rem', color: s.c, margin: 0 }}>{s.v}</p>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, marginTop: '4px' }}>{s.l}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
                   {/* SRS Reminder card */}
                   {wrongCount > 0 && (
-                    <div style={{ padding:'1.25rem', background:'var(--violet-soft)', border:'1px solid rgba(99,102,241,0.2)', borderRadius:'1.25rem', display:'flex', flexDirection:'column', gap:'0.75rem', marginBottom: '1.5rem' }}>
-                      <div style={{ display:'flex', gap:'0.6rem', alignItems:'center' }}>
-                        <BrainCircuit size={20} color="var(--violet)" />
-                        <h4 style={{ fontWeight:800, fontSize:'0.88rem', margin: 0 }}>Planification SRS Activée</h4>
+                    <div style={{ 
+                      padding: '1.5rem', 
+                      background: 'var(--violet-soft)', 
+                      border: '1px solid rgba(113, 109, 242, 0.15)', 
+                      borderRadius: '1.5rem', 
+                      display: 'flex', 
+                      flexDirection: 'column', 
+                      smDirection: 'row', // Flex layout
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: '1.25rem' 
+                    }}>
+                      <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
+                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(113, 109, 242, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <BrainCircuit size={22} color="var(--violet)" />
+                        </div>
+                        <div>
+                          <h4 style={{ fontWeight: 800, fontSize: '0.95rem', margin: 0, color: 'var(--text-main)' }}>Planification SRS Activée</h4>
+                          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0.25rem 0 0 0', lineHeight: 1.45 }}>
+                            Les {wrongCount} questions incorrectes ont été ajoutées à votre cycle de révision espacée.
+                          </p>
+                        </div>
                       </div>
-                      <p style={{ fontSize:'0.8rem', color:'var(--text-muted)', margin: 0, lineHeight: 1.5 }}>
-                        Les {wrongCount} questions ratées ont été ajoutées à vos rappels Spaced Repetition.
-                      </p>
-                      <button className="btn" onClick={() => navigate(`/study?exam=${activeExam.id}`)} style={{ display:'flex', alignItems:'center', gap:'0.5rem', justifyContent:'center', fontSize: '0.8rem', fontWeight: 800 }}>
-                        <Zap size={13} /> Lancer la révision
+                      <button className="btn" onClick={() => navigate(`/study?exam=${activeExam.id}`)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', fontWeight: 800, whiteSpace: 'nowrap', padding: '0.6rem 1.25rem', borderRadius: '0.75rem' }}>
+                        <Zap size={14} /> Lancer la révision
                       </button>
                     </div>
                   )}
-                </div>
 
-                {/* Right col: Tabs list / Diagnostic details */}
-                <div>
-                  <div style={{ display:'flex', justifyBetween:'space-between', alignItems: 'center', marginBottom:'1.25rem' }}>
-                    <div style={{ display:'flex', gap:'0.4rem', background:'var(--bg-glass)', padding:'0.3rem', borderRadius:'var(--radius-md)', border:'1px solid var(--border)' }}>
-                      {[{id:'list',label:'Feuille de Correction',icon:<CheckCircle2 size={14}/>},{id:'diagnostic',label:'Analyse Thématique',icon:<TrendingUp size={14}/>}].map(t=>(
-                        <button key={t.id} onClick={()=>setResultsTab(t.id)}
-                          style={{ display:'flex',alignItems:'center',gap:'0.4rem',padding:'0.45rem 1rem',borderRadius:'calc(var(--radius-md) - 3px)',border:'none',cursor:'pointer',fontWeight:700,fontSize:'0.82rem',fontFamily:'inherit',transition:'all 0.2s',
-                            background:resultsTab===t.id?'var(--violet)':'transparent',
-                            color:resultsTab===t.id?'#fff':'var(--text-muted)',
-                          }}>
-                          {t.icon}{t.label}
-                        </button>
-                      ))}
+                  {/* Corrections / Diagnostics details */}
+                  <div style={{ background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--border)', borderRadius: '1.5rem', padding: '1.25rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.25rem' }}>
+                      <div style={{ display: 'flex', gap: '0.3rem', background: 'rgba(255, 255, 255, 0.02)', padding: '0.25rem', borderRadius: '0.875rem', border: '1px solid var(--border)' }}>
+                        {[{id:'list',label:'Feuille de Correction',icon:<CheckCircle2 size={14}/>},{id:'diagnostic',label:'Analyse Thématique',icon:<TrendingUp size={14}/>}].map(t=>(
+                          <button key={t.id} onClick={()=>setResultsTab(t.id)}
+                            style={{ 
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.4rem',
+                              padding: '0.5rem 1rem',
+                              borderRadius: '0.65rem',
+                              border: 'none',
+                              cursor: 'pointer',
+                              fontWeight: 700,
+                              fontSize: '0.82rem',
+                              fontFamily: 'inherit',
+                              transition: 'all 0.2s',
+                              background: resultsTab === t.id ? 'var(--violet)' : 'transparent',
+                              color: resultsTab === t.id ? '#fff' : 'var(--text-muted)',
+                              boxShadow: resultsTab === t.id ? '0 2px 8px var(--violet-glow)' : 'none'
+                            }}>
+                            {t.icon}{t.label}
+                          </button>
+                        ))}
+                      </div>
                     </div>
+
+                    {resultsTab === 'list' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: 400, overflowY: 'auto', paddingRight: '4px' }}>
+                        {corrected.map(row => <ResultRow key={row.q} row={row} />)}
+                      </div>
+                    )}
+
+                    {resultsTab === 'diagnostic' && (
+                      <div style={{ maxHeight: 400, overflowY: 'auto' }}>
+                        <DiagnosticReport corrected={corrected} exam={activeExam} onClose={() => {}} />
+                      </div>
+                    )}
                   </div>
-
-                  {resultsTab === 'list' && (
-                    <div style={{ display:'flex', flexDirection:'column', gap:'0.4rem', maxHeight:420, overflowY:'auto', paddingRight: '4px' }}>
-                      {corrected.map(row => <ResultRow key={row.q} row={row} />)}
-                    </div>
-                  )}
-
-                  {resultsTab === 'diagnostic' && (
-                    <div style={{ maxHeight:420, overflowY:'auto' }}>
-                      <DiagnosticReport corrected={corrected} exam={activeExam} onClose={() => {}} />
-                    </div>
-                  )}
                 </div>
 
               </div>
 
               {/* Action row */}
               <div style={{ 
-                display:'flex', 
-                gap:'0.75rem', 
-                marginTop:'2.5rem', 
+                display: 'flex', 
+                gap: '0.85rem', 
+                marginTop: '3rem', 
                 borderTop: '1px solid var(--border)', 
                 paddingTop: '1.5rem', 
-                justifyContent:'flex-end', 
+                justifyContent: 'flex-end', 
                 flexWrap: 'wrap' 
               }}>
                 <button 
                   className="btn-outline" 
                   onClick={reset} 
-                  style={{ display:'flex', alignItems:'center', gap:'0.5rem', padding: '0.7rem 1.5rem', borderRadius: '10px' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.7rem 1.5rem', borderRadius: '0.875rem' }}
                 >
-                  <RotateCcw size={15} /> Scanner une autre feuille
+                  <RotateCcw size={15} /> Scanner une autre copie
                 </button>
                 <button 
                   className="btn-outline" 
                   onClick={() => navigate('/dashboard')} 
-                  style={{ padding: '0.7rem 1.5rem', borderRadius: '10px' }}
+                  style={{ padding: '0.7rem 1.5rem', borderRadius: '0.875rem' }}
                 >
                   Retour à l'accueil
                 </button>
@@ -679,11 +949,11 @@ export default function OMRScannerPage() {
                   className="btn" 
                   onClick={handlePrintReport} 
                   style={{ 
-                    display:'flex', 
-                    alignItems:'center', 
-                    gap:'0.5rem', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
                     padding: '0.7rem 1.75rem', 
-                    borderRadius: '10px',
+                    borderRadius: '0.875rem',
                     fontWeight: 700 
                   }}
                 >

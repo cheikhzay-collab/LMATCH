@@ -12,10 +12,24 @@ function renderOptionText(text) {
 }
 
 export default function MockExamMode() {
-  const { exams, saveMockExamResult, schoolBranding, isExamLocked, updateCardProgress, user, loading } = useAuth();
+  const { exams, saveMockExamResult, schoolBranding, isExamLocked, updateCardProgress, user, loading, loadExamQuestions } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const navigate = useNavigate();
+
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
+
+  useEffect(() => {
+    if (examId) {
+      const exam = exams.find(e => e.id === examId);
+      if (exam && (!exam.questions || exam.questions.length === 0)) {
+        setLoadingQuestions(true);
+        loadExamQuestions(examId)
+          .catch(err => console.error('[MockExamMode] Failed to load exam questions:', err))
+          .finally(() => setLoadingQuestions(false));
+      }
+    }
+  }, [examId, exams, loadExamQuestions]);
 
   const currentExam = useMemo(() => examId ? exams.find(e => e.id === examId) : exams[0], [exams, examId]);
   const questions = useMemo(() => currentExam?.questions ?? [], [currentExam]);
@@ -101,7 +115,7 @@ export default function MockExamMode() {
 
   const onReturn = useCallback(() => navigate(user ? '/dashboard' : '/schools'), [navigate, user]);
 
-  if (loading || (currentExam && !questions.length)) {
+  if (loading || loadingQuestions || (currentExam && !questions.length)) {
     return (
       <div className="focus-layout" style={{
         height: '100vh',

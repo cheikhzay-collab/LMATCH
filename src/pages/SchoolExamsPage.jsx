@@ -54,7 +54,7 @@ function useIsMobile() {
 export default function SchoolExamsPage() {
   const { schoolName } = useParams();
   const school = decodeURIComponent(schoolName);
-  const { exams, user, schoolBranding, schools, isExamLocked } = useAuth();
+  const { exams, user, schoolBranding, schools, isExamLocked, loadExamQuestions } = useAuth();
   const navigate = useNavigate();
   const [scanExam, setScanExam] = useState(null);
   const isMobile = useIsMobile();
@@ -63,7 +63,16 @@ export default function SchoolExamsPage() {
   const schoolExams = exams.filter(e => e.school === school && e.isActive !== false && e.isArchived !== true);
 
   const handleDownloadPDF = async (exam) => {
-    await generateAnswerSheet(exam, user);
+    let questions = exam.questions;
+    if (!questions || questions.length === 0) {
+      try {
+        questions = await loadExamQuestions(exam.id);
+      } catch (err) {
+        console.error('Failed to load questions for OMR sheet:', err);
+        return;
+      }
+    }
+    await generateAnswerSheet({ ...exam, questions }, user);
   };
 
   const IconComponent = ICON_MAP[brand.iconKey] || GraduationCap;
@@ -360,9 +369,18 @@ export default function SchoolExamsPage() {
                             win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre sujet PDF en cours...</p></div></body></html>');
                           }
                           (async () => {
-                            const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
-                            const html = await generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
-                            openPrintWindow(html, 'sujet', win);
+                            try {
+                              let questions = exam.questions;
+                              if (!questions || questions.length === 0) {
+                                questions = await loadExamQuestions(exam.id);
+                              }
+                              const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
+                              const html = await generateSubjectHTML(exam.name, exam.school, exam.year, questions || [], { examId: exam.id, schoolsList });
+                              openPrintWindow(html, 'sujet', win);
+                            } catch (err) {
+                              console.error('Failed to generate subject PDF:', err);
+                              if (win) win.close();
+                            }
                           })();
                         }
                       }
@@ -402,9 +420,20 @@ export default function SchoolExamsPage() {
                         if (win) {
                           win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre corrigé PDF en cours...</p></div></body></html>');
                         }
-                        const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
-                        const html = generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions, { examId: exam.id, schoolsList });
-                        openPrintWindow(html, 'corrigé', win);
+                        (async () => {
+                          try {
+                            let questions = exam.questions;
+                            if (!questions || questions.length === 0) {
+                              questions = await loadExamQuestions(exam.id);
+                            }
+                            const schoolsList = schools && schools.length > 0 ? schools : Array.from(new Set(exams.map(e => e.school))).filter(Boolean);
+                            const html = generateCorrectionHTML(exam.name, exam.school, exam.year, questions || [], { examId: exam.id, schoolsList });
+                            openPrintWindow(html, 'corrigé', win);
+                          } catch (err) {
+                            console.error('Failed to generate correction PDF:', err);
+                            if (win) win.close();
+                          }
+                        })();
                       }
                     }}
                     title="Voir le corrigé de l'examen"

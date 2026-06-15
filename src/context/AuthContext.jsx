@@ -1,7 +1,7 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
 import { getUserDoc, createUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard } from '../services/userService';
-import { getAllExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam } from '../services/examService';
+import { getAllExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam, getExamQuestionsOnly } from '../services/examService';
 import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, redeemCodeViaRPC } from '../services/planService';
 import { sanitizeInputString, validatePhoneNumber } from '../utils/security';
@@ -1658,6 +1658,22 @@ export function AuthProvider({ children }) {
     return !plan.allowedSchools.includes(exam.school);
   };
 
+  const loadExamQuestions = async (examId) => {
+    if (!SUPABASE_ENABLED) return;
+    const exam = exams.find(e => e.id === examId);
+    if (exam && exam.questions && exam.questions.length > 0) {
+      return exam.questions;
+    }
+    try {
+      const questions = await getExamQuestionsOnly(examId);
+      setExams(prev => prev.map(e => e.id === examId ? { ...e, questions } : e));
+      return questions;
+    } catch (err) {
+      console.error('[Supabase] Failed to load questions for exam:', examId, err);
+      throw err;
+    }
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, users, login, logout, register, loginWithGoogle: loginGoogle, exams, addExam, updateUserTier, updateProfile,
@@ -1671,6 +1687,7 @@ export function AuthProvider({ children }) {
       mockExamHistory, saveMockExamResult,
       leaderboard, refreshLeaderboard,
       isExamLocked,
+      loadExamQuestions,
       supabaseEnabled: SUPABASE_ENABLED,
       refreshAdminData,
       loading,

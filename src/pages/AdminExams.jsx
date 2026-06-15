@@ -1,17 +1,31 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Lock, Unlock, Library, Eye, EyeOff, Edit, X, FileText, Download, Search, BookOpen, Trash2, Archive } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { generateSubjectHTML, generateCorrectionHTML, generateEbookHTML, openPrintWindow } from '../utils/generateExamPDF';
 
 export default function AdminExams() {
-  const { exams, toggleExamStatus, schools, deleteExam, toggleArchiveExam } = useAuth();
+  const { exams, toggleExamStatus, schools, deleteExam, toggleArchiveExam, loadExamQuestions } = useAuth();
   const navigate = useNavigate();
 
   const [showEbook, setShowEbook] = useState(false);
+  const [loadingEbookData, setLoadingEbookData] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState('');
   const [archiveTab, setArchiveTab] = useState('active'); // 'active' | 'archived'
   const [deleteConfirmExam, setDeleteConfirmExam] = useState(null);
+
+  // Load questions for all active exams when opening the Ebook Modal
+  useEffect(() => {
+    if (showEbook) {
+      const examsToLoad = exams.filter(e => !e.isArchived && (!e.questions || e.questions.length === 0));
+      if (examsToLoad.length > 0) {
+        setLoadingEbookData(true);
+        Promise.all(examsToLoad.map(e => loadExamQuestions(e.id)))
+          .catch(err => console.error('Failed to load exam questions for E-book:', err))
+          .finally(() => setLoadingEbookData(false));
+      }
+    }
+  }, [showEbook, exams, loadExamQuestions]);
 
   // All unique topics + question count across all exams
   const topicMap = useMemo(() => {
@@ -61,14 +75,23 @@ export default function AdminExams() {
   const clearFilters = () => { setSearch(''); setFilterSchool(''); setFilterYear(''); setFilterStatus(''); setFilterTier(''); };
 
   // ── CSV Export ──
-  const downloadCSV = (exam) => {
+  const downloadCSV = async (exam) => {
+    let questions = exam.questions;
+    if (!questions || questions.length === 0) {
+      try {
+        questions = await loadExamQuestions(exam.id);
+      } catch (err) {
+        console.error('Failed to load questions for CSV export:', err);
+        return;
+      }
+    }
     const esc = (v = '') => {
       const s = String(v).replace(/"/g, '""');
       return /[,"\n]/.test(s) ? `"${s}"` : s;
     };
     const rows = [
       ['Context', 'Topic', 'Question', 'Options', 'Réponse', 'Astuce', 'Trick'],
-      ...(exam.questions || []).map(q => [
+      ...(questions || []).map(q => [
         esc(q.context || ''),
         esc(q.subject || q.topic || 'Général'),
         esc(q.question || ''),
@@ -236,7 +259,7 @@ export default function AdminExams() {
                     {/* Questions count */}
                     <td style={{ padding: '0.9rem 1rem', textAlign: 'center', fontWeight: 700, fontSize: '0.9rem' }}>
                       <span style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: 6, padding: '0.15rem 0.5rem', fontSize: '0.8rem' }}>
-                        {exam.questions?.length || 0}
+                        {exam.questionsCount || exam.questions?.length || 0}
                       </span>
                     </td>
 
@@ -258,15 +281,24 @@ export default function AdminExams() {
                       <div style={{ display: 'inline-flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'nowrap' }}>
 
                         {/* CSV */}
-                        <button onClick={() => downloadCSV(exam)} disabled={!exam.questions?.length}
+                        <button onClick={() => downloadCSV(exam)} disabled={!(exam.questionsCount || exam.questions?.length)}
                           title="Télécharger CSV"
-                          style={{ padding: '0.3rem 0.55rem', borderRadius: 6, border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.08)', color: 'var(--emerald)', cursor: exam.questions?.length ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.72rem', fontWeight: 700, opacity: exam.questions?.length ? 1 : 0.35 }}>
+                          style={{ padding: '0.3rem 0.55rem', borderRadius: 6, border: '1px solid rgba(16,185,129,0.3)', background: 'rgba(16,185,129,0.08)', color: 'var(--emerald)', cursor: (exam.questionsCount || exam.questions?.length) ? 'pointer' : 'not-allowed', display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.72rem', fontWeight: 700, opacity: (exam.questionsCount || exam.questions?.length) ? 1 : 0.35 }}>
                           <Download size={12} /> CSV
                         </button>
 
                         {/* Sujet PDF */}
                         <button onClick={async () => {
-                          const html = await generateSubjectHTML(exam.name, exam.school, exam.year, exam.questions || [], { examId: exam.id, schoolsList: schools });
+                          let questions = exam.questions;
+                          if (!questions || questions.length === 0) {
+                            try {
+                              questions = await loadExamQuestions(exam.id);
+                            } catch (err) {
+                              console.error('Failed to load questions for PDF:', err);
+                              return;
+                            }
+                          }
+                          const html = await generateSubjectHTML(exam.name, exam.school, exam.year, questions || [], { examId: exam.id, schoolsList: schools });
                           openPrintWindow(html, 'sujet');
                         }}
                           title="Sujet Blanc PDF"
@@ -275,7 +307,18 @@ export default function AdminExams() {
                         </button>
 
                         {/* Corrigé PDF */}
-                        <button onClick={() => openPrintWindow(generateCorrectionHTML(exam.name, exam.school, exam.year, exam.questions || [], { schoolsList: schools }), 'corrigé')}
+                        <button onClick={async () => {
+                          let questions = exam.questions;
+                          if (!questions || questions.length === 0) {
+                            try {
+                              questions = await loadExamQuestions(exam.id);
+                            } catch (err) {
+                              console.error('Failed to load questions for PDF:', err);
+                              return;
+                            }
+                          }
+                          openPrintWindow(generateCorrectionHTML(exam.name, exam.school, exam.year, questions || [], { schoolsList: schools }), 'corrigé');
+                        }}
                           title="Corrigé Détaillé PDF"
                           style={{ padding: '0.3rem 0.55rem', borderRadius: 6, border: '1px solid rgba(124,58,237,0.3)', background: 'rgba(124,58,237,0.08)', color: '#7c3aed', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3, fontSize: '0.72rem', fontWeight: 700 }}>
                           <FileText size={12} /> Corrigé
@@ -331,7 +374,15 @@ export default function AdminExams() {
               <button onClick={() => setShowEbook(false)} style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}><X size={22} /></button>
             </div>
 
-            {topicList.length === 0 ? (
+            {loadingEbookData ? (
+              <div style={{ padding: '3rem 1rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                <div style={{ width: 40, height: 40, border: '3px solid rgba(124,58,237,0.15)', borderTopColor: 'var(--violet)', borderRadius: '50%', animation: 'spinEbook 1s linear infinite', margin: '0 auto 1.25rem' }} />
+                <p style={{ fontWeight: 700, fontSize: '0.9rem' }}>Chargement des données de l'E-book...</p>
+                <style dangerouslySetInnerHTML={{__html: `
+                  @keyframes spinEbook { to { transform: rotate(360deg); } }
+                `}} />
+              </div>
+            ) : topicList.length === 0 ? (
               <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>Aucun topic trouvé. Importez d'abord des examens avec sujets.</p>
             ) : (
               <>

@@ -28,6 +28,7 @@ const mapDBToExam = (row) => {
     year: row.year,
     tier: row.tier,
     questions: row.questions,
+    questionsCount: row.questions_count !== undefined ? row.questions_count : (row.questions ? row.questions.length : 0),
     pdfUrl: row.pdf_url,
     isActive: row.is_active,
     isArchived: row.is_archived,
@@ -44,7 +45,7 @@ const mapDBToExam = (row) => {
 export const getAllExams = async () => {
   if (!supabase) return [];
   const { data, error } = await supabase
-    .from('exams')
+    .from('exams_metadata')
     .select('*')
     .order('date_added', { ascending: false });
 
@@ -61,7 +62,7 @@ export const getAllExams = async () => {
 export const getActiveExams = async () => {
   if (!supabase) return [];
   const { data, error } = await supabase
-    .from('exams')
+    .from('exams_metadata')
     .select('*')
     .eq('is_active', true)
     .eq('is_archived', false);
@@ -86,6 +87,24 @@ export const getExamById = async (examId) => {
 
   if (error || !data) return null;
   return mapDBToExam(data);
+};
+
+/**
+ * Fetch only the questions array of a single exam.
+ */
+export const getExamQuestionsOnly = async (examId) => {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('exams')
+    .select('questions')
+    .eq('id', examId)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('[Supabase] Failed to fetch exam questions:', error);
+    return [];
+  }
+  return data.questions || [];
 };
 
 // ─── Write ────────────────────────────────────────────────────────────────────

@@ -41,7 +41,7 @@ function groupCardsByContext(compiledCards, questionsPool) {
 }
 
 export default function StudyMode() {
-  const { user, exams, progress: allProgress, updateCardProgress, isExamLocked } = useAuth();
+  const { user, exams, progress: allProgress, updateCardProgress, isExamLocked, loadExamQuestions } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const topicId = searchParams.get('topic');
@@ -55,6 +55,7 @@ export default function StudyMode() {
   const [sessionFinished, setSessionFinished] = useState(false);
   const [sessionHistory, setSessionHistory] = useState([]);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
 
   // Mobile detection — updated on resize
   useEffect(() => {
@@ -68,6 +69,46 @@ export default function StudyMode() {
   const currentExam = examId ? exams.find(e => e.id === examId) : activeExamsList[0];
 
   const isParcours = !examId && !topicId;
+
+  // Lazy load questions for study session before initialization
+  useEffect(() => {
+    if (!sessionStarted) {
+      const examsToLoad = activeExamsList.filter(e => e.isActive !== false && e.isArchived !== true && (!e.questions || e.questions.length === 0));
+      if (examsToLoad.length > 0) {
+        setLoadingQuestions(true);
+        Promise.all(examsToLoad.map(e => loadExamQuestions(e.id)))
+          .catch(err => console.error('[StudyMode] Failed to pre-load active exam questions:', err))
+          .finally(() => setLoadingQuestions(false));
+      }
+      return;
+    }
+
+    if (examId) {
+      const exam = exams.find(e => e.id === examId);
+      if (exam && (!exam.questions || exam.questions.length === 0)) {
+        setLoadingQuestions(true);
+        loadExamQuestions(examId)
+          .catch(err => console.error('[StudyMode] Failed to load exam questions:', err))
+          .finally(() => setLoadingQuestions(false));
+      }
+    } else if (topicId) {
+      const examsToLoad = activeExamsList.filter(e => !e.questions || e.questions.length === 0);
+      if (examsToLoad.length > 0) {
+        setLoadingQuestions(true);
+        Promise.all(examsToLoad.map(e => loadExamQuestions(e.id)))
+          .catch(err => console.error('[StudyMode] Failed to load active exams questions for topic:', err))
+          .finally(() => setLoadingQuestions(false));
+      }
+    } else {
+      const examsToLoad = activeExamsList.filter(e => !e.questions || e.questions.length === 0);
+      if (examsToLoad.length > 0) {
+        setLoadingQuestions(true);
+        Promise.all(examsToLoad.map(e => loadExamQuestions(e.id)))
+          .catch(err => console.error('[StudyMode] Failed to load active exams questions for general review:', err))
+          .finally(() => setLoadingQuestions(false));
+      }
+    }
+  }, [examId, topicId, sessionStarted, exams, activeExamsList, loadExamQuestions]);
 
   // Dynamically allow scrolling on selector dashboard, but lock it in study session focus mode
   useEffect(() => {
@@ -121,7 +162,16 @@ export default function StudyMode() {
   }, [examId, topicId, sessionStarted]);
 
   useEffect(() => {
-    if (!sessionStarted || sessionCards !== null) return;
+    if (!sessionStarted || sessionCards !== null || loadingQuestions) return;
+
+    // Check if questions are actually loaded for what we need
+    if (examId) {
+      const exam = exams.find(e => e.id === examId);
+      if (!exam || !exam.questions || exam.questions.length === 0) return;
+    } else {
+      const pendingCount = activeExamsList.filter(e => !e.questions || e.questions.length === 0).length;
+      if (pendingCount > 0) return;
+    }
 
     const now = new Date();
     let questionsPool;
@@ -551,12 +601,14 @@ export default function StudyMode() {
   }
 
   // ── Loading state ──
-  if ((!isParcours && !currentExam && !topicId) || sessionCards === null) {
+  if ((!isParcours && !currentExam && !topicId) || sessionCards === null || loadingQuestions) {
     return (
       <div style={{ height: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <div style={{ textAlign: 'center' }}>
           <BrainCircuit size={48} color="var(--primary)" style={{ marginBottom: '1rem' }} />
-          <h2 className="text-muted">{isParcours ? "Chargement du parcours guidé..." : "Chargement de la session..."}</h2>
+          <h2 className="text-muted">
+            {loadingQuestions ? "Chargement des questions..." : (isParcours ? "Chargement du parcours guidé..." : "Chargement de la session...")}
+          </h2>
         </div>
       </div>
     );
