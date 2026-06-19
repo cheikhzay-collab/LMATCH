@@ -136,7 +136,7 @@ export default function Layout() {
 
   if (isFocusMode) {
     return (
-      <div className="focus-layout" style={{ minHeight: '100vh', width: '100vw', background: 'var(--bg-base)', color: 'var(--text-main)', transition: 'background 0.3s, color 0.3s' }}>
+      <div className="focus-layout" style={{ minHeight: '100vh', width: '100vw', background: 'var(--bg-base)', color: 'var(--text-main)', transition: 'background 0.3s, color 0.3s', paddingTop: '1rem' }}>
         <Suspense fallback={<LayoutLoadingFallback />}>
           <Outlet />
         </Suspense>

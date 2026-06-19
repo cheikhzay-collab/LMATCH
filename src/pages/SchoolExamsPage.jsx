@@ -60,7 +60,9 @@ export default function SchoolExamsPage() {
   const isMobile = useIsMobile();
 
   const brand = getBrand(school, schoolBranding);
-  const schoolExams = exams.filter(e => e.school === school && e.isActive !== false && e.isArchived !== true);
+  const schoolExams = exams
+    .filter(e => e.school === school && e.isActive !== false && e.isArchived !== true)
+    .sort((a, b) => (parseInt(b.year) || 0) - (parseInt(a.year) || 0));
 
   const handleDownloadPDF = async (exam) => {
     let questions = exam.questions;

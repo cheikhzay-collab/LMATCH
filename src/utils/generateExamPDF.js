@@ -36,9 +36,9 @@ const getFontImportLinks = () => {
 };
 
 const getMarginStyle = (margin) => {
-  if (margin === 'compact') return '0.3cm 0.8cm 0.2cm';
-  if (margin === 'wide') return '0.8cm 1.8cm 0.4cm';
-  return '0.5cm 1.3cm 0.3cm'; // standard
+  if (margin === 'compact') return '1.0cm 0.8cm 0.2cm';
+  if (margin === 'wide') return '1.5cm 1.8cm 0.4cm';
+  return '1.5cm 1.3cm 0.3cm'; // standard
 };
 
 const getFontFamilyStyle = (font) => {
@@ -684,7 +684,7 @@ body{
 }
 @page{
   size:A4;
-  margin:0.8cm 0 1.0cm 0;
+  margin:1.5cm 1.3cm 1.0cm 1.3cm;
   ${showPageNumbers ? `
   @bottom-left {
     content: "⚡ L'CONQ   |   ${examTitle}   |   ${copyrightLine}";
@@ -1814,7 +1814,7 @@ body{
 }
 @page{
   size:A4;
-  margin:0.8cm 0 1.0cm 0;
+  margin:1.5cm 1.3cm 1.0cm 1.3cm;
   ${showPageNumbers ? `
   @bottom-left {
     content: "⚡ L'CONQ   |   ${examTitle}   |   ${copyrightLine}";
@@ -2533,7 +2533,7 @@ body{
 
 @page{
   size:A4;
-  margin:0.8cm 0 1.0cm 0;
+  margin:1.5cm 1.3cm 1.0cm 1.3cm;
   ${showPageNumbers ? `
   @bottom-left {
     content: "⚡ L'CONQ   |   ${topic}   |   ${copyrightLine}";
@@ -3471,3 +3471,812 @@ export const openPrintWindow = (html, title, targetWindow) => {
     win.addEventListener('load', () => URL.revokeObjectURL(url), { once: true });
   }
 };
+
+export const generateCompilationEbookHTML = (config, examsData, settings = {}) => {
+  const pdfConf = getPdfSettings(settings);
+  const fontFamilyCSS = getFontFamilyStyle(pdfConf.fontFamily);
+  const fontSizeCSS = pdfConf.fontSize;
+  const pageMargin = pdfConf.pageMargins === 'compact' ? '10mm' : pdfConf.pageMargins === 'wide' ? '25mm' : '15mm';
+  const pageHeightMM = pdfConf.pageMargins === 'compact' ? 277 : pdfConf.pageMargins === 'wide' ? 247 : 267;
+
+  const {
+    title = "CONCOURS D'ACCÈS AUX GRANDES ÉCOLES",
+    subtitle = "ARCHIVES & CORRECTIONS DÉTAILLÉES",
+    selectedSchools = [],
+    selectedExams = {}, // { schoolName: [examId1, examId2, ...] }
+    schoolOrder = [],
+    includeCover = true,
+    includeTOC = true,
+    includeSubject = true,
+    includeOMR = true,
+    includeCorrection = true,
+    showTricks = true,
+    profName = '',
+    profPhone = '',
+    profSite = 'www.lconq.ma',
+  } = config;
+
+  const siteUrl = profSite || 'www.lconq.ma';
+  const copyrightLine = profName
+    ? `© ${new Date().getFullYear()} L'CONQ × ${profName}. Tous droits réservés.`
+    : `© ${new Date().getFullYear()} L'CONQ. Tous droits réservés.`;
+
+  const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+
+  // Helper for rendering blank OMR grid
+  const renderBlankOMRGrid = (questionsCount) => {
+    const pHalf = Math.ceil(questionsCount / 2);
+    const pOpts = ['A', 'B', 'C', 'D', 'E'];
+
+    let premiumOmrHtml = '';
+    
+    // Column 1
+    premiumOmrHtml += '<div class="omr-column col-1">';
+    premiumOmrHtml += `
+      <div class="omr-col-header">
+        <span class="row-num">N°</span>
+        <div style="display:flex; justify-content:space-between; flex-grow:1; padding-left:10px;">
+          ${pOpts.map(o => `<span style="width:20px; text-align:center;">${o}</span>`).join('')}
+        </div>
+      </div>
+    `;
+    for (let i = 0; i < pHalf; i++) {
+      const isAlt = i % 2 === 0 ? ' alt' : '';
+      const qNum = String(i + 1).padStart(2, '0');
+      const bubblesHtml = pOpts.map(o => `<div class="omr-bubble">${o}</div>`).join('');
+      premiumOmrHtml += `
+        <div class="omr-row${isAlt}">
+          <span class="row-num">${qNum}</span>
+          <div style="display:flex; justify-content:space-between; flex-grow:1; padding-left:10px;">
+            ${bubblesHtml}
+          </div>
+        </div>
+      `;
+    }
+    premiumOmrHtml += '</div>';
+
+    // Column 2
+    premiumOmrHtml += '<div class="omr-column col-2">';
+    premiumOmrHtml += `
+      <div class="omr-col-header">
+        <span class="row-num">N°</span>
+        <div style="display:flex; justify-content:space-between; flex-grow:1; padding-left:10px;">
+          ${pOpts.map(o => `<span style="width:20px; text-align:center;">${o}</span>`).join('')}
+        </div>
+      </div>
+    `;
+    for (let i = pHalf; i < questionsCount; i++) {
+      const isAlt = i % 2 === 0 ? ' alt' : '';
+      const qNum = String(i + 1).padStart(2, '0');
+      const bubblesHtml = pOpts.map(o => `<div class="omr-bubble">${o}</div>`).join('');
+      premiumOmrHtml += `
+        <div class="omr-row${isAlt}">
+          <span class="row-num">${qNum}</span>
+          <div style="display:flex; justify-content:space-between; flex-grow:1; padding-left:10px;">
+            ${bubblesHtml}
+          </div>
+        </div>
+      `;
+    }
+    premiumOmrHtml += '</div>';
+    return premiumOmrHtml;
+  };
+
+  const renderSubjectQuestions = (questions) => {
+    return questions.map((q, idx) => {
+      const num = idx + 1;
+      const optionsHtml = (q.options || []).map((opt, oi) => {
+        const letter = LETTERS[oi] || String(oi + 1);
+        return `<div class="ws-opt">
+          <span class="ws-opt-letter">${letter}</span>
+          <span class="ws-opt-text">${renderMath(optText(opt))}</span>
+        </div>`;
+      }).join('');
+
+      return `
+      <div class="ws-exercise" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #ffffff;">
+        <div class="ws-ex-header" style="display:flex; justify-content:space-between; margin-bottom:10px; align-items:center;">
+          <div class="ws-ex-pill" style="display:flex; align-items:center; background:#f1f5f9; border-radius:4px; padding:2px 8px;">
+            <span class="ws-ex-pill-label" style="font-size:0.75rem; font-weight:600; color:#64748b; margin-right:4px;">Question N°</span>
+            <span class="ws-ex-num" style="font-size:0.8rem; font-weight:800; color:#0f172a;">${num}</span>
+          </div>
+          <span class="ws-ans-tag" style="font-size:0.75rem; font-weight:700; color:#1e3a8a; background:#dbeafe; padding:2px 6px; border-radius:4px; text-transform:uppercase;">${(q.subject || q.topic || 'Général').toUpperCase()}</span>
+        </div>
+        <div class="ws-ex-body">
+          ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px; font-size:0.95rem; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px;">📋 ${renderMath(q.context)}</div>` : ''}
+          ${renderQuestionImageHTML(q, 'above')}
+          <div class="ws-qtext" style="font-size:0.95rem; font-weight:500; color:#1e293b; margin-bottom:12px;">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
+          ${renderQuestionImageHTML(q, 'below')}
+          <div class="ws-opts ${getOptionsLayoutClass(q.options)}" style="display:grid; gap:8px;">${optionsHtml}</div>
+        </div>
+      </div>`;
+    }).join('');
+  };
+
+  const renderCorrectionQuestions = (questions, showTricks) => {
+    return questions.map((q, idx) => {
+      const num = idx + 1;
+      const optionsHtml = (q.options || []).map((opt, oi) => {
+        const letter = LETTERS[oi] || String(oi + 1);
+        const isCorrect = q.correct_answer === letter;
+        return `<div class="opt${isCorrect ? ' correct-opt' : ''}">
+          <span class="opt-badge${isCorrect ? ' correct-badge' : ''}">${letter}</span>
+          <span class="opt-text">${renderMath(optText(opt))}</span>
+          ${isCorrect ? '<span class="correct-check">✓ Correcte</span>' : ''}
+        </div>`;
+      }).join('');
+
+      return `
+      <div class="qcard" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 15px; background: #ffffff;">
+        <div class="qheader" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <span class="qnum" style="background:#0f172a; color:#fff; padding:2px 8px; border-radius:4px; font-weight:800;">Q${num}</span>
+          <span class="ans-badge" style="background:#f1f5f9; padding:2px 8px; border-radius:4px; font-size:0.8rem; font-weight:700;">Réponse : ${q.correct_answer || '?'}</span>
+        </div>
+        ${renderQuestionImageHTML(q, 'above')}
+        <div class="qtext" style="font-size:0.95rem; font-weight:500; color:#1e293b; margin-bottom:12px;">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
+        ${renderQuestionImageHTML(q, 'below')}
+        <div class="opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
+        ${q.astuce ? `<div class="rule-box" style="margin-top:12px; padding:10px; border-left:4px solid #10b981; background:#f0fdf4; border-radius:4px;">
+          <div class="rule-title" style="font-size:0.75rem; font-weight:800; color:#065f46; margin-bottom:4px;">⭐ RÈGLE DE L'ART</div>
+          <div class="rule-body" style="font-size:0.85rem;">${renderMath(q.astuce)}</div>
+        </div>` : ''}
+        ${showTricks && q.trick ? `<div class="trick-box" style="margin-top:8px; padding:10px; border-left:4px solid #f59e0b; background:#fffbeb; border-radius:4px;">
+          <div class="trick-title" style="font-size:0.75rem; font-weight:800; color:#b45309; margin-bottom:4px;">⚡ COUP DE GRÂCE</div>
+          <div class="trick-body" style="font-size:0.85rem;">${renderMath(q.trick)}</div>
+        </div>` : ''}
+      </div>`;
+    }).join('');
+  };
+
+  let bookHtml = '';
+
+  // ── Pre-compute page numbers for TOC ──
+  // Each fixed page (cover, TOC, exam cover, OMR) = 1 page
+  // Subject/correction sections: estimate based on question count
+  const QUESTIONS_PER_PAGE_SUBJECT = 3;   // approx questions per page in subject
+  const QUESTIONS_PER_PAGE_CORRECTION = 2; // approx questions per page in correction (with tips)
+  const pageMap = {}; // { sectionId: pageNumber }
+  let currentPage = 0;
+  if (includeCover) currentPage++;
+  if (includeTOC) currentPage++;
+
+  schoolOrder.forEach(school => {
+    const schoolExams = selectedExams[school] || [];
+    schoolExams.forEach(examId => {
+      const exam = examsData.find(e => e.id === examId);
+      if (!exam) return;
+      const qCount = (exam.questions || []).length || 20;
+      // Exam cover page
+      currentPage++;
+      pageMap[`exam-${examId}-cover`] = currentPage;
+      // Subject
+      if (includeSubject) {
+        currentPage++;
+        pageMap[`exam-${examId}-subject`] = currentPage;
+        currentPage += Math.max(0, Math.ceil(qCount / QUESTIONS_PER_PAGE_SUBJECT) - 1);
+      }
+      // OMR
+      if (includeOMR) {
+        currentPage++;
+        pageMap[`exam-${examId}-omr`] = currentPage;
+      }
+      // Correction
+      if (includeCorrection) {
+        currentPage++;
+        pageMap[`exam-${examId}-correction`] = currentPage;
+        currentPage += Math.max(0, Math.ceil(qCount / QUESTIONS_PER_PAGE_CORRECTION) - 1);
+      }
+    });
+  });
+  const totalPages = currentPage;
+
+
+  // 1. Cover Page
+  if (includeCover) {
+    bookHtml += `
+    <div class="book-cover-container print-page" id="book-main-cover">
+      <div class="book-cover-border">
+        <div class="book-cover-header" style="text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 4mm;">
+          <h2 style="font-family:'Inter', sans-serif; font-size:2.2rem; font-weight:900; letter-spacing:6px; color:#0f172a; margin-bottom:1mm;">L'CONQ</h2>
+          <div style="font-family:'Inter', sans-serif; font-size:0.8rem; font-weight:700; color:#b89047; letter-spacing:4px;">EXCELLENCE &amp; PERFORMANCE</div>
+        </div>
+        
+        <div class="book-cover-body" style="text-align: center; margin: 15mm 0; flex-grow: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+          <div style="font-family:'Inter', sans-serif; font-size:0.95rem; font-weight:800; color:#b89047; letter-spacing:3px; text-transform:uppercase; margin-bottom:6mm; background:rgba(184,144,71,0.08); border:1px solid rgba(184,144,71,0.2); padding:4px 16px; border-radius:99px;">LIVRE COMPILATION</div>
+          <h1 style="font-family:'Plus Jakarta Sans', sans-serif; font-size:2.4rem; font-weight:900; color:#0f172a; line-height:1.2; margin-bottom:4mm; max-width:90%;">${title.toUpperCase()}</h1>
+          <p style="font-family:'Inter', sans-serif; font-size:1.1rem; color:#475569; max-width:80%; margin-bottom:8mm;">${subtitle}</p>
+          
+          <div style="width: 60px; height: 3px; background: #b89047; border-radius: 2px; margin-bottom: 8mm;"></div>
+          
+          <div style="font-family:'Inter', sans-serif; font-size:0.85rem; font-weight:700; color:#64748b; margin-bottom:4mm; text-transform:uppercase; letter-spacing:1px;">Établissements &amp; Concours Inclus</div>
+          <div class="school-list" style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-width: 85%;">
+            ${selectedSchools.map(sch => `<span style="background: #f1f5f9; color: #1e293b; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700; font-family:'Inter', sans-serif;">${sch}</span>`).join('')}
+          </div>
+        </div>
+        
+        <div class="book-cover-footer" style="text-align: center; border-top: 1px solid #e2e8f0; padding-top: 6mm;">
+          <div style="font-family:'Inter', sans-serif; font-size:0.9rem; color:#334155; margin-bottom:2mm;">
+            ${profName ? `Préparé par : <strong>${profName}</strong>${profPhone ? ' · ' + profPhone : ''}` : `<strong>${siteUrl}</strong>`}
+          </div>
+          <div style="font-family:'Inter', sans-serif; font-size:0.75rem; color:#94a3b8;">
+            ${copyrightLine}
+          </div>
+        </div>
+      </div>
+      <div id="page-1-end" style="position:absolute;bottom:0;width:1px;height:1px"></div>
+    </div>
+    `;
+  }
+
+  // 2. Table of Contents
+  if (includeTOC) {
+    bookHtml += `
+    <div class="toc-page-container print-page" id="book-toc">
+      <div class="toc-border">
+        <h2 class="toc-title">TABLE DES MATIÈRES</h2>
+        <div class="toc-divider"></div>
+        
+        <div class="toc-list">
+          ${schoolOrder.map(school => {
+            const schoolExamsList = selectedExams[school] || [];
+            if (schoolExamsList.length === 0) return '';
+            
+            const examItemsHtml = schoolExamsList.map(examId => {
+              const exam = examsData.find(e => e.id === examId);
+              if (!exam) return '';
+              
+              const parts = [];
+              if (includeSubject) {
+                parts.push(`
+                  <div class="toc-sub-item toc-item" data-target="exam-${exam.id}-subject">
+                    <span class="toc-sub-label">Sujet de l'épreuve</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page-num">${pageMap[`exam-${exam.id}-subject`] || '—'}</span>
+                  </div>
+                `);
+              }
+              if (includeOMR) {
+                parts.push(`
+                  <div class="toc-sub-item toc-item" data-target="exam-${exam.id}-omr">
+                    <span class="toc-sub-label">Grille de réponses OMR</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page-num">${pageMap[`exam-${exam.id}-omr`] || '—'}</span>
+                  </div>
+                `);
+              }
+              if (includeCorrection) {
+                parts.push(`
+                  <div class="toc-sub-item toc-item" data-target="exam-${exam.id}-correction">
+                    <span class="toc-sub-label">Correction détaillée &amp; Solutions</span>
+                    <span class="toc-dots"></span>
+                    <span class="toc-page-num">${pageMap[`exam-${exam.id}-correction`] || '—'}</span>
+                  </div>
+                `);
+              }
+              
+              return `
+                <div class="toc-exam-item">
+                  <div class="toc-exam-header">${exam.name} — ${exam.year}</div>
+                  ${parts.join('')}
+                </div>
+              `;
+            }).join('');
+            
+            return `
+              <div class="toc-section">
+                <div class="toc-part-title">${school.toUpperCase()}</div>
+                ${examItemsHtml}
+              </div>
+            `;
+          }).join('')}
+        </div>
+        
+        <div style="font-family:'Inter', sans-serif; font-size:7.5pt; text-align:center; color:#94a3b8; margin-top:auto;">
+          Généré le ${new Date().toLocaleDateString('fr-MA')} · ${siteUrl}
+        </div>
+      </div>
+      <div id="page-2-end" style="position:absolute;bottom:0;width:1px;height:1px"></div>
+    </div>
+    `;
+  }
+
+  // 3. Exams
+  schoolOrder.forEach(school => {
+    const schoolExams = selectedExams[school] || [];
+    schoolExams.forEach(examId => {
+      const exam = examsData.find(e => e.id === examId);
+      if (!exam) return;
+
+      // A: Exam Divider / Cover Page
+      bookHtml += `
+      <div class="exam-cover-container print-page toc-anchor" id="exam-${exam.id}-cover" style="page-break-after: always; break-after: page; height: ${pageHeightMM}mm; padding:0; box-sizing:border-box; background:#ffffff;">
+        <div class="exam-cover-border" style="border: 2px solid #0f172a; outline: 1px solid #b89047; outline-offset: -5px; padding: 15mm 10mm; height: 100%; display: flex; flex-direction: column; justify-content: space-between; box-sizing: border-box;">
+          <div class="exam-cover-header" style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:4px;">
+            <span style="font-family:'Inter', sans-serif; font-size:1.2rem; font-weight:900; letter-spacing:2px; color:#0f172a;">L'CONQ</span>
+            <span style="font-family:'Inter', sans-serif; font-size:0.75rem; font-weight:800; color:#b89047; letter-spacing:1px;">SESSION ${exam.year}</span>
+          </div>
+          
+          <div class="exam-cover-body" style="flex-grow:1; display:flex; flex-direction:column; justify-content:center; align-items:center; text-align:center; margin:10mm 0;">
+            <span style="font-family:'Inter', sans-serif; font-size:0.95rem; font-weight:800; color:#b89047; letter-spacing:3px; text-transform:uppercase; margin-bottom:4px;">ANNALE OFFICIELLE</span>
+            <div style="font-family:'Plus Jakarta Sans', sans-serif; font-size:1.8rem; font-weight:800; color:#0f172a; line-height:1.3; margin-bottom:4px;">${exam.name.toUpperCase()}</div>
+            <div style="font-family:'Inter', sans-serif; font-size:0.9rem; color:#64748b;">${exam.school} — ${exam.year}</div>
+            
+            <div style="width: 40px; height: 2px; background: #b89047; margin: 8mm auto;"></div>
+            
+            <div style="font-family:'Inter', sans-serif; font-size:0.8rem; color:#475569; max-width:70%;">
+              Ce fascicule contient le sujet officiel de l'épreuve, une grille de réponses OMR vierge pour l'entraînement, ainsi que la correction détaillée et les astuces de résolution.
+            </div>
+          </div>
+          
+          <div class="exam-cover-footer" style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #e2e8f0; padding-top:4px; font-family:'Inter', sans-serif; font-size:0.75rem; color:#64748b;">
+            <span>${profName || siteUrl}</span>
+            <span>Examen Blanc National</span>
+          </div>
+        </div>
+      </div>
+      `;
+
+      // B: Subject Section
+      if (includeSubject) {
+        bookHtml += `
+        <div class="subject-section toc-anchor" id="exam-${exam.id}-subject" style="page-break-after: always; break-after: page; padding: 0; box-sizing: border-box;">
+          <h2 style="font-family:'Plus Jakarta Sans', sans-serif; font-size:1.4rem; font-weight:800; border-bottom: 2px solid #0f172a; padding-bottom: 4px; margin-bottom: 8mm; display:flex; justify-content:space-between; align-items:center;">
+            <span>SUJET OFFICIEL — ${exam.name.toUpperCase()}</span>
+            <span style="font-size:0.75rem; background:#f1f5f9; padding:3px 10px; border-radius:4px; font-weight:700; color:#475569;">ÉPREUVE BLANCHE</span>
+          </h2>
+          <div class="questions-list">
+            ${renderSubjectQuestions(exam.questions || [])}
+          </div>
+        </div>
+        `;
+      }
+
+      // C: Blank OMR Grid Section
+      if (includeOMR) {
+        bookHtml += `
+        <div class="omr-page-container print-page toc-anchor" id="exam-${exam.id}-omr" style="height: ${pageHeightMM}mm; padding: 0; box-sizing: border-box;">
+          <div class="omr-border">
+            <div class="omr-header">
+              <div class="omr-logo" style="font-family:'Inter', sans-serif; font-weight:900; color:#0f172a;">L'CONQ</div>
+              <div class="omr-title" style="font-family:'Plus Jakarta Sans', sans-serif; font-size:0.85rem; font-weight:800; text-align:center;">
+                GRILLE OMR — ${exam.name.toUpperCase()}
+              </div>
+              <div class="omr-barcode"></div>
+            </div>
+            <div class="omr-instructions">
+              <strong>Instructions :</strong> Remplissez complètement la bulle correspondante à votre réponse au stylo noir ou bleu foncé.
+            </div>
+            <div class="omr-grid-container">
+              ${renderBlankOMRGrid(exam.questions?.length || 0)}
+            </div>
+            <div class="omr-footer" style="font-family:'Inter', sans-serif;">
+              <span>Examen Blanc National — L'CONQ</span>
+              <span>Propulsé par la technologie OMR Scanner L'CONQ</span>
+            </div>
+          </div>
+        </div>
+        `;
+      }
+
+      // D: Detailed Correction Section
+      if (includeCorrection) {
+        bookHtml += `
+        <div class="correction-section toc-anchor" id="exam-${exam.id}-correction" style="page-break-after: always; break-after: page; padding: 0; box-sizing: border-box;">
+          <h2 style="font-family:'Plus Jakarta Sans', sans-serif; font-size:1.4rem; font-weight:800; border-bottom: 2px solid #b89047; padding-bottom: 4px; margin-bottom: 8mm; display:flex; justify-content:space-between; align-items:center;">
+            <span style="color:#b89047;">CORRIGÉ DÉTAILLÉ &amp; RÉSOLUTIONS</span>
+            <span style="font-size:0.75rem; background:#fffbeb; border:1px solid #fef3c7; padding:3px 10px; border-radius:4px; font-weight:700; color:#d97706;">RESOLUTIONS RAPIDES</span>
+          </h2>
+          <div class="corrections-list">
+            ${renderCorrectionQuestions(exam.questions || [], showTricks)}
+          </div>
+        </div>
+        `;
+      }
+    });
+  });
+
+  return `<!DOCTYPE html><html lang="fr"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${title}</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+${getFontImportLinks()}
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: ${fontFamilyCSS};
+  background: #ffffff;
+  color: #0f172a;
+  font-size: ${fontSizeCSS};
+  line-height: 1.6;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+@page {
+  size: A4;
+  margin: 0 0 10mm 0;
+  @bottom-center {
+    content: counter(page) " / ${totalPages}";
+    font-family: 'Inter', sans-serif;
+    font-size: 8pt;
+    font-weight: 600;
+    color: #64748b;
+  }
+}
+@page :first {
+  @bottom-center { content: none; }
+}
+@media print {
+  .print-page {
+    height: ${pageHeightMM}mm;
+    margin: 0;
+    padding: 0;
+  }
+  .subject-section, .correction-section {
+    page-break-after: always;
+    break-after: page;
+  }
+}
+.print-page {
+  box-sizing: border-box;
+  width: 100%;
+  height: ${pageHeightMM}mm;
+  position: relative;
+  background: #ffffff;
+  page-break-after: always;
+  break-after: page;
+}
+
+/* --- cover styling --- */
+.book-cover-container {
+  box-sizing: border-box;
+  width: 100%;
+  height: ${pageHeightMM}mm;
+  padding: 0;
+  background: #ffffff;
+}
+.book-cover-border {
+  border: 2px solid #0f172a;
+  outline: 1px solid #b89047;
+  outline-offset: -5px;
+  padding: 20mm 15mm;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+/* --- toc styling --- */
+.toc-page-container {
+  box-sizing: border-box;
+  width: 100%;
+  height: ${pageHeightMM}mm;
+  padding: 0;
+  background: #ffffff;
+}
+.toc-border {
+  border: 2px solid #0f172a;
+  outline: 1px solid #b89047;
+  outline-offset: -5px;
+  padding: 15mm 15mm;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.toc-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  text-align: center;
+  color: #0f172a;
+  letter-spacing: 2px;
+}
+.toc-divider {
+  width: 60px;
+  height: 3px;
+  background: #b89047;
+  margin: 4mm auto 10mm;
+}
+.toc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6mm;
+}
+.toc-part-title {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #1e3a8a;
+  border-bottom: 2px solid #1e3a8a;
+  padding-bottom: 2px;
+  margin-bottom: 4mm;
+  letter-spacing: 1px;
+}
+.toc-exam-item {
+  margin-bottom: 4mm;
+  padding-left: 2mm;
+}
+.toc-exam-header {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 2mm;
+}
+.toc-sub-item {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  font-family: 'Inter', sans-serif;
+  font-size: 0.78rem;
+  margin-bottom: 1.5mm;
+  padding-left: 4mm;
+  color: #64748b;
+}
+.toc-sub-label {
+  flex-shrink: 0;
+}
+.toc-dots {
+  flex-grow: 1;
+  border-bottom: 1px dashed #cbd5e1;
+  margin: 0 4px;
+  position: relative;
+  top: -3px;
+}
+.toc-page-num {
+  font-weight: 700;
+  color: #0f172a;
+  width: 24px;
+  text-align: right;
+}
+
+/* --- omr styling --- */
+.omr-page-container {
+  box-sizing: border-box;
+  width: 100%;
+  height: ${pageHeightMM}mm;
+  padding: 0;
+  background: #ffffff;
+}
+.omr-border {
+  border: 2px solid #000000;
+  padding: 8mm;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+.omr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #000;
+  padding-bottom: 4mm;
+}
+.omr-logo {
+  font-size: 1.4rem;
+  font-weight: 900;
+  letter-spacing: 1px;
+  color: #000;
+}
+.omr-title {
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+}
+.omr-title-main {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #000;
+}
+.omr-title-sub {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-weight: 600;
+  margin: 1mm 0 0 0;
+}
+.omr-barcode {
+  width: 100px;
+  height: 25px;
+  background: repeating-linear-gradient(90deg, #000, #000 2px, #fff 2px, #fff 6px);
+}
+.omr-instructions {
+  font-size: 0.7rem;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  padding: 3mm;
+  border-radius: 4px;
+  margin: 4mm 0;
+}
+.omr-grid-container {
+  flex-grow: 1;
+  display: flex;
+  justify-content: space-around;
+  margin: 6mm 0;
+  padding: 0 4mm;
+}
+.omr-column {
+  width: 45%;
+  display: flex;
+  flex-direction: column;
+}
+.omr-col-header {
+  display: flex;
+  font-weight: 800;
+  font-size: 0.75rem;
+  padding-bottom: 2mm;
+  border-bottom: 1px solid #000;
+  margin-bottom: 2mm;
+}
+.omr-row {
+  display: flex;
+  align-items: center;
+  height: 7mm;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+.omr-row.alt {
+  background: #f8fafc;
+}
+.row-num {
+  font-weight: 800;
+  width: 25px;
+}
+.omr-bubble {
+  width: 5mm;
+  height: 5mm;
+  border: 1.5px solid #000;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.6rem;
+  font-weight: bold;
+}
+.omr-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.6rem;
+  color: #64748b;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 3mm;
+}
+
+/* --- standard question rendering overrides --- */
+.ws-section {
+  margin-bottom: 25px;
+}
+.ws-exercise {
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 15px;
+  background: #ffffff;
+}
+.ws-ex-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  align-items: center;
+}
+.ws-ex-pill {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  border-radius: 4px;
+  padding: 2px 8px;
+}
+.ws-ex-pill-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  margin-right: 4px;
+}
+.ws-ex-num {
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+.ws-ans-tag {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #1e3a8a;
+  background: #dbeafe;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+.ws-qtext {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #1e293b;
+  margin-bottom: 12px;
+}
+.ws-opts {
+  display: grid;
+  gap: 8px;
+}
+.ws-opts-1col { grid-template-columns: 1fr; }
+.ws-opts-2col { grid-template-columns: 1fr 1fr; }
+.ws-opts-4col { grid-template-columns: repeat(4, 1fr); }
+.ws-opts-5col { grid-template-columns: repeat(5, 1fr); }
+
+.ws-opt {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.ws-opt-letter {
+  background: #f1f5f9;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-right: 8px;
+}
+.ws-opt-text {
+  font-size: 0.85rem;
+}
+
+.opt {
+  display: flex;
+  align-items: center;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  font-size: 0.85rem;
+}
+.opt-badge {
+  background: #f1f5f9;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 800;
+  margin-right: 8px;
+}
+.correct-opt {
+  background: #ecfdf5 !important;
+  border-color: #10b981 !important;
+  color: #065f46 !important;
+}
+.correct-badge {
+  background: #10b981 !important;
+  color: #ffffff !important;
+}
+.correct-check {
+  margin-left: auto;
+  color: #10b981;
+  font-weight: bold;
+}
+</style>
+</head>
+<body>
+<div id="book-content">
+  ${bookHtml}
+</div>
+
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    // Page numbers are already pre-computed in the TOC — no DOM calculation needed
+    // Just trigger print
+    window.print();
+  }, 1500);
+});
+</script>
+</body>
+</html>`;
+};
+

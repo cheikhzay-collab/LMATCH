@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, RefreshCw, Layers, MousePointerClick, Crown, Download, Sliders, FileText } from 'lucide-react';
+import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, RefreshCw, Layers, MousePointerClick, Crown, Download, Sliders, FileText, Camera } from 'lucide-react';
 
 export default function AdminSettings() {
   const { 
@@ -85,6 +85,10 @@ export default function AdminSettings() {
   const [profPhone, setProfPhone] = useState(initialProfPhone || '');
   const [profSite, setProfSite] = useState(initialProfSite || 'www.lconq.ma');
   const [brandSaved, setBrandSaved] = useState(false);
+
+  // OMR Scanner Settings
+  const [scannerDirectCapture, setScannerDirectCapture] = useState(() => localStorage.getItem('scanner_direct_capture_enabled') !== 'false');
+  const [scannerSaved, setScannerSaved] = useState(false);
 
   React.useEffect(() => {
     Promise.resolve().then(() => {
@@ -860,6 +864,57 @@ export default function AdminSettings() {
             {brandSaved ? <><CheckCircle2 size={16} /> Sauvegardé !</> : 'Sauvegarder l\'identité'}
           </button>
         </div>
+
+        {/* ── OMR Scanner Settings ── */}
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'general' ? 'block' : 'none' }}>
+          <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Camera size={20} /> Paramètres du Scanner OMR
+          </h3>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+            Configurez le comportement du scanner de feuilles de réponses OMR.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem 1rem', borderRadius: 12, background: 'var(--bg-glass)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <Camera size={18} style={{ color: 'var(--violet)' }} />
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>Tir direct par caméra (Tansouir Mobachir)</p>
+                  <p style={{ fontSize: '0.73rem', color: 'var(--text-subtle)', margin: 0 }}>Activer l'option de capture en direct avec la caméra pour scanner les feuilles de réponses</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  const newVal = !scannerDirectCapture;
+                  setScannerDirectCapture(newVal);
+                  localStorage.setItem('scanner_direct_capture_enabled', newVal ? 'true' : 'false');
+                  setScannerSaved(true);
+                  setTimeout(() => setScannerSaved(false), 2000);
+                }}
+                style={{
+                  width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+                  background: scannerDirectCapture ? 'var(--violet)' : 'var(--bg-card)',
+                  position: 'relative', transition: 'background 0.2s',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                }}
+              >
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                  position: 'absolute', top: 3, transition: 'left 0.2s',
+                  left: scannerDirectCapture ? 25 : 3,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                }} />
+              </button>
+            </div>
+            
+            {scannerSaved && (
+              <p style={{ fontSize: '0.78rem', color: 'var(--emerald)', margin: '0.2rem 0 0 0', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                <CheckCircle2 size={14} /> Modifications enregistrées avec succès !
+              </p>
+            )}
+          </div>
+        </div>
+
 
         {/* ── Subscription Plans Configuration ── */}
         <div className="col-span-12 glass-panel" style={{ display: activeTab === 'subscriptions' ? 'block' : 'none' }}>

@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { renderWithMath } from '../utils/mathRenderer';
 import { uploadAsset } from '../services/storageService';
+import { getExamQuestionsOnly } from '../services/examService';
 
 /* ─────────────────────────────────────────────────────────────
    Tiny LaTeX toolbar
@@ -239,6 +240,7 @@ export default function AdminExamEdit() {
 
   const [activeTab, setActiveTab] = useState('details');    // 'details' | 'questions'
   const [localQuestions, setLocalQuestions] = useState([]);
+  const [questionsLoading, setQuestionsLoading] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(0);
   const [previewSide, setPreviewSide] = useState('front');
   const [saved, setSaved] = useState(false);
@@ -250,27 +252,52 @@ export default function AdminExamEdit() {
   const [editYear, setEditYear] = useState('');
   const [editTier, setEditTier] = useState('freemium');
 
+  // Stable exam ID for effect dependency
+  const examId = exam?.id;
+
   // CSV state
   const [showImportModal, setShowImportModal] = useState(false);
   const [importRows, setImportRows]     = useState([]);   // parsed rows awaiting confirmation
   const [importMode, setImportMode]     = useState('merge');  // 'merge' | 'replace'
   const [importError, setImportError]   = useState('');
 
+  // Sync metadata fields (name, school, year, tier) whenever exam object changes
   useEffect(() => {
-    if (exam) {
-      const timer = setTimeout(() => {
-        setLocalQuestions(prev => {
-          const next = exam.questions || [];
-          return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
-        });
-        setEditName(prev => prev === exam.name ? prev : (exam.name || ''));
-        setEditSchool(prev => prev === exam.school ? prev : (exam.school || ''));
-        setEditYear(prev => prev === exam.year ? prev : (exam.year || ''));
-        setEditTier(prev => prev === exam.tier ? prev : (exam.tier || 'freemium'));
-      }, 0);
-      return () => clearTimeout(timer);
-    }
+    if (!exam) return;
+    setEditName(prev => prev === exam.name ? prev : (exam.name || ''));
+    setEditSchool(prev => prev === exam.school ? prev : (exam.school || ''));
+    setEditYear(prev => prev === exam.year ? prev : (exam.year || ''));
+    setEditTier(prev => prev === exam.tier ? prev : (exam.tier || 'freemium'));
   }, [exam]);
+
+  // Load questions once per exam.
+  // getAllExams() fetches from exams_metadata view which has NO questions column.
+  // We must fetch questions separately from the exams table when they are absent.
+  useEffect(() => {
+    if (!examId) return;
+    if (exam && exam.questions && exam.questions.length > 0) {
+      // Questions already in context (local/offline mode or previously merged)
+      setLocalQuestions(prev => {
+        const next = exam.questions;
+        return JSON.stringify(prev) === JSON.stringify(next) ? prev : next;
+      });
+      return;
+    }
+    // Questions not in context — fetch directly from the exams table
+    setQuestionsLoading(true);
+    getExamQuestionsOnly(examId)
+      .then(questions => {
+        setLocalQuestions(questions || []);
+      })
+      .catch(e => {
+        console.error('[AdminExamEdit] Failed to load exam questions:', e);
+        setLocalQuestions([]);
+      })
+      .finally(() => {
+        setQuestionsLoading(false);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [examId]);
 
   if (!exam) {
     return (
@@ -289,6 +316,12 @@ export default function AdminExamEdit() {
   const markDirty = () => { setHasUnsaved(true); setSaved(false); };
 
   const handleSave = () => {
+    // Safety guard: never save an empty questions array while questions are still
+    // being fetched from the DB. This prevents accidental data loss.
+    if (questionsLoading) {
+      alert('Les questions sont en cours de chargement. Veuillez patienter quelques secondes avant de sauvegarder.');
+      return;
+    }
     updateExamDetails(exam.id, {
       name: editName,
       school: editSchool,
@@ -300,6 +333,7 @@ export default function AdminExamEdit() {
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   };
+
 
   const updateQField = (idx, field, value) => {
     setLocalQuestions(prev => prev.map((q, i) => i === idx ? { ...q, [field]: value } : q));
@@ -737,10 +771,22 @@ export default function AdminExamEdit() {
 
             {/* ── Column A: Question list ── */}
             <div className="glass-panel" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', overflowY: 'auto', scrollbarWidth: 'thin' }}>
-              <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', padding: '0 0.25rem', marginBottom: '0.25rem' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', padding: '0 0.25rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: 6 }}>
                 Questions ({localQuestions.length})
+                {questionsLoading && (
+                  <span style={{
+                    display: 'inline-block', width: 10, height: 10,
+                    border: '2px solid var(--border)', borderTopColor: 'var(--violet)',
+                    borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0
+                  }} />
+                )}
               </div>
-              {localQuestions.length === 0 && (
+              {questionsLoading && localQuestions.length === 0 && (
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', textAlign: 'center', padding: '1.5rem 0.5rem' }}>
+                  Chargement des questions…
+                </p>
+              )}
+              {!questionsLoading && localQuestions.length === 0 && (
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', textAlign: 'center', padding: '1.5rem 0.5rem' }}>
                   Aucune question dans ce concours.
                 </p>

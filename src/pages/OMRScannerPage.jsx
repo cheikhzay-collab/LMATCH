@@ -184,9 +184,10 @@ export default function OMRScannerPage() {
   const { user, mockExamHistory, updateCardProgress, saveMockExamResult, schoolBranding, exams, isExamLocked, profName, profPhone, profSite, loadExamQuestions } = useAuth();
   const navigate = useNavigate();
 
+  const isDirectCaptureEnabled = localStorage.getItem('scanner_direct_capture_enabled') !== 'false';
   const [activeExam,   setActiveExam]   = useState(null);
   const [phase,        setPhase]        = useState('upload');
-  const [scanMethod,   setScanMethod]   = useState('camera');
+  const [scanMethod,   setScanMethod]   = useState(() => localStorage.getItem('scanner_direct_capture_enabled') !== 'false' ? 'camera' : 'file');
   const [imagePreview, setImagePreview] = useState(null);
   const [scanned,      setScanned]      = useState([]);
   const [corrected,    setCorrected]    = useState([]);
@@ -336,7 +337,7 @@ export default function OMRScannerPage() {
   const reset = () => {
     setPhase('upload'); setActiveExam(null); setImagePreview(url => { if (url) URL.revokeObjectURL(url); return null; }); setScanned([]);
     setCorrected([]); setScore(null); setScanStep(0); setScanError(null); setResultsTab('list');
-    setScanMethod('camera');
+    setScanMethod(localStorage.getItem('scanner_direct_capture_enabled') !== 'false' ? 'camera' : 'file');
   };
 
   const ambiguousCount = scanned.filter(r => r.confidence < 0.3).length;
@@ -514,64 +515,66 @@ export default function OMRScannerPage() {
                   )}
               
                   {/* Premium Segmented Controller */}
-                  <div style={{ 
-                    display: 'flex', 
-                    background: 'rgba(255, 255, 255, 0.02)', 
-                    border: '1px solid var(--border)', 
-                    padding: '0.3rem', 
-                    borderRadius: '1.25rem', 
-                    width: '100%',
-                    marginBottom: '1.75rem'
-                  }}>
-                    <button 
-                      onClick={() => setScanMethod('camera')}
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        padding: '0.75rem 1rem',
-                        borderRadius: '1rem',
-                        border: 'none',
-                        fontWeight: 800,
-                        fontSize: '0.85rem',
-                        fontFamily: 'inherit',
-                        cursor: 'pointer',
-                        transition: 'all 0.25s',
-                        background: scanMethod === 'camera' ? 'var(--violet)' : 'transparent',
-                        color: scanMethod === 'camera' ? '#fff' : 'var(--text-muted)',
-                        boxShadow: scanMethod === 'camera' ? '0 4px 16px var(--violet-glow)' : 'none'
-                      }}
-                    >
-                      <Camera size={16} />
-                      Utiliser la caméra
-                    </button>
-                    <button 
-                      onClick={() => setScanMethod('file')}
-                      style={{
-                        flex: 1,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '0.5rem',
-                        padding: '0.75rem 1rem',
-                        borderRadius: '1rem',
-                        border: 'none',
-                        fontWeight: 800,
-                        fontSize: '0.85rem',
-                        fontFamily: 'inherit',
-                        cursor: 'pointer',
-                        transition: 'all 0.25s',
-                        background: scanMethod === 'file' ? 'var(--violet)' : 'transparent',
-                        color: scanMethod === 'file' ? '#fff' : 'var(--text-muted)',
-                        boxShadow: scanMethod === 'file' ? '0 4px 16px var(--violet-glow)' : 'none'
-                      }}
-                    >
-                      <Upload size={16} />
-                      Importer un fichier
-                    </button>
-                  </div>
+                  {isDirectCaptureEnabled && (
+                    <div style={{ 
+                      display: 'flex', 
+                      background: 'rgba(255, 255, 255, 0.02)', 
+                      border: '1px solid var(--border)', 
+                      padding: '0.3rem', 
+                      borderRadius: '1.25rem', 
+                      width: '100%',
+                      marginBottom: '1.75rem'
+                    }}>
+                      <button 
+                        onClick={() => setScanMethod('camera')}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '1rem',
+                          border: 'none',
+                          fontWeight: 800,
+                          fontSize: '0.85rem',
+                          fontFamily: 'inherit',
+                          cursor: 'pointer',
+                          transition: 'all 0.25s',
+                          background: scanMethod === 'camera' ? 'var(--violet)' : 'transparent',
+                          color: scanMethod === 'camera' ? '#fff' : 'var(--text-muted)',
+                          boxShadow: scanMethod === 'camera' ? '0 4px 16px var(--violet-glow)' : 'none'
+                        }}
+                      >
+                        <Camera size={16} />
+                        Utiliser la caméra
+                      </button>
+                      <button 
+                        onClick={() => setScanMethod('file')}
+                        style={{
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '1rem',
+                          border: 'none',
+                          fontWeight: 800,
+                          fontSize: '0.85rem',
+                          fontFamily: 'inherit',
+                          cursor: 'pointer',
+                          transition: 'all 0.25s',
+                          background: scanMethod === 'file' ? 'var(--violet)' : 'transparent',
+                          color: scanMethod === 'file' ? '#fff' : 'var(--text-muted)',
+                          boxShadow: scanMethod === 'file' ? '0 4px 16px var(--violet-glow)' : 'none'
+                        }}
+                      >
+                        <Upload size={16} />
+                        Importer un fichier
+                      </button>
+                    </div>
+                  )}
 
                   {scanMethod === 'camera' ? (
                     <SmartCameraScanner

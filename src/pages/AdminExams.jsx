@@ -4,9 +4,21 @@ import { Lock, Unlock, Library, Eye, EyeOff, Edit, X, FileText, Download, Search
 import { Link, useNavigate } from 'react-router-dom';
 import { generateSubjectHTML, generateCorrectionHTML, generateEbookHTML, openPrintWindow } from '../utils/generateExamPDF';
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function AdminExams() {
   const { exams, toggleExamStatus, schools, deleteExam, toggleArchiveExam, loadExamQuestions } = useAuth();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   const [showEbook, setShowEbook] = useState(false);
   const [loadingEbookData, setLoadingEbookData] = useState(false);
@@ -128,20 +140,24 @@ export default function AdminExams() {
             {filtered.length} / {exams.filter(e => archiveTab === 'active' ? !e.isArchived : e.isArchived).length} concours{hasFilters ? ' (filtrés)' : ''}
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '0.6rem' }}>
+        <div style={{ display: 'flex', gap: '0.6rem', width: isMobile ? '100%' : 'auto' }}>
           <button onClick={() => setShowEbook(true)}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '0.6rem 1rem', borderRadius: 10, background: 'linear-gradient(135deg,#7c3aed,#6366f1)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,58,237,0.35)' }}>
-            <BookOpen size={16} /> Générer E-Book
+            style={{ flex: isMobile ? 1 : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '0.6rem 1rem', borderRadius: 10, background: 'linear-gradient(135deg,#7c3aed,#6366f1)', color: '#fff', border: 'none', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(124,58,237,0.35)' }}>
+            <BookOpen size={16} /> {isMobile ? 'E-Book' : 'Générer E-Book'}
           </button>
-          <Link to="/admin/upload" className="btn">+ Nouveau Concours</Link>
+          <Link to="/admin/upload" className="btn" style={{ flex: isMobile ? 1 : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '44px' }}>
+            + {isMobile ? 'Nouveau' : 'Nouveau Concours'}
+          </Link>
         </div>
       </header>
 
       {/* ── Tabs for Active vs Archived ── */}
-      <div style={{ display: 'flex', gap: '6px', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', gap: '6px', marginBottom: '1rem', width: '100%' }}>
         <button
           onClick={() => setArchiveTab('active')}
           style={{
+            flex: isMobile ? 1 : 'none',
+            justifyContent: 'center',
             padding: '0.55rem 1.1rem', borderRadius: '10px', border: '1px solid var(--border)',
             background: archiveTab === 'active' ? 'linear-gradient(135deg, var(--violet), #6366f1)' : 'var(--bg-glass)',
             color: archiveTab === 'active' ? '#fff' : 'var(--text-muted)',
@@ -150,11 +166,13 @@ export default function AdminExams() {
             boxShadow: archiveTab === 'active' ? '0 4px 14px rgba(124,58,237,0.25)' : 'none'
           }}
         >
-          <Library size={14} /> Concours Actifs ({exams.filter(e => !e.isArchived).length})
+          <Library size={14} /> {isMobile ? 'Actifs' : 'Concours Actifs'} ({exams.filter(e => !e.isArchived).length})
         </button>
         <button
           onClick={() => setArchiveTab('archived')}
           style={{
+            flex: isMobile ? 1 : 'none',
+            justifyContent: 'center',
             padding: '0.55rem 1.1rem', borderRadius: '10px', border: '1px solid var(--border)',
             background: archiveTab === 'archived' ? 'linear-gradient(135deg, var(--violet), #6366f1)' : 'var(--bg-glass)',
             color: archiveTab === 'archived' ? '#fff' : 'var(--text-muted)',
@@ -163,7 +181,7 @@ export default function AdminExams() {
             boxShadow: archiveTab === 'archived' ? '0 4px 14px rgba(124,58,237,0.25)' : 'none'
           }}
         >
-          <Archive size={14} /> Concours Archivés ({exams.filter(e => e.isArchived).length})
+          <Archive size={14} /> {isMobile ? 'Archivés' : 'Concours Archivés'} ({exams.filter(e => e.isArchived).length})
         </button>
       </div>
 
@@ -183,16 +201,16 @@ export default function AdminExams() {
           <option value="">🏫 Toutes les écoles</option>
           {schools.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
-        <select value={filterYear} onChange={e => setFilterYear(e.target.value)} style={{ ...sel, flex: '0 0 auto' }}>
+        <select value={filterYear} onChange={e => setFilterYear(e.target.value)} style={{ ...sel, flex: isMobile ? '1 1 130px' : '0 0 auto' }}>
           <option value="">📅 Toutes les années</option>
           {years.map(y => <option key={y} value={y}>{y}</option>)}
         </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ ...sel, flex: '0 0 auto' }}>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={{ ...sel, flex: isMobile ? '1 1 130px' : '0 0 auto' }}>
           <option value="">👁 Tous les statuts</option>
           <option value="active">✅ Actifs</option>
           <option value="inactive">🔴 Désactivés</option>
         </select>
-        <select value={filterTier} onChange={e => setFilterTier(e.target.value)} style={{ ...sel, flex: '0 0 auto' }}>
+        <select value={filterTier} onChange={e => setFilterTier(e.target.value)} style={{ ...sel, flex: isMobile ? '1 1 130px' : '0 0 auto' }}>
           <option value="">🔓 Tous les abonnements</option>
           <option value="freemium">Gratuit</option>
           <option value="premium">Premium</option>
@@ -205,10 +223,10 @@ export default function AdminExams() {
         )}
       </div>
 
-      {/* ── Table ── */}
-      <div className="glass-panel" style={{ overflow: 'hidden', padding: 0 }}>
+      {/* ── Table / Cards ── */}
+      <div className="glass-panel" style={{ overflow: 'hidden', padding: isMobile ? '0.5rem 0' : 0, background: isMobile ? 'transparent' : 'var(--bg-glass)', border: isMobile ? 'none' : '1px solid var(--border)', boxShadow: isMobile ? 'none' : 'var(--shadow-card)' }}>
         {filtered.length === 0 ? (
-          <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+          <div style={{ padding: '4rem 2rem', textAlign: 'center', color: 'var(--text-muted)', background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: '12px' }}>
             <Library size={48} style={{ margin: '0 auto 1rem', opacity: 0.4 }} />
             <p>
               {exams.length === 0
@@ -217,6 +235,229 @@ export default function AdminExams() {
                   ? 'Aucun concours archivé.'
                   : 'Aucun résultat pour ces filtres.'}
             </p>
+          </div>
+        ) : isMobile ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+            {filtered.map(exam => (
+              <div
+                key={exam.id}
+                style={{
+                  background: 'var(--bg-card)',
+                  borderRadius: '16px',
+                  padding: '1.25rem',
+                  border: '1px solid var(--border)',
+                  boxShadow: 'var(--shadow-card)',
+                  opacity: exam.isActive === false ? 0.75 : 1,
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.85rem'
+                }}
+              >
+                {/* Header Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: 'var(--text-main)', lineHeight: 1.35 }}>
+                    {exam.name}
+                  </div>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', flexShrink: 0 }}>
+                    {exam.tier === 'premium' ? (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--warning)', background: 'rgba(245,158,11,0.1)', padding: '0.15rem 0.5rem', borderRadius: '1rem', fontSize: '0.7rem', fontWeight: 700 }}>
+                        <Lock size={10} /> Pro
+                      </span>
+                    ) : (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, color: 'var(--emerald)', background: 'rgba(16,185,129,0.1)', padding: '0.15rem 0.5rem', borderRadius: '1rem', fontSize: '0.7rem', fontWeight: 700 }}>
+                        <Unlock size={10} /> Free
+                      </span>
+                    )}
+                    {exam.isActive === false && (
+                      <span style={{ fontSize: '0.65rem', color: 'var(--danger)', padding: '0.1rem 0.35rem', border: '1px solid var(--danger)', borderRadius: 4, display: 'inline-block', fontWeight: 700 }}>Désactivé</span>
+                    )}
+                    {exam.isArchived && (
+                      <span style={{ fontSize: '0.65rem', color: 'var(--warning)', padding: '0.1rem 0.35rem', border: '1px solid var(--warning)', borderRadius: 4, display: 'inline-block', fontWeight: 700 }}>Archivé</span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Metadata badges */}
+                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                  <span style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: 6, padding: '0.2rem 0.5rem' }}>
+                    🏫 {exam.school || '—'}
+                  </span>
+                  <span style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: 6, padding: '0.2rem 0.5rem' }}>
+                    📅 {exam.year || '—'}
+                  </span>
+                  <span style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: 6, padding: '0.2rem 0.5rem', fontWeight: 700 }}>
+                    ❓ {exam.questionsCount || exam.questions?.length || 0} Q
+                  </span>
+                </div>
+
+                {/* Document Actions Row */}
+                <div style={{ display: 'flex', gap: '0.4rem', width: '100%' }}>
+                  <button
+                    onClick={() => downloadCSV(exam)}
+                    disabled={!(exam.questionsCount || exam.questions?.length)}
+                    style={{
+                      flex: 1,
+                      padding: '0.45rem 0.5rem',
+                      borderRadius: 8,
+                      border: '1px solid rgba(16,185,129,0.3)',
+                      background: 'rgba(16,185,129,0.08)',
+                      color: 'var(--emerald)',
+                      cursor: (exam.questionsCount || exam.questions?.length) ? 'pointer' : 'not-allowed',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      fontSize: '0.74rem',
+                      fontWeight: 700,
+                      opacity: (exam.questionsCount || exam.questions?.length) ? 1 : 0.35
+                    }}
+                  >
+                    <Download size={13} /> CSV
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      let questions = exam.questions;
+                      if (!questions || questions.length === 0) {
+                        try {
+                          questions = await loadExamQuestions(exam.id);
+                        } catch (err) {
+                          console.error('Failed to load questions for PDF:', err);
+                          return;
+                        }
+                      }
+                      const html = await generateSubjectHTML(exam.name, exam.school, exam.year, questions || [], { examId: exam.id, schoolsList: schools });
+                      openPrintWindow(html, 'sujet');
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '0.45rem 0.5rem',
+                      borderRadius: 8,
+                      border: '1px solid rgba(30,86,219,0.3)',
+                      background: 'rgba(30,86,219,0.08)',
+                      color: '#1a56db',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      fontSize: '0.74rem',
+                      fontWeight: 700
+                    }}
+                  >
+                    <FileText size={13} /> Sujet
+                  </button>
+
+                  <button
+                    onClick={async () => {
+                      let questions = exam.questions;
+                      if (!questions || questions.length === 0) {
+                        try {
+                          questions = await loadExamQuestions(exam.id);
+                        } catch (err) {
+                          console.error('Failed to load questions for PDF:', err);
+                          return;
+                        }
+                      }
+                      openPrintWindow(generateCorrectionHTML(exam.name, exam.school, exam.year, questions || [], { schoolsList: schools }), 'corrigé');
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '0.45rem 0.5rem',
+                      borderRadius: 8,
+                      border: '1px solid rgba(124,58,237,0.3)',
+                      background: 'rgba(124,58,237,0.08)',
+                      color: '#7c3aed',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      fontSize: '0.74rem',
+                      fontWeight: 700
+                    }}
+                  >
+                    <FileText size={13} /> Corrigé
+                  </button>
+                </div>
+
+                {/* Management Actions Row */}
+                <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                  <button
+                    onClick={() => navigate(`/admin/exams/${exam.id}/edit`)}
+                    className="btn-outline"
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 4,
+                      padding: '0.45rem',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      borderRadius: 8
+                    }}
+                  >
+                    <Edit size={14} /> Éditer
+                  </button>
+
+                  <button
+                    onClick={() => toggleExamStatus(exam.id)}
+                    title={exam.isActive === false ? 'Activer' : 'Désactiver'}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: 8,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: exam.isActive === false ? 'rgba(239,68,68,0.1)' : 'rgba(16,185,129,0.1)',
+                      color: exam.isActive === false ? 'var(--danger)' : 'var(--emerald)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    {exam.isActive === false ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+
+                  <button
+                    onClick={() => toggleArchiveExam(exam.id)}
+                    title={exam.isArchived ? 'Désarchiver' : 'Archiver'}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: 8,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: exam.isArchived ? 'rgba(245,158,11,0.1)' : 'rgba(124,58,237,0.1)',
+                      color: exam.isArchived ? 'var(--warning)' : '#7c3aed',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Archive size={15} />
+                  </button>
+
+                  <button
+                    onClick={() => setDeleteConfirmExam(exam)}
+                    title="Supprimer définitivement"
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: 8,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: 'rgba(239,68,68,0.1)',
+                      color: 'var(--danger)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         ) : (
           <div style={{ overflowX: 'auto' }}>

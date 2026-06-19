@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Flashcard from '../components/Flashcard';
 import MobileFlashcard from '../components/MobileFlashcard';
@@ -41,7 +41,7 @@ function groupCardsByContext(compiledCards, questionsPool) {
 }
 
 export default function StudyMode() {
-  const { user, exams, progress: allProgress, updateCardProgress, isExamLocked, loadExamQuestions } = useAuth();
+  const { user, exams, progress: allProgress, updateCardProgress, isExamLocked, loadExamQuestions, supabaseEnabled } = useAuth();
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const topicId = searchParams.get('topic');
@@ -65,15 +65,20 @@ export default function StudyMode() {
     return () => mq.removeEventListener('change', handler);
   }, []);
 
-  const activeExamsList = exams.filter(e => e.isActive !== false && e.isArchived !== true && !isExamLocked(e));
+  const activeExamsList = useMemo(() => {
+    return exams.filter(e => e.isActive !== false && e.isArchived !== true && !isExamLocked(e));
+  }, [exams, isExamLocked]);
   const currentExam = examId ? exams.find(e => e.id === examId) : activeExamsList[0];
 
   const isParcours = !examId && !topicId;
 
   // Lazy load questions for study session before initialization
   useEffect(() => {
+    if (!supabaseEnabled) return;
+    if (loadingQuestions) return;
+
     if (!sessionStarted) {
-      const examsToLoad = activeExamsList.filter(e => e.isActive !== false && e.isArchived !== true && (!e.questions || e.questions.length === 0));
+      const examsToLoad = activeExamsList.filter(e => e.isActive !== false && e.isArchived !== true && e.questions === undefined);
       if (examsToLoad.length > 0) {
         setLoadingQuestions(true);
         Promise.all(examsToLoad.map(e => loadExamQuestions(e.id)))
@@ -85,14 +90,14 @@ export default function StudyMode() {
 
     if (examId) {
       const exam = exams.find(e => e.id === examId);
-      if (exam && (!exam.questions || exam.questions.length === 0)) {
+      if (exam && exam.questions === undefined) {
         setLoadingQuestions(true);
         loadExamQuestions(examId)
           .catch(err => console.error('[StudyMode] Failed to load exam questions:', err))
           .finally(() => setLoadingQuestions(false));
       }
     } else if (topicId) {
-      const examsToLoad = activeExamsList.filter(e => !e.questions || e.questions.length === 0);
+      const examsToLoad = activeExamsList.filter(e => e.questions === undefined);
       if (examsToLoad.length > 0) {
         setLoadingQuestions(true);
         Promise.all(examsToLoad.map(e => loadExamQuestions(e.id)))
@@ -100,7 +105,7 @@ export default function StudyMode() {
           .finally(() => setLoadingQuestions(false));
       }
     } else {
-      const examsToLoad = activeExamsList.filter(e => !e.questions || e.questions.length === 0);
+      const examsToLoad = activeExamsList.filter(e => e.questions === undefined);
       if (examsToLoad.length > 0) {
         setLoadingQuestions(true);
         Promise.all(examsToLoad.map(e => loadExamQuestions(e.id)))
@@ -108,7 +113,7 @@ export default function StudyMode() {
           .finally(() => setLoadingQuestions(false));
       }
     }
-  }, [examId, topicId, sessionStarted, exams, activeExamsList, loadExamQuestions]);
+  }, [examId, topicId, sessionStarted, exams, loadExamQuestions, activeExamsList, supabaseEnabled, loadingQuestions]);
 
   // Dynamically allow scrolling on selector dashboard, but lock it in study session focus mode
   useEffect(() => {
@@ -167,10 +172,24 @@ export default function StudyMode() {
     // Check if questions are actually loaded for what we need
     if (examId) {
       const exam = exams.find(e => e.id === examId);
-      if (!exam || !exam.questions || exam.questions.length === 0) return;
-    } else {
-      const pendingCount = activeExamsList.filter(e => !e.questions || e.questions.length === 0).length;
-      if (pendingCount > 0) return;
+      if (!exam) return;
+      if (supabaseEnabled && exam.questions === undefined) {
+        return; // wait for lazy loading to populate questions
+      }
+      if (!exam.questions || exam.questions.length === 0) {
+        Promise.resolve().then(() => {
+          setSessionCards([]);
+        });
+        return;
+      }
+    }
+
+    if (supabaseEnabled) {
+      if (topicId) {
+        if (activeExamsList.some(e => e.questions === undefined)) return;
+      } else if (!examId) {
+        if (activeExamsList.some(e => e.questions === undefined)) return;
+      }
     }
 
     const now = new Date();
@@ -315,7 +334,7 @@ export default function StudyMode() {
         setSessionCards(groupedCards);
       });
     }
-  }, [currentExam, examId, topicId, exams, allProgress, sessionCards, sessionStarted, activeExamsList]);
+  }, [currentExam, examId, topicId, exams, allProgress, sessionCards, sessionStarted, activeExamsList, supabaseEnabled]);
   // ────────────────────────────────────────────────────────────────────────────
 
   const handleBackClick = () => {
