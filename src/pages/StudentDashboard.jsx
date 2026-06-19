@@ -13,6 +13,7 @@ import WeeklyActivityChart from '../components/dashboard/WeeklyActivityChart';
 import MockExamHistoryList from '../components/dashboard/MockExamHistoryList';
 import DashboardSkeleton from '../components/dashboard/DashboardSkeleton';
 import { generateEbookHTML, generateStudentReportHTML, openPrintWindow } from '../utils/generateExamPDF';
+import { getExamById } from '../services/examService';
 
 export default function StudentDashboard() {
   const { 
@@ -25,7 +26,8 @@ export default function StudentDashboard() {
     profSite, 
     updateProfile,
     loadExamQuestions,
-    loading: authLoading
+    loading: authLoading,
+    supabaseEnabled
   } = useAuth();
   
   const navigate = useNavigate();
@@ -157,10 +159,31 @@ export default function StudentDashboard() {
   }, [stats.weakTopics, exams, profName, profPhone, profSite, user, navigate, loadExamQuestions]);
 
   const handleDownloadReport = useCallback(async (item) => {
-    const exam = exams.find(e => e.id === item.examId);
+    let exam = exams.find(e => e.id === item.examId);
+    
+    // Try to load exam from database if not in active in-memory list
+    if (!exam && supabaseEnabled && item.examId) {
+      try {
+        exam = await getExamById(item.examId);
+      } catch (err) {
+        console.warn('[StudentDashboard] Failed to fetch exam from database:', err);
+      }
+    }
+
+    // Fallback to a mock exam object if deleted or inaccessible, allowing report generation
     if (!exam) {
-      alert("Examen introuvable dans la bibliothèque.");
-      return;
+      exam = {
+        id: item.examId || 'fallback',
+        name: item.examName || "Examen Blanc",
+        school: item.school || "—",
+        year: item.date ? new Date(item.date).getFullYear().toString() : "—",
+        questions: Array.from({ length: item.maxScore || 20 }, (_, i) => ({
+          id: `q-${i + 1}`,
+          question: `Question ${i + 1}`,
+          correct_answer: '—',
+          topic: 'Général'
+        }))
+      };
     }
     
     let questions = exam.questions;
@@ -169,7 +192,13 @@ export default function StudentDashboard() {
         questions = await loadExamQuestions(exam.id);
       } catch (err) {
         console.error('Failed to load questions for student report:', err);
-        return;
+        // Fallback questions array so it doesn't block printing
+        questions = Array.from({ length: item.maxScore || 20 }, (_, i) => ({
+          id: `q-${i + 1}`,
+          question: `Question ${i + 1}`,
+          correct_answer: '—',
+          topic: 'Général'
+        }));
       }
     }
     
