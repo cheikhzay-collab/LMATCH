@@ -374,6 +374,11 @@ export function AuthProvider({ children }) {
     const unsubscribe = onAuthChange(async (supabaseUser) => {
       try {
         if (supabaseUser) {
+          // Optimistically dismiss the loading screen if we have a cached user session
+          const cached = localStorage.getItem('user');
+          if (cached) {
+            setLoading(false);
+          }
           try {
             let profile = await getUserDoc(supabaseUser.id);
             if (!profile) {
@@ -1406,16 +1411,16 @@ export function AuthProvider({ children }) {
 
     const loadConfigAndExams = async () => {
       try {
-        // Fetch all config documents and exams in parallel to avoid sequential blocking awaits
+        // Fetch all config documents and exams in parallel with allSettled to prevent single-query failure from blocking everything
         const [
-          schoolsConfig,
-          brandConfig,
-          flashcardConfig,
-          pdfConfig,
-          omrScannerConfig,
-          fbPlans,
-          fbExams
-        ] = await Promise.all([
+          schoolsConfigRes,
+          brandConfigRes,
+          flashcardConfigRes,
+          pdfConfigRes,
+          omrScannerConfigRes,
+          fbPlansRes,
+          fbExamsRes
+        ] = await Promise.allSettled([
           getSchoolsConfig(),
           getBrandingConfig(),
           getFlashcardSettingsConfig(),
@@ -1424,6 +1429,14 @@ export function AuthProvider({ children }) {
           getPlans(),
           getAllExams()
         ]);
+
+        const schoolsConfig = schoolsConfigRes.status === 'fulfilled' ? schoolsConfigRes.value : null;
+        const brandConfig = brandConfigRes.status === 'fulfilled' ? brandConfigRes.value : null;
+        const flashcardConfig = flashcardConfigRes.status === 'fulfilled' ? flashcardConfigRes.value : null;
+        const pdfConfig = pdfConfigRes.status === 'fulfilled' ? pdfConfigRes.value : null;
+        const omrScannerConfig = omrScannerConfigRes.status === 'fulfilled' ? omrScannerConfigRes.value : null;
+        const fbPlans = fbPlansRes.status === 'fulfilled' ? fbPlansRes.value : null;
+        const fbExams = fbExamsRes.status === 'fulfilled' ? fbExamsRes.value : null;
 
         // Process Schools Config
         if (schoolsConfig && schoolsConfig.schools && schoolsConfig.schools.length > 0) {
