@@ -12,7 +12,8 @@ export default function AdminSettings() {
     profSite: initialProfSite,
     updateBrandingConfig,
     updateFlashcardSettingsConfig,
-    updatePdfSettingsConfig
+    updatePdfSettingsConfig,
+    updateOmrScannerSettingsConfig
   } = useAuth();
   const [newSchool, setNewSchool] = useState('');
   const [activeTab, setActiveTab] = useState('general');
@@ -884,10 +885,10 @@ export default function AdminSettings() {
                 </div>
               </div>
               <button
-                onClick={() => {
+                onClick={async () => {
                   const newVal = !scannerDirectCapture;
                   setScannerDirectCapture(newVal);
-                  localStorage.setItem('scanner_direct_capture_enabled', newVal ? 'true' : 'false');
+                  await updateOmrScannerSettingsConfig({ scannerDirectCapture: newVal });
                   setScannerSaved(true);
                   setTimeout(() => setScannerSaved(false), 2000);
                 }}

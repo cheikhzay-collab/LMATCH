@@ -162,4 +162,39 @@ export const savePdfSettingsConfig = async (settings) => {
   }
 };
 
+/**
+ * Fetch OMR scanner settings from Supabase.
+ */
+export const getOmrScannerSettingsConfig = async () => {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('config')
+    .select('value')
+    .eq('key', 'omr_scanner_settings')
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.value;
+};
+
+/**
+ * Save OMR scanner settings to Supabase.
+ */
+export const saveOmrScannerSettingsConfig = async (settings) => {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('config')
+    .upsert({
+      key: 'omr_scanner_settings',
+      value: settings,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('[Supabase] Failed to save OMR scanner settings config:', error);
+    throw error;
+  }
+};
+
+
 

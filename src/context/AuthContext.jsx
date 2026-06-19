@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback, use
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
 import { getUserDoc, createUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard } from '../services/userService';
 import { getAllExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam, getExamQuestionsOnly } from '../services/examService';
-import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig } from '../services/schoolService';
+import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig, getOmrScannerSettingsConfig, saveOmrScannerSettingsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, redeemCodeViaRPC } from '../services/planService';
 import { sanitizeInputString, validatePhoneNumber } from '../utils/security';
 
@@ -340,6 +340,17 @@ export function AuthProvider({ children }) {
     localStorage.setItem('pdf_avoid_page_breaks', String(settings.pdfAvoidPageBreaks));
     localStorage.setItem('pdf_force_print_colors', String(settings.pdfForcePrintColors));
     localStorage.setItem('pdf_show_sidebar', String(settings.pdfShowSidebar));
+  };
+
+  const updateOmrScannerSettingsConfig = async (settings) => {
+    if (SUPABASE_ENABLED) {
+      try {
+        await saveOmrScannerSettingsConfig(settings);
+      } catch (e) {
+        console.error('[Supabase] Failed to save OMR scanner settings config:', e);
+      }
+    }
+    localStorage.setItem('scanner_direct_capture_enabled', settings.scannerDirectCapture ? 'true' : 'false');
   };
 
   // ── Supabase Auth listener ───────────────────────────────────────────────
@@ -1401,6 +1412,7 @@ export function AuthProvider({ children }) {
           brandConfig,
           flashcardConfig,
           pdfConfig,
+          omrScannerConfig,
           fbPlans,
           fbExams
         ] = await Promise.all([
@@ -1408,6 +1420,7 @@ export function AuthProvider({ children }) {
           getBrandingConfig(),
           getFlashcardSettingsConfig(),
           getPdfSettingsConfig(),
+          getOmrScannerSettingsConfig(),
           getPlans(),
           getAllExams()
         ]);
@@ -1494,6 +1507,17 @@ export function AuthProvider({ children }) {
           localStorage.setItem('pdf_avoid_page_breaks', String(defaultPdf.pdfAvoidPageBreaks));
           localStorage.setItem('pdf_force_print_colors', String(defaultPdf.pdfForcePrintColors));
           localStorage.setItem('pdf_show_sidebar', String(defaultPdf.pdfShowSidebar));
+        }
+
+        // Process OMR Scanner Settings
+        if (omrScannerConfig) {
+          localStorage.setItem('scanner_direct_capture_enabled', String(omrScannerConfig.scannerDirectCapture !== false));
+        } else {
+          const defaultOmr = {
+            scannerDirectCapture: true
+          };
+          await saveOmrScannerSettingsConfig(defaultOmr);
+          localStorage.setItem('scanner_direct_capture_enabled', String(defaultOmr.scannerDirectCapture));
         }
 
         // Process Plans
@@ -1695,7 +1719,7 @@ export function AuthProvider({ children }) {
       supabaseEnabled: SUPABASE_ENABLED,
       refreshAdminData,
       loading,
-      profName, profPhone, profSite, updateBrandingConfig, updateFlashcardSettingsConfig, updatePdfSettingsConfig,
+      profName, profPhone, profSite, updateBrandingConfig, updateFlashcardSettingsConfig, updatePdfSettingsConfig, updateOmrScannerSettingsConfig,
     }}>
       {children}
     </AuthContext.Provider>
