@@ -356,6 +356,56 @@ export function renderWithMath(text) {
       .trim();
     if (!cleaned) return null;
 
+    // ── Markdown Headings: ### ## #
+    if (/^###\s+/.test(cleaned)) {
+      const text = cleaned.replace(/^###\s+/, '');
+      return (
+        <div key={key} style={{ fontWeight: 800, fontSize: '0.95rem', color: '#005086', borderBottom: '1px solid rgba(0,80,134,0.15)', paddingBottom: '0.25rem', margin: '0.75rem 0 0.4rem' }}>
+          {renderLineContent(text)}
+        </div>
+      );
+    }
+    if (/^##\s+/.test(cleaned)) {
+      const text = cleaned.replace(/^##\s+/, '');
+      return (
+        <div key={key} style={{ fontWeight: 900, fontSize: '1.05rem', color: '#005086', borderBottom: '1.5px solid rgba(0,80,134,0.2)', paddingBottom: '0.3rem', margin: '1rem 0 0.5rem' }}>
+          {renderLineContent(text)}
+        </div>
+      );
+    }
+    if (/^#\s+/.test(cleaned)) {
+      const text = cleaned.replace(/^#\s+/, '');
+      return (
+        <div key={key} style={{ fontWeight: 900, fontSize: '1.2rem', color: '#005086', borderBottom: '2px solid rgba(0,80,134,0.3)', paddingBottom: '0.4rem', margin: '1rem 0 0.6rem' }}>
+          {renderLineContent(text)}
+        </div>
+      );
+    }
+
+    // ── Markdown unordered list: - item  or  • item  or  * item (but not LaTeX like \mu, ** bold, etc.)
+    if (/^[-•]\s+/.test(cleaned) || (/^\*\s+/.test(cleaned) && !cleaned.startsWith('**'))) {
+      const text = cleaned.replace(/^[-•*]\s+/, '');
+      return (
+        <div key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', margin: '0.2rem 0', lineHeight: 1.7 }}>
+          <span style={{ color: '#005086', fontWeight: 800, flexShrink: 0, marginTop: '0.05em' }}>•</span>
+          <span style={{ flex: 1 }}>{renderLineContent(text)}</span>
+        </div>
+      );
+    }
+
+    // ── Markdown numbered list: 1. or 1) 
+    const numberedMatch = cleaned.match(/^(\d+)[.)]\s+(.+)/);
+    if (numberedMatch) {
+      const num = numberedMatch[1];
+      const text = numberedMatch[2];
+      return (
+        <div key={key} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', margin: '0.2rem 0', lineHeight: 1.7 }}>
+          <span style={{ color: '#005086', fontWeight: 800, flexShrink: 0, minWidth: '1.5em' }}>{num}.</span>
+          <span style={{ flex: 1 }}>{renderLineContent(text)}</span>
+        </div>
+      );
+    }
+
     // Response Block (Réponse :)
     if (cleaned.toLowerCase().startsWith('**réponse') || cleaned.toLowerCase().startsWith('réponse')) {
       const contentText = cleaned.replace(/^(\*\*)?réponse\s*:?\s*/i, '').replace(/\*\*$/, '');
@@ -432,30 +482,89 @@ export function renderWithMath(text) {
       );
     }
 
+    // Bare LaTeX block: Line starts with \ and does not contain $
+    if (cleaned.startsWith('\\') && !cleaned.includes('$')) {
+      return <SafeBlockMath key={key} math={repairCorruptedLatex(cleaned)} />;
+    }
+
     const content = renderLineContent(cleaned);
     return <span key={key} style={{ display: 'block', lineHeight: 1.75 }}>{content}</span>;
   };
 
-  // Split into paragraphs (double newline), then lines within each paragraph
-  const paragraphs = normalised.split(/\n{2,}/);
+  const tokens = tokenizeMath(normalised);
+
+  // Group tokens into paragraphs (by \n\n) and lines (by \n)
+  let paragraphs = [ [[]] ];
+  
+  for (const tok of tokens) {
+    if (tok.type === 'block') {
+      const currentPara = paragraphs[paragraphs.length - 1];
+      if (currentPara[currentPara.length - 1].length > 0) {
+        currentPara.push([]);
+      }
+      currentPara[currentPara.length - 1].push(tok);
+      currentPara.push([]);
+    } else if (tok.type === 'inline') {
+      const currentPara = paragraphs[paragraphs.length - 1];
+      currentPara[currentPara.length - 1].push(tok);
+    } else {
+      const paraParts = tok.content.split(/\n{2,}/);
+      for (let pIdx = 0; pIdx < paraParts.length; pIdx++) {
+        if (pIdx > 0) {
+          paragraphs.push([[]]);
+        }
+        const currentPara = paragraphs[paragraphs.length - 1];
+        
+        const lineParts = paraParts[pIdx].split('\n');
+        for (let lIdx = 0; lIdx < lineParts.length; lIdx++) {
+          if (lIdx > 0) {
+            currentPara.push([]);
+          }
+          if (lineParts[lIdx]) {
+            currentPara[currentPara.length - 1].push({ type: 'text', content: lineParts[lIdx] });
+          }
+        }
+      }
+    }
+  }
 
   if (paragraphs.length === 1) {
-    // Single paragraph with line breaks
-    const lines = normalised.split('\n');
+    const lines = paragraphs[0];
     return (
       <span style={{ display: 'block' }}>
-        {lines.map((line, i) => renderLine(line, i))}
+        {lines.map((lineTokens, li) => {
+          if (lineTokens.length === 0) return null;
+          if (lineTokens.length === 1 && lineTokens[0].type === 'block') {
+            return <SafeBlockMath key={li} math={lineTokens[0].content} />;
+          }
+          const reconstructedLine = lineTokens.map(t => {
+            if (t.type === 'inline') return `$${t.content}$`;
+            if (t.type === 'block') return `$$${t.content}$$`;
+            return t.content;
+          }).join('');
+          return renderLine(reconstructedLine, li);
+        })}
       </span>
     );
   }
 
   return (
     <>
-      {paragraphs.map((para, pi) => {
-        const lines = para.split('\n');
+      {paragraphs.map((lines, pi) => {
         return (
           <p key={pi} style={{ margin: '0.35em 0', lineHeight: 1.75 }}>
-            {lines.map((line, li) => renderLine(line, li))}
+            {lines.map((lineTokens, li) => {
+              if (lineTokens.length === 0) return null;
+              if (lineTokens.length === 1 && lineTokens[0].type === 'block') {
+                return <SafeBlockMath key={li} math={lineTokens[0].content} />;
+              }
+              const reconstructedLine = lineTokens.map(t => {
+                if (t.type === 'inline') return `$${t.content}$`;
+                if (t.type === 'block') return `$$${t.content}$$`;
+                return t.content;
+              }).join('');
+              return renderLine(reconstructedLine, li);
+            })}
           </p>
         );
       })}

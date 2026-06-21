@@ -380,3 +380,40 @@ export const getLeaderboard = async () => {
   return data;
 };
 
+/**
+ * Log a user login in public.login_logs.
+ */
+export const addLoginLog = async (uid) => {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('login_logs')
+    .insert({
+      user_id: uid,
+      logged_at: new Date().toISOString()
+    });
+  if (error) {
+    console.error('[Supabase] Failed to log user login:', error);
+  }
+};
+
+/**
+ * Fetch login logs for a user.
+ */
+export const getLoginLogs = async (uid) => {
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from('login_logs')
+    .select('*')
+    .eq('user_id', uid)
+    .order('logged_at', { ascending: false });
+  if (error) {
+    console.error('[Supabase] Failed to fetch login logs:', error);
+    return [];
+  }
+  return data.map(row => ({
+    id: row.id,
+    userId: row.user_id,
+    loggedAt: row.logged_at
+  }));
+};
+

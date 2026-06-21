@@ -24,6 +24,10 @@ const AdminAIImport = lazy(() => import('./pages/AdminAIImport'));
 const AdminEbooks = lazy(() => import('./pages/AdminEbooks'));
 const AdminExamEdit = lazy(() => import('./pages/AdminExamEdit'));
 const SuitesNumeriquesPage = lazy(() => import('./pages/SuitesNumeriquesPage'));
+const AdminLessonsImport = lazy(() => import('./pages/AdminLessonsImport'));
+const AdminLessons = lazy(() => import('./pages/AdminLessons'));
+const LessonViewerPage = lazy(() => import('./pages/LessonViewerPage'));
+const AdminLessonEdit = lazy(() => import('./pages/AdminLessonEdit'));
 const OMRScannerPage = lazy(() => import('./pages/OMRScannerPage'));
 const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const RankingPage = lazy(() => import('./pages/RankingPage'));
@@ -112,6 +116,14 @@ function AppContent() {
       title = "Admin : Upload de Sujets — L'CONQ";
     } else if (path === '/admin/ai-import') {
       title = "Admin : Importateur de Sujets IA — L'CONQ";
+    } else if (path === '/admin/lessons') {
+      title = "Admin : Fiches de Cours — L'CONQ";
+    } else if (path === '/admin/ai-lessons') {
+      title = "Admin : Générateur de Cours IA — L'CONQ";
+    } else if (path.startsWith('/admin/lessons/') && path.endsWith('/edit')) {
+      title = "Admin : Édition de la Fiche — L'CONQ";
+    } else if (path.startsWith('/admin/lessons/')) {
+      title = "Fiche Interactive — L'CONQ";
     } else if (path === '/admin/ebooks') {
       title = "Admin : Générateur d'E-Books — L'CONQ";
     } else if (path === '/admin/settings') {
@@ -153,6 +165,10 @@ function AppContent() {
             <Route path="/admin/users/:id" element={<AdminStudentDetail />} />
             <Route path="/admin/upload" element={<AdminUpload />} />
             <Route path="/admin/ai-import" element={<AdminAIImport />} />
+            <Route path="/admin/ai-lessons" element={<AdminLessonsImport />} />
+            <Route path="/admin/lessons" element={<AdminLessons />} />
+            <Route path="/admin/lessons/:id" element={<LessonViewerPage />} />
+            <Route path="/admin/lessons/:id/edit" element={<AdminLessonEdit />} />
             <Route path="/admin/ebooks" element={<AdminEbooks />} />
             <Route path="/admin/settings" element={<AdminSettings />} />
           </Route>

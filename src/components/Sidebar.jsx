@@ -95,7 +95,13 @@ export default function Sidebar() {
               <UploadCloud size={18} /> Upload QCM
             </NavLink>
             <NavLink to="/admin/ai-import" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Sparkles size={18} /> Import IA
+              <Sparkles size={18} /> Import IA (QCM)
+            </NavLink>
+            <NavLink to="/admin/lessons" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <BookOpen size={18} /> Fiches de Cours
+            </NavLink>
+            <NavLink to="/admin/ai-lessons" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+              <Sparkles size={18} /> Import IA (Cours)
             </NavLink>
             <NavLink to="/admin/ebooks" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
               <BookMarked size={18} /> E-Books

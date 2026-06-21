@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { getAllProgress, getMockHistory } from '../services/userService';
+import { getAllProgress, getMockHistory, getLoginLogs } from '../services/userService';
 import { 
   ArrowLeft, Crown, User, Calendar, Target, 
   BarChart3, Clock, BookOpen, TrendingUp, Loader2,
@@ -47,6 +47,7 @@ export default function AdminStudentDetail() {
   // Real Database Student Details
   const [realHistory, setRealHistory] = useState([]);
   const [realProgress, setRealProgress] = useState({});
+  const [realLoginLogs, setRealLoginLogs] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
 
   useEffect(() => {
@@ -56,12 +57,14 @@ export default function AdminStudentDetail() {
       setLoadingStats(true);
       try {
         const uid = student.id || student.uid;
-        const [historyData, progressData] = await Promise.all([
+        const [historyData, progressData, logsData] = await Promise.all([
           getMockHistory(uid),
-          getAllProgress(uid)
+          getAllProgress(uid),
+          getLoginLogs(uid)
         ]);
         setRealHistory(historyData || []);
         setRealProgress(progressData || {});
+        setRealLoginLogs(logsData || []);
       } catch (e) {
         console.error('[Admin] Failed to load real student stats:', e);
       } finally {
@@ -466,6 +469,40 @@ export default function AdminStudentDetail() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Access Logs History */}
+          <div className="glass-panel" style={{ padding:'2rem' }}>
+            <h3 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
+              <Clock size={24} color="var(--primary)" /> Historique des Connexions
+            </h3>
+            
+            {loadingStats ? (
+              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
+                <Loader2 className="animate-spin" size={32} color="var(--primary)" />
+              </div>
+            ) : realLoginLogs.length === 0 ? (
+              <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
+                Aucune connexion enregistrée.
+              </div>
+            ) : (
+              <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                {realLoginLogs.slice(0, 50).map((log, idx) => {
+                  const dateObj = new Date(log.loggedAt);
+                  const dateStr = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+                  const timeStr = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                  return (
+                    <div key={log.id || idx} style={{ padding:'0.85rem 1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'0.75rem', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--emerald)', boxShadow: '0 0 8px var(--emerald)' }}></div>
+                        <span style={{ fontWeight:700, fontSize:'0.9rem', color: 'var(--text-main)' }}>Connexion réussie</span>
+                      </div>
+                      <span style={{ fontSize:'0.82rem', color:'var(--text-muted)', fontWeight: 600 }}>{dateStr} à {timeStr}</span>
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>

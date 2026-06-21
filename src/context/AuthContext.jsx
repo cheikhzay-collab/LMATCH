@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
-import { getUserDoc, createUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard } from '../services/userService';
+import { getUserDoc, createUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard, addLoginLog, getLoginLogs } from '../services/userService';
 import { getAllExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam, getExamQuestionsOnly } from '../services/examService';
 import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig, getOmrScannerSettingsConfig, saveOmrScannerSettingsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, redeemCodeViaRPC } from '../services/planService';
@@ -420,6 +420,12 @@ export function AuthProvider({ children }) {
                 city:         profile.city  || supabaseUser.user_metadata?.city  || '',
               };
               setUser(enriched);
+
+              // Log session access log entry
+              if (SUPABASE_ENABLED && !sessionStorage.getItem('logged_this_session')) {
+                addLoginLog(supabaseUser.id).catch(err => console.warn('[Auth] Failed to add access log:', err));
+                sessionStorage.setItem('logged_this_session', '1');
+              }
             }
           } catch (e) {
             console.warn('[Supabase] Failed to fetch or initialize user profile:', e.message);

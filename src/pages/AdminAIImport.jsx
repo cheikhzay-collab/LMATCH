@@ -301,11 +301,7 @@ export default function AdminAIImport() {
   const [provider, setProvider] = useState(() => draft?.provider || localStorage.getItem('aiImportProvider') || 'gemini');
   const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('geminiApiKey') || '');
   const [geminiModel, setGeminiModel] = useState(() => {
-    let m = draft?.geminiModel || localStorage.getItem('geminiModel') || 'gemini-1.5-flash';
-    if (typeof m === 'string' && (m.includes('2.0-flash') || m.includes('2.0'))) {
-      m = 'gemini-1.5-flash';
-      localStorage.setItem('geminiModel', 'gemini-1.5-flash');
-    }
+    let m = draft?.geminiModel || localStorage.getItem('geminiModel') || 'gemini-3.5-flash';
     return m;
   });
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('claudeApiKey') || '');
@@ -426,9 +422,7 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
       userPromptText = `${pageNote}Extrais TOUTES les questions QCM de ce document et retourne le JSON demandé.`;
     }
 
-    const modelToUse = (geminiModel && (geminiModel.includes('2.0-flash') || geminiModel.includes('2.0')))
-      ? 'gemini-1.5-flash'
-      : geminiModel;
+    const modelToUse = geminiModel || 'gemini-3.5-flash';
     const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${geminiKey}`;
     
     // Create fresh AbortController for this request
@@ -503,19 +497,24 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
       throw new Error("Gemini n'a renvoyé aucun texte ou la génération a été bloquée.");
     }
 
-    const cleanRawText = sanitizeLatexJson(rawText.trim());
     try {
-      return JSON.parse(cleanRawText);
-    } catch (err) {
-      const jsonMatch = cleanRawText.match(/\[[\s\S]*/);
-      if (jsonMatch) {
-        try {
-          return JSON.parse(jsonMatch[0]);
-        } catch (e) {
-          throw new Error(`Erreur lors du décodage du JSON de Gemini: ${err.message}`, { cause: e });
+      return JSON.parse(rawText.trim());
+    } catch (directErr) {
+      console.warn("[JSON Parse] Direct parse failed, trying sanitization...", directErr);
+      const cleanRawText = sanitizeLatexJson(rawText.trim());
+      try {
+        return JSON.parse(cleanRawText);
+      } catch (err) {
+        const jsonMatch = cleanRawText.match(/\[[\s\S]*/);
+        if (jsonMatch) {
+          try {
+            return JSON.parse(jsonMatch[0]);
+          } catch (e) {
+            throw new Error(`Erreur lors du décodage du JSON de Gemini : ${err.message}`, { cause: e });
+          }
         }
+        throw new Error(`Erreur lors du décodage du JSON de Gemini : ${err.message}`, { cause: err });
       }
-      throw new Error(`Erreur lors du décodage du JSON de Gemini: ${err.message}`, { cause: err });
     }
   };
 

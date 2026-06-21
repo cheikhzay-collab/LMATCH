@@ -4,7 +4,7 @@ import Flashcard from '../components/Flashcard';
 import MobileFlashcard from '../components/MobileFlashcard';
 import SessionSummary from '../components/SessionSummary';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, BrainCircuit, CheckCircle2, Zap, RefreshCw, Sparkles, Trophy } from 'lucide-react';
+import { ArrowLeft, BrainCircuit, CheckCircle2, Zap, RefreshCw, Sparkles, Trophy, BookOpen, Loader2 } from 'lucide-react';
 
 // Helper to group cards by context, preserving original exam order and avoiding duplicates.
 function groupCardsByContext(compiledCards, questionsPool) {
@@ -437,51 +437,58 @@ export default function StudyMode() {
           </p>
         </div>
 
-        {/* List of chapters in clean layout */}
-        {(() => {
-          const topicCounts = {};
-          const now = new Date();
-          
-          activeExamsList.forEach(e => {
-            (e.questions || []).forEach(q => {
-              const topic = q.topic || 'Général';
-              if (!topicCounts[topic]) {
-                topicCounts[topic] = { total: 0, due: 0 };
-              }
-              topicCounts[topic].total++;
-              
-              const p = allProgress[q.id];
-              const isDue = !p || new Date(p.nextReviewDate) <= now;
-              if (isDue) {
-                topicCounts[topic].due++;
-              }
+        {/* Centered Chapter Review */}
+        <div style={{ maxWidth: '680px', margin: '0 auto', width: '100%' }}>
+          {(() => {
+            const topicCounts = {};
+            const now = new Date();
+            
+            activeExamsList.forEach(e => {
+              (e.questions || []).forEach(q => {
+                const topic = q.topic || 'Général';
+                if (!topicCounts[topic]) {
+                  topicCounts[topic] = { total: 0, due: 0 };
+                }
+                topicCounts[topic].total++;
+                
+                const p = allProgress[q.id];
+                const isDue = !p || new Date(p.nextReviewDate) <= now;
+                if (isDue) {
+                  topicCounts[topic].due++;
+                }
+              });
             });
-          });
-          
-          const topicsData = Object.entries(topicCounts).map(([name, counts]) => ({
-            name,
-            total: counts.total,
-            due: counts.due
-          })).sort((a, b) => b.due - a.due || b.total - a.total);
+            
+            const topicsData = Object.entries(topicCounts).map(([name, counts]) => ({
+              name,
+              total: counts.total,
+              due: counts.due
+            })).sort((a, b) => b.due - a.due || b.total - a.total);
 
-          if (topicsData.length === 0) {
+            if (topicsData.length === 0) {
+              return (
+                <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', paddingBottom: '0.85rem' }}>
+                    <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, margin: 0, fontSize: '1.15rem' }}>
+                      <BrainCircuit size={20} color="var(--violet)" /> Révision par Chapitres
+                    </h3>
+                  </div>
+                  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)', minHeight: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                    <BrainCircuit size={36} opacity={0.4} style={{ marginBottom: '1rem' }} />
+                    <p style={{ fontWeight: 600 }}>Aucun chapitre disponible</p>
+                  </div>
+                </div>
+              );
+            }
+
             return (
-              <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)', minHeight: '300px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                <BrainCircuit size={36} opacity={0.4} style={{ marginBottom: '1rem' }} />
-                <p style={{ fontWeight: 600 }}>Aucun chapitre disponible</p>
-              </div>
-            );
-          }
-
-          return (
-            <div style={{ maxWidth: '800px', width: '100%', margin: '0 auto' }}>
               <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.85rem', marginBottom: '0.25rem' }}>
                   <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, margin: 0, fontSize: '1.15rem' }}>
                     <BrainCircuit size={20} color="var(--violet)" /> Révision par Chapitres
                   </h3>
                   <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700 }}>
-                    {topicsData.length} chapitre{topicsData.length !== 1 ? 's' : ''} au total
+                    {topicsData.length} chapitre{topicsData.length !== 1 ? 's' : ''}
                   </span>
                 </div>
 
@@ -589,9 +596,9 @@ export default function StudyMode() {
                   })}
                 </div>
               </div>
-            </div>
-          );
-        })()}
+            );
+          })()}
+        </div>
       </div>
     );
   }

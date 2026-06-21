@@ -1305,12 +1305,11 @@ body.light-theme .astuce-tabs {
   display: inline !important;
   white-space: normal !important;
   max-width: 100%;
-  vertical-align: middle;
-  padding-bottom: 0.15em;
-  margin-bottom: -0.15em;
+  vertical-align: baseline;
 }
 .inline-math-container .katex {
   white-space: normal !important;
+  font-size: 1.04em !important; /* Scale to harmonize with standard text size */
 }
 .inline-math-container .katex .base {
   white-space: normal !important;

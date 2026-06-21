@@ -268,14 +268,14 @@ const renderTextWithBold = (text) => {
 const renderLineContent = (text) => {
   const toParse = autoWrapLatex(text);
   const tokens = tokenizeMath(toParse);
-  if (tokens.length === 1 && tokens[0].type === 'text') {
-    return renderTextWithBold(tokens[0].content);
-  }
-  return tokens.map((tok) => {
+  const html = tokens.map((tok) => {
     if (tok.type === 'block')  return renderBlockKatex(tok.content);
     if (tok.type === 'inline') return renderInlineKatex(tok.content);
-    return renderTextWithBold(tok.content);
+    return esc(tok.content);
   }).join('');
+  return html
+    .replace(/\*\*([\s\S]+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([\s\S]+?)\*/g, '<em>$1</em>');
 };
 
 const renderLine = (line) => {

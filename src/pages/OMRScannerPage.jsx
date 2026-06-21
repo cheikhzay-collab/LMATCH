@@ -1,8 +1,8 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Upload, Camera, CheckCircle2, XCircle, AlertCircle,
-  BrainCircuit, Zap, RotateCcw, Loader2, Check, TrendingUp, Printer
+  BrainCircuit, Zap, RotateCcw, Loader2, Check, TrendingUp, Printer, Home
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { scanAnswerSheet, readQRCodeFromImage } from '../utils/OMRScanner';
@@ -34,9 +34,9 @@ function ConfidenceDot({ confidence }) {
 }
 
 /* ── Verification Row ───────────────────────────────────────────── */
-function VerifyGrid({ scanned, questions, onChange }) {
+function VerifyGrid({ scanned, questions, onChange, isMobile }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: 420, overflowY: 'auto', paddingRight: '6px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', maxHeight: isMobile ? 320 : 420, overflowY: 'auto', paddingRight: '6px' }}>
       {scanned.map((row, idx) => {
         const qTextRaw = questions[idx]?.question || `Question ${row.q}`;
         const isLowConfidence = row.confidence < 0.35;
@@ -45,7 +45,7 @@ function VerifyGrid({ scanned, questions, onChange }) {
             display: 'flex', 
             flexDirection: 'column',
             gap: '0.6rem',
-            padding: '0.75rem 1rem',
+            padding: isMobile ? '0.6rem 0.8rem' : '0.75rem 1rem',
             background: isLowConfidence ? 'rgba(245, 158, 11, 0.05)' : 'rgba(255, 255, 255, 0.02)',
             borderRadius: '1rem',
             border: `1.5px solid ${isLowConfidence ? 'rgba(245, 158, 11, 0.25)' : 'var(--border)'}`,
@@ -61,17 +61,17 @@ function VerifyGrid({ scanned, questions, onChange }) {
             </span>
 
             {/* Option selection buttons */}
-            <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginTop: '0.2rem', alignItems: 'center' }}>
+            <div style={{ display: 'flex', gap: isMobile ? '0.45rem' : '0.35rem', flexWrap: 'wrap', marginTop: '0.2rem', alignItems: 'center' }}>
               {CHOICES.map(opt => (
                 <button 
                   key={opt} 
                   onClick={() => onChange(idx, opt)} 
                   style={{
-                    width: 32, 
-                    height: 32, 
+                    width: isMobile ? 38 : 32, 
+                    height: isMobile ? 38 : 32, 
                     borderRadius: '50%', 
                     fontWeight: 800, 
-                    fontSize: '0.85rem',
+                    fontSize: isMobile ? '0.95rem' : '0.85rem',
                     cursor: 'pointer', 
                     transition: 'all 0.2s ease',
                     background: row.answer === opt ? 'var(--violet)' : 'rgba(255,255,255,0.03)',
@@ -98,11 +98,11 @@ function VerifyGrid({ scanned, questions, onChange }) {
               <button 
                 onClick={() => onChange(idx, null)} 
                 style={{
-                  padding: '0 0.75rem', 
-                  height: 32, 
+                  padding: isMobile ? '0 1rem' : '0 0.75rem', 
+                  height: isMobile ? 38 : 32, 
                   borderRadius: '0.5rem', 
                   fontWeight: 800, 
-                  fontSize: '0.75rem',
+                  fontSize: isMobile ? '0.82rem' : '0.75rem',
                   cursor: 'pointer', 
                   transition: 'all 0.2s ease',
                   background: row.answer === null ? 'var(--danger-soft)' : 'rgba(255,255,255,0.03)',
@@ -154,7 +154,7 @@ function ResultRow({ row }) {
         {renderMathSnippet(row.question)}
       </span>
       
-      <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', fontSize: '0.82rem', marginTop: '0.2rem' }}>
+      <div className="result-row-details">
         <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Réponse cochée :</span>
         <span style={{ 
           padding: '0.2rem 0.6rem', 
@@ -181,8 +181,22 @@ function ResultRow({ row }) {
 
 /* ── Main Global Scanner Page ────────────────────────────────────── */
 export default function OMRScannerPage() {
-  const { user, mockExamHistory, updateCardProgress, saveMockExamResult, schoolBranding, exams, isExamLocked, profName, profPhone, profSite, loadExamQuestions } = useAuth();
+  const { user, theme, mockExamHistory, updateCardProgress, saveMockExamResult, schoolBranding, exams, isExamLocked, profName, profPhone, profSite, loadExamQuestions } = useAuth();
   const navigate = useNavigate();
+
+  const isDark = theme === 'dark';
+  const textMainColor = isDark ? '#E4E4E7' : '#0F172A';
+  const textMutedColor = isDark ? '#A1A1AA' : '#334155';
+  const textSubtleColor = isDark ? '#8F8F98' : '#4E5D73';
+  const borderCol = isDark ? 'rgba(255, 255, 255, 0.05)' : '#E2E8F0';
+  const cardBg = isDark ? 'rgba(24, 24, 27, 0.7)' : '#FFFFFF';
+
+  const emeraldColor = isDark ? '#10B981' : '#059669';
+  const dangerColor = isDark ? '#EF4444' : '#DC2626';
+  const warningColor = isDark ? '#F59E0B' : '#D97706';
+  const emeraldSoftColor = isDark ? 'rgba(16, 185, 129, 0.08)' : 'rgba(5, 150, 105, 0.08)';
+  const dangerSoftColor = isDark ? 'rgba(239, 68, 68, 0.08)' : 'rgba(220, 38, 38, 0.08)';
+
 
   const isDirectCaptureEnabled = localStorage.getItem('scanner_direct_capture_enabled') !== 'false';
   const [activeExam,   setActiveExam]   = useState(null);
@@ -195,6 +209,16 @@ export default function OMRScannerPage() {
   const [scanError,    setScanError]    = useState(null);
   const [scanStep,     setScanStep]     = useState(0);
   const [resultsTab,   setResultsTab]   = useState('list');
+
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const fileRef = useRef(null);
 
@@ -346,17 +370,19 @@ export default function OMRScannerPage() {
 
   const phaseLabel = { upload:'Uploader', scanning:'Analyse…', verify:'Vérification', results:'Résultats' };
 
+  const currentStepIndex = ['upload', 'scanning', 'verify', 'results'].indexOf(phase);
+
   return (
-    <div className="animate-fade-in" style={{ padding: '0.5rem 0 3rem 0', width: '100%', overflowX: 'hidden' }}>
+    <div className="animate-fade-in" style={{ padding: isMobile ? '0.5rem 0 5rem 0' : '0.5rem 0 3rem 0', width: '100%', overflowX: 'hidden' }}>
       {/* Page Title & Phase Indicators */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '0.75rem' : '1.25rem', marginBottom: isMobile ? '1.25rem' : '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '0.4rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: isMobile ? '0.15rem' : '0.4rem' }}>
               <div style={{ 
-                width: 42, 
-                height: 42, 
-                borderRadius: '12px', 
+                width: isMobile ? 34 : 42, 
+                height: isMobile ? 34 : 42, 
+                borderRadius: isMobile ? '10px' : '12px', 
                 background: 'linear-gradient(135deg, var(--violet), var(--emerald))', 
                 display: 'flex', 
                 alignItems: 'center', 
@@ -364,88 +390,141 @@ export default function OMRScannerPage() {
                 flexShrink: 0,
                 boxShadow: '0 4px 14px var(--violet-glow)'
               }}>
-                <Camera size={20} color="#fff" />
+                <Camera size={isMobile ? 16 : 20} color="#fff" />
               </div>
-              <h1 style={{ fontSize: '1.6rem', fontWeight: 900, letterSpacing: '-0.03em', margin: 0, color: 'var(--text-main)' }}>
+              <h1 style={{ fontSize: isMobile ? '1.35rem' : '1.6rem', fontWeight: 900, letterSpacing: '-0.03em', margin: 0, color: 'var(--text-main)' }}>
                 Scanner Intelligent
               </h1>
             </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', margin: 0, lineHeight: 1.5 }}>
-              Prenez en photo votre feuille de réponses L'Match. L'IA s'occupe du reste.
-            </p>
+            {(!isMobile || phase === 'upload') && (
+              <p style={{ color: 'var(--text-muted)', fontSize: isMobile ? '0.8rem' : '0.88rem', margin: 0, lineHeight: 1.5 }}>
+                Prenez en photo votre feuille de réponses L'Match. L'IA s'occupe du reste.
+              </p>
+            )}
           </div>
         </div>
         
         {/* Phase indicators */}
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          width: '100%', 
-          background: 'rgba(255, 255, 255, 0.02)', 
-          backdropFilter: 'blur(10px)',
-          border: '1px solid var(--border)', 
-          padding: '0.75rem 1.25rem', 
-          borderRadius: '1.25rem',
-          justifyContent: 'space-between',
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          {['upload', 'scanning', 'verify', 'results'].map((p, i) => {
-            const isActive = phase === p;
-            const isCompleted = ['upload', 'scanning', 'verify', 'results'].indexOf(phase) > i;
-            return (
-              <div key={p} style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                flex: i === 3 ? 'none' : 1,
-                position: 'relative'
+        {isMobile ? (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            width: '100%',
+            background: 'rgba(255, 255, 255, 0.02)',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid var(--border)',
+            padding: '0.75rem 1rem',
+            borderRadius: '1.25rem',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 32,
+                height: 32,
+                borderRadius: '50%',
+                background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
+                color: '#fff',
+                fontSize: '0.85rem',
+                fontWeight: 800,
+                boxShadow: '0 4px 10px var(--violet-glow)'
               }}>
-                <div style={{ 
+                {currentStepIndex + 1}
+              </div>
+              <div>
+                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', display: 'block', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Étape {currentStepIndex + 1} sur 4
+                </span>
+                <span style={{ fontSize: '0.9rem', color: 'var(--text-main)', fontWeight: 800 }}>
+                  {phaseLabel[phase]}
+                </span>
+              </div>
+            </div>
+            
+            {/* Mini progress bar on the right */}
+            <div style={{ width: '80px', height: '6px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '3px', overflow: 'hidden', border: '1px solid var(--border)' }}>
+              <div style={{
+                width: `${((currentStepIndex + 1) / 4) * 100}%`,
+                height: '100%',
+                background: 'linear-gradient(90deg, var(--violet), var(--emerald))',
+                borderRadius: '3px',
+                transition: 'width 0.3s ease'
+              }} />
+            </div>
+          </div>
+        ) : (
+          <div className="stepper-container" style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            width: '100%', 
+            background: 'rgba(255, 255, 255, 0.02)', 
+            backdropFilter: 'blur(10px)',
+            border: '1px solid var(--border)', 
+            padding: '0.75rem 1.25rem', 
+            borderRadius: '1.25rem',
+            justifyContent: 'space-between',
+            position: 'relative',
+            overflow: 'hidden'
+          }}>
+            {['upload', 'scanning', 'verify', 'results'].map((p, i) => {
+              const isActive = phase === p;
+              const isCompleted = ['upload', 'scanning', 'verify', 'results'].indexOf(phase) > i;
+              return (
+                <div key={p} className="step-item" style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
-                  justifyContent: 'center',
-                  width: 24, 
-                  height: 24, 
-                  borderRadius: '50%', 
-                  background: isActive ? 'var(--violet)' : isCompleted ? 'var(--emerald)' : 'rgba(255,255,255,0.05)',
-                  border: `1.5px solid ${isActive ? 'var(--violet)' : isCompleted ? 'var(--emerald)' : 'var(--border)'}`,
-                  color: isActive || isCompleted ? '#fff' : 'var(--text-muted)',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  boxShadow: isActive ? '0 0 10px var(--violet-glow)' : 'none',
-                  transition: 'all 0.3s ease'
+                  gap: '0.5rem',
+                  flex: i === 3 ? 'none' : 1,
+                  position: 'relative'
                 }}>
-                  {isCompleted ? <Check size={12} strokeWidth={3} /> : i + 1}
-                </div>
-                <span style={{ 
-                  fontSize: '0.8rem', 
-                  fontWeight: isActive ? 800 : 600, 
-                  color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
-                  whiteSpace: 'nowrap',
-                  transition: 'all 0.3s ease'
-                }}>
-                  {phaseLabel[p]}
-                </span>
-                
-                {i < 3 && (
                   <div style={{ 
-                    flex: 1, 
-                    height: 2, 
-                    background: isCompleted ? 'var(--emerald)' : 'var(--border)', 
-                    marginLeft: '0.75rem', 
-                    marginRight: '0.75rem',
-                    minWidth: 16
-                  }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    width: 24, 
+                    height: 24, 
+                    borderRadius: '50%', 
+                    background: isActive ? 'var(--violet)' : isCompleted ? 'var(--emerald)' : 'rgba(255,255,255,0.05)',
+                    border: `1.5px solid ${isActive ? 'var(--violet)' : isCompleted ? 'var(--emerald)' : 'var(--border)'}`,
+                    color: isActive || isCompleted ? '#fff' : 'var(--text-muted)',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    boxShadow: isActive ? '0 0 10px var(--violet-glow)' : 'none',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    {isCompleted ? <Check size={12} strokeWidth={3} /> : i + 1}
+                  </div>
+                  <span className={`step-label ${isActive ? 'active' : ''}`} style={{ 
+                    fontSize: '0.8rem', 
+                    fontWeight: isActive ? 800 : 600, 
+                    color: isActive ? 'var(--text-main)' : 'var(--text-muted)',
+                    whiteSpace: 'nowrap',
+                    transition: 'all 0.3s ease'
+                  }}>
+                    {phaseLabel[p]}
+                  </span>
+                  
+                  {i < 3 && (
+                    <div className="step-line" style={{ 
+                      flex: 1, 
+                      height: 2, 
+                      background: isCompleted ? 'var(--emerald)' : 'var(--border)', 
+                      marginLeft: '0.75rem', 
+                      marginRight: '0.75rem',
+                      minWidth: 16
+                    }} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.25rem', width: '100%' }}>
-        <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '1.5rem', border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }}>
+        <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '1.5rem', borderRadius: '1.5rem', border: '1px solid var(--border)', width: '100%', boxSizing: 'border-box' }}>
           
           {/* ── UPLOAD PHASE ── */}
           {phase === 'upload' && (
@@ -738,37 +817,39 @@ export default function OMRScannerPage() {
               </div>
 
               {/* Exam banner */}
-              <div style={{ 
-                background: 'rgba(255, 255, 255, 0.01)', 
-                border: '1px solid var(--border)', 
-                borderRadius: '1.25rem', 
-                padding: '1.25rem 1.5rem', 
-                marginBottom: '1.75rem', 
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '1rem'
-              }}>
-                <div>
+              <div className="exam-banner">
+                <div className="exam-banner-left">
                   <span style={{ fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', color: 'var(--violet)', letterSpacing: '0.12em' }}>Examen Identifié</span>
                   <h3 style={{ fontWeight: 900, fontSize: '1.25rem', margin: '4px 0 0 0', letterSpacing: '-0.02em', color: 'var(--text-main)' }}>{activeExam.name}</h3>
                   <p style={{ color:'var(--text-muted)', fontSize: '0.82rem', margin: '4px 0 0 0', fontWeight: 500 }}>{activeExam.school} · {activeExam.year}</p>
                 </div>
-                <div style={{ textAlign: 'right' }}>
+                <div className="exam-banner-right">
                   <span style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--text-main)' }}>{Q}</span>
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.78rem', margin: 0, fontWeight: 500 }}>Questions lues</p>
                 </div>
               </div>
 
-              <VerifyGrid scanned={scanned} questions={questions} onChange={handleVerifyChange} />
+              <VerifyGrid scanned={scanned} questions={questions} onChange={handleVerifyChange} isMobile={isMobile} />
 
-              <div style={{ display: 'flex', gap: '0.85rem', marginTop: '2.5rem', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-                <button className="btn-outline" onClick={reset} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '0.875rem' }}>
+              <div className="actions-row" style={isMobile ? {
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                background: 'var(--bg-card)',
+                borderTop: '1px solid var(--border)',
+                padding: '0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom))',
+                zIndex: 400,
+                display: 'flex',
+                gap: '0.75rem',
+                margin: 0,
+                boxShadow: '0 -4px 16px rgba(0,0,0,0.1)'
+              } : {}}>
+                <button className="btn-outline" onClick={reset} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '0.875rem', flex: isMobile ? 1 : 'none' }}>
                   <RotateCcw size={15} /> Rescanner
                 </button>
-                <button className="btn" onClick={handleConfirmVerify} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 2rem', borderRadius: '0.875rem', background: 'var(--emerald)', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.2)' }}>
-                  <Check size={16} strokeWidth={2.5} /> Confirmer & Calculer la note
+                <button className="btn" onClick={handleConfirmVerify} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem 2rem', borderRadius: '0.875rem', background: 'var(--emerald)', boxShadow: '0 4px 14px rgba(16, 185, 129, 0.2)', flex: isMobile ? 2 : 'none' }}>
+                  <Check size={16} strokeWidth={2.5} /> {isMobile ? 'Valider' : 'Confirmer & Calculer la note'}
                 </button>
               </div>
             </div>
@@ -780,33 +861,16 @@ export default function OMRScannerPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
                 
                 {/* Visual scorecard header */}
-                <div style={{ 
-                  borderRadius: '1.5rem', 
-                  overflow: 'hidden', 
-                  border: '1px solid var(--border)', 
-                  boxShadow: 'var(--shadow-card)',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  mdDirection: 'row',
-                  background: 'rgba(255, 255, 255, 0.01)'
-                }}>
+                <div className="scorecard-header">
                   {/* Left part: glowing glass badge with dynamic gradients based on score */}
-                  <div style={{ 
-                    background: `linear-gradient(135deg, ${score.pct >= 70 ? 'rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05)' : score.pct >= 50 ? 'rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.05)' : 'rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.05)'})`, 
-                    padding: '2.5rem 2rem', 
-                    textAlign: 'center',
-                    flex: '1.2',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    borderRight: '1px solid var(--border)',
-                    position: 'relative'
+                  <div className="scorecard-left" style={{ 
+                    padding: isMobile ? '1.25rem 1rem' : '2.5rem 2rem',
+                    background: `linear-gradient(135deg, ${score.pct >= 70 ? 'rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05)' : score.pct >= 50 ? 'rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.05)' : 'rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.05)'})`
                   }}>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' }}>NOTE SUR 20</p>
+                    <p style={{ color: textMutedColor, fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' }}>NOTE SUR 20</p>
                     <h2 style={{ 
-                      color: score.pct >= 70 ? 'var(--emerald)' : score.pct >= 50 ? 'var(--warning)' : 'var(--danger)', 
-                      fontSize: '4.2rem', 
+                      color: score.pct >= 70 ? emeraldColor : score.pct >= 50 ? warningColor : dangerColor, 
+                      fontSize: isMobile ? '2.8rem' : '4.2rem', 
                       fontWeight: 900, 
                       lineHeight: 1, 
                       margin: 0,
@@ -815,34 +879,34 @@ export default function OMRScannerPage() {
                     }}>
                       {((score.pts / Q) * 20).toFixed(2)}
                     </h2>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginTop: '0.75rem', fontWeight: 600 }}>
-                      Score : <strong style={{ color: 'var(--text-main)' }}>{score.pts.toFixed(2)}</strong> / {Q} pts
+                    <p style={{ color: textMutedColor, fontSize: isMobile ? '0.78rem' : '0.85rem', marginTop: isMobile ? '0.4rem' : '0.75rem', fontWeight: 600 }}>
+                      Score : <strong style={{ color: textMainColor }}>{score.pts.toFixed(2)}</strong> / {Q} pts
                     </p>
-                    <p style={{ color: 'var(--text-subtle)', fontSize: '0.75rem', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                    <p style={{ color: textSubtleColor, fontSize: '0.75rem', marginTop: '0.25rem', fontStyle: 'italic' }}>
                       Pénalités : -{score.neg.toFixed(2)} pts (Faux: {wrongCount})
                     </p>
                   </div>
                   
                   {/* Right part: stats breakdown list */}
-                  <div style={{ flex: '1', display: 'flex', background: 'rgba(255, 255, 255, 0.015)' }}>
-                    {[{l:'Correctes',v:correctCount,c:'var(--emerald)',bg:'var(--emerald-soft)'},{l:'Fausses',v:wrongCount,c:'var(--danger)',bg:'var(--danger-soft)'}].map((s, sIdx)=>(
-                      <div key={s.l} style={{ flex: 1, padding: '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: sIdx === 0 ? '1px solid var(--border)' : 'none' }}>
+                  <div className="scorecard-right" style={{ flexWrap: isMobile ? 'nowrap' : 'wrap' }}>
+                    {[{l:'Correctes',v:correctCount,c:emeraldColor,bg:emeraldSoftColor},{l:'Fausses',v:wrongCount,c:dangerColor,bg:dangerSoftColor}].map((s, sIdx)=>(
+                      <div key={s.l} style={{ flex: 1, padding: isMobile ? '1rem 0.5rem' : '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: sIdx === 0 ? `1px solid ${borderCol}` : 'none' }}>
                         <div style={{ 
-                          width: 44, 
-                          height: 44, 
+                          width: isMobile ? 32 : 44, 
+                          height: isMobile ? 32 : 44, 
                           borderRadius: '50%', 
                           background: s.bg, 
                           color: s.c, 
                           display: 'flex', 
                           alignItems: 'center', 
                           justifyContent: 'center',
-                          marginBottom: '0.75rem',
+                          marginBottom: isMobile ? '0.4rem' : '0.75rem',
                           fontWeight: 800
                         }}>
-                          {sIdx === 0 ? <Check size={18} strokeWidth={2.5} /> : <XCircle size={18} />}
+                          {sIdx === 0 ? <Check size={isMobile ? 14 : 18} strokeWidth={2.5} /> : <XCircle size={isMobile ? 14 : 18} />}
                         </div>
-                        <p style={{ fontWeight: 900, fontSize: '1.75rem', color: s.c, margin: 0 }}>{s.v}</p>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700, marginTop: '4px' }}>{s.l}</p>
+                        <p style={{ fontWeight: 900, fontSize: isMobile ? '1.35rem' : '1.75rem', color: s.c, margin: 0 }}>{s.v}</p>
+                        <p style={{ fontSize: isMobile ? '0.72rem' : '0.8rem', color: textMutedColor, fontWeight: 700, marginTop: '2px' }}>{s.l}</p>
                       </div>
                     ))}
                   </div>
@@ -851,18 +915,7 @@ export default function OMRScannerPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
                   {/* SRS Reminder card */}
                   {wrongCount > 0 && (
-                    <div style={{ 
-                      padding: '1.5rem', 
-                      background: 'var(--violet-soft)', 
-                      border: '1px solid rgba(113, 109, 242, 0.15)', 
-                      borderRadius: '1.5rem', 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      smDirection: 'row', // Flex layout
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: '1.25rem' 
-                    }}>
+                    <div className="srs-reminder-card">
                       <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
                         <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(113, 109, 242, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                           <BrainCircuit size={22} color="var(--violet)" />
@@ -882,22 +935,12 @@ export default function OMRScannerPage() {
 
                   {/* Corrections / Diagnostics details */}
                   <div style={{ background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--border)', borderRadius: '1.5rem', padding: '1.25rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1.25rem' }}>
-                      <div style={{ display: 'flex', gap: '0.3rem', background: 'rgba(255, 255, 255, 0.02)', padding: '0.25rem', borderRadius: '0.875rem', border: '1px solid var(--border)' }}>
+                    <div className="results-tabs-wrapper">
+                      <div className="results-tabs-container">
                         {[{id:'list',label:'Feuille de Correction',icon:<CheckCircle2 size={14}/>},{id:'diagnostic',label:'Analyse Thématique',icon:<TrendingUp size={14}/>}].map(t=>(
                           <button key={t.id} onClick={()=>setResultsTab(t.id)}
+                            className="results-tab-button"
                             style={{ 
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '0.4rem',
-                              padding: '0.5rem 1rem',
-                              borderRadius: '0.65rem',
-                              border: 'none',
-                              cursor: 'pointer',
-                              fontWeight: 700,
-                              fontSize: '0.82rem',
-                              fontFamily: 'inherit',
-                              transition: 'all 0.2s',
                               background: resultsTab === t.id ? 'var(--violet)' : 'transparent',
                               color: resultsTab === t.id ? '#fff' : 'var(--text-muted)',
                               boxShadow: resultsTab === t.id ? '0 2px 8px var(--violet-glow)' : 'none'
@@ -925,28 +968,28 @@ export default function OMRScannerPage() {
               </div>
 
               {/* Action row */}
-              <div style={{ 
-                display: 'flex', 
-                gap: '0.85rem', 
-                marginTop: '3rem', 
-                borderTop: '1px solid var(--border)', 
-                paddingTop: '1.5rem', 
-                justifyContent: 'flex-end', 
-                flexWrap: 'wrap' 
-              }}>
+              <div className="results-actions-row" style={isMobile ? {
+                position: 'fixed',
+                bottom: 0,
+                left: 0,
+                right: 0,
+                background: 'var(--bg-card)',
+                borderTop: '1px solid var(--border)',
+                padding: '0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom))',
+                zIndex: 400,
+                display: 'flex',
+                gap: '0.5rem',
+                margin: 0,
+                boxShadow: '0 -4px 16px rgba(0,0,0,0.1)',
+                flexDirection: 'row',
+                justifyContent: 'space-between'
+              } : {}}>
                 <button 
                   className="btn-outline" 
                   onClick={reset} 
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.7rem 1.5rem', borderRadius: '0.875rem' }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.7rem 1rem', borderRadius: '0.875rem', flex: 1, fontSize: '0.82rem' }}
                 >
-                  <RotateCcw size={15} /> Scanner une autre copie
-                </button>
-                <button 
-                  className="btn-outline" 
-                  onClick={() => navigate('/dashboard')} 
-                  style={{ padding: '0.7rem 1.5rem', borderRadius: '0.875rem' }}
-                >
-                  Retour à l'accueil
+                  <RotateCcw size={15} /> {isMobile ? 'Recommencer' : 'Scanner une autre copie'}
                 </button>
                 <button 
                   className="btn" 
@@ -954,13 +997,24 @@ export default function OMRScannerPage() {
                   style={{ 
                     display: 'flex', 
                     alignItems: 'center', 
-                    gap: '0.5rem', 
-                    padding: '0.7rem 1.75rem', 
+                    justifyContent: 'center',
+                    gap: '0.4rem', 
+                    padding: '0.7rem 1.2rem', 
                     borderRadius: '0.875rem',
-                    fontWeight: 700 
+                    fontWeight: 700,
+                    flex: 1.2,
+                    fontSize: '0.82rem'
                   }}
                 >
-                  <Printer size={15} /> Télécharger le Rapport PDF
+                  <Printer size={15} /> {isMobile ? 'Rapport PDF' : 'Télécharger le Rapport PDF'}
+                </button>
+                <button 
+                  className="btn-outline" 
+                  onClick={() => navigate('/dashboard')} 
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.7rem', borderRadius: '0.875rem', width: 44, height: 44, flexShrink: 0 }}
+                  title="Retour à l'accueil"
+                >
+                  <Home size={17} />
                 </button>
               </div>
             </div>
@@ -973,6 +1027,194 @@ export default function OMRScannerPage() {
           0% { top: 0%; opacity: 0.3; }
           50% { top: 100%; opacity: 1; }
           100% { top: 0%; opacity: 0.3; }
+        }
+
+        /* Responsive stepper wizard */
+        @media (max-width: 768px) {
+          .stepper-container {
+            padding: 0.6rem 0.8rem !important;
+            border-radius: 1rem !important;
+          }
+          .step-item {
+            gap: 0.25rem !important;
+          }
+          .step-label {
+            display: none;
+          }
+          .step-label.active {
+            display: inline;
+            font-size: 0.75rem !important;
+          }
+          .step-line {
+            margin-left: 0.4rem !important;
+            margin-right: 0.4rem !important;
+            min-width: 8px !important;
+          }
+        }
+
+        /* Responsive Scorecard Header */
+        .scorecard-header {
+          border-radius: 1.5rem; 
+          overflow: hidden; 
+          border: 1px solid ${borderCol}; 
+          box-shadow: var(--shadow-card);
+          display: flex;
+          flex-direction: row;
+          background: ${cardBg};
+        }
+        .scorecard-left {
+          text-align: center;
+          flex: 1.2;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          border-right: 1px solid ${borderCol};
+          position: relative;
+        }
+        .scorecard-left h2 {
+          font-weight: 900 !important;
+          line-height: 1 !important;
+          margin: 0 !important;
+          letter-spacing: -0.03em !important;
+        }
+        .scorecard-right {
+          flex: 1; 
+          display: flex; 
+          background: rgba(255, 255, 255, 0.015);
+        }
+
+        /* Responsive SRS Card */
+        .srs-reminder-card {
+          padding: 1.5rem; 
+          background: var(--violet-soft); 
+          border: 1px solid rgba(113, 109, 242, 0.15); 
+          border-radius: 1.5rem; 
+          display: flex; 
+          flex-direction: column; 
+          justify-content: space-between;
+          align-items: center;
+          gap: 1.25rem;
+        }
+        @media (min-width: 640px) {
+          .srs-reminder-card {
+            flex-direction: row;
+          }
+        }
+        @media (max-width: 480px) {
+          .srs-reminder-card {
+            padding: 1.25rem 1rem;
+            align-items: stretch;
+          }
+          .srs-reminder-card button {
+            width: 100%;
+          }
+        }
+
+        /* Responsive Exam Banner in Verify */
+        .exam-banner {
+          background: rgba(255, 255, 255, 0.01); 
+          border: 1px solid var(--border); 
+          border-radius: 1.25rem; 
+          padding: 1.25rem 1.5rem; 
+          margin-bottom: 1.75rem; 
+          display: flex; 
+          justify-content: space-between; 
+          align-items: center;
+          gap: 1rem;
+        }
+        .exam-banner-left {
+          text-align: left;
+        }
+        .exam-banner-right {
+          text-align: right;
+          flex-shrink: 0;
+        }
+        @media (max-width: 480px) {
+          .exam-banner {
+            flex-direction: column;
+            align-items: flex-start;
+            padding: 1rem;
+          }
+          .exam-banner-right {
+            text-align: left;
+            margin-top: 0.25rem;
+          }
+        }
+
+        /* Responsive Action Row Buttons */
+        .actions-row {
+          display: flex;
+          gap: 0.85rem;
+          margin-top: 2.5rem;
+          justify-content: flex-end;
+          flex-wrap: wrap;
+        }
+        .results-actions-row {
+          display: flex; 
+          gap: 0.85rem; 
+          margin-top: 3rem; 
+          border-top: 1px solid var(--border); 
+          padding-top: 1.5rem; 
+          justify-content: flex-end; 
+          flex-wrap: wrap;
+        }
+        @media (max-width: 600px) {
+          .actions-row, .results-actions-row {
+            flex-direction: column;
+            align-items: stretch;
+            width: 100%;
+          }
+          .actions-row button, .results-actions-row button {
+            width: 100%;
+            justify-content: center;
+          }
+        }
+
+        /* Results Tab responsiveness */
+        .results-tabs-wrapper {
+          display: flex;
+          align-items: center;
+          margin-bottom: 1.25rem;
+        }
+        .results-tabs-container {
+          display: flex;
+          gap: 0.3rem;
+          background: rgba(255, 255, 255, 0.02);
+          padding: 0.25rem;
+          border-radius: 0.875rem;
+          border: 1px solid var(--border);
+          width: 100%;
+        }
+        .results-tab-button {
+          flex: 1;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.4rem;
+          padding: 0.5rem 1rem;
+          border-radius: 0.65rem;
+          border: none;
+          cursor: pointer;
+          font-weight: 700;
+          font-size: 0.82rem;
+          font-family: inherit;
+          transition: all 0.2s;
+        }
+        @media (max-width: 480px) {
+          .results-tab-button {
+            padding: 0.5rem 0.5rem;
+            font-size: 0.75rem;
+          }
+        }
+
+        .result-row-details {
+          display: flex;
+          gap: 0.6rem;
+          align-items: center;
+          font-size: 0.82rem;
+          margin-top: 0.2rem;
+          flex-wrap: wrap;
         }
       `}</style>
     </div>
