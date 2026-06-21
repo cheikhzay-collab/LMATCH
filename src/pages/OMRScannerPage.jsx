@@ -1062,6 +1062,11 @@ export default function OMRScannerPage() {
           flex-direction: row;
           background: ${cardBg};
         }
+        @media (max-width: 600px) {
+          .scorecard-header {
+            flex-direction: column !important;
+          }
+        }
         .scorecard-left {
           text-align: center;
           flex: 1.2;
@@ -1071,6 +1076,13 @@ export default function OMRScannerPage() {
           align-items: center;
           border-right: 1px solid ${borderCol};
           position: relative;
+        }
+        @media (max-width: 600px) {
+          .scorecard-left {
+            border-right: none !important;
+            border-bottom: 1px solid ${borderCol} !important;
+            padding: 1.5rem 1rem !important;
+          }
         }
         .scorecard-left h2 {
           font-weight: 900 !important;
