@@ -121,13 +121,14 @@ export default function Layout() {
     );
   }
 
-  const publicPaths = ['/schools', '/study/suites-numeriques', '/exam', '/study', '/scanner'];
+  const publicPaths = ['/schools', '/study/suites-numeriques', '/exam', '/study', '/scanner', '/scan'];
   const isPublicPath = publicPaths.some(p => 
     location.pathname === p || 
     location.pathname.startsWith('/schools/') || 
     location.pathname.startsWith('/exam') ||
     location.pathname.startsWith('/study') ||
-    location.pathname.startsWith('/scanner')
+    location.pathname.startsWith('/scanner') ||
+    location.pathname.startsWith('/scan')
   );
 
   if (!user && !isPublicPath) {

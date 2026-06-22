@@ -155,6 +155,7 @@ function AppContent() {
             <Route path="/study/suites-numeriques" element={<SuitesNumeriquesPage />} />
             <Route path="/exam" element={<MockExamMode />} />
             <Route path="/scanner" element={<OMRScannerPage />} />
+            <Route path="/scan" element={<Navigate to="/scanner" replace />} />
             <Route path="/ranking" element={<RankingPage />} />
             
             {/* Admin Routes */}

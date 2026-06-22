@@ -275,7 +275,14 @@ export function AuthProvider({ children }) {
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
-  const [loading, setLoading] = useState(SUPABASE_ENABLED);
+  // Optimistically set loading to false if user session is already cached in localStorage
+  const [loading, setLoading] = useState(() => {
+    if (SUPABASE_ENABLED) {
+      const cached = localStorage.getItem('user');
+      return !cached;
+    }
+    return false;
+  });
 
   const [profName, setProfName] = useState(() => localStorage.getItem('profName') || '');
   const [profPhone, setProfPhone] = useState(() => localStorage.getItem('profPhone') || '');
@@ -396,6 +403,12 @@ export function AuthProvider({ children }) {
       return;
     }
 
+    // Safety net: force loading to false if auth doesn't resolve within 2.5 seconds (prevents loading screen hangs on network issues)
+    const safetyTimeout = setTimeout(() => {
+      console.warn('[Auth] Auth state resolution timed out. Forcing loading screen dismissal.');
+      setLoading(false);
+    }, 2500);
+
     // Handle hash-based OAuth redirect (when Supabase returns #access_token= in the URL)
     // This happens when the redirect URL in Supabase dashboard doesn't exactly match
     // what the app sent, so Supabase falls back to the Site URL with a hash fragment
@@ -406,6 +419,7 @@ export function AuthProvider({ children }) {
     }
 
     const unsubscribe = onAuthChange(async (supabaseUser) => {
+      clearTimeout(safetyTimeout);
       try {
         if (supabaseUser) {
           // Optimistically dismiss the loading screen if we have a cached user session
@@ -474,7 +488,10 @@ export function AuthProvider({ children }) {
         setLoading(false);
       }
     });
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(safetyTimeout);
+      unsubscribe();
+    };
   }, []);
 
   // Helper: extract readable name from email prefix
