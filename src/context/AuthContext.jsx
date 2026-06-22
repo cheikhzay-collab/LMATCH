@@ -2,7 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useCallback, use
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
 import { getUserDoc, createUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard, addLoginLog, getLoginLogs } from '../services/userService';
 import { getAllExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam, getExamQuestionsOnly } from '../services/examService';
-import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig, getOmrScannerSettingsConfig, saveOmrScannerSettingsConfig } from '../services/schoolService';
+import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig, getOmrScannerSettingsConfig, saveOmrScannerSettingsConfig, getWhatsAppSettingsConfig, saveWhatsAppSettingsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, redeemCodeViaRPC } from '../services/planService';
 import { sanitizeInputString, validatePhoneNumber } from '../utils/security';
 
@@ -351,6 +351,40 @@ export function AuthProvider({ children }) {
       }
     }
     localStorage.setItem('scanner_direct_capture_enabled', settings.scannerDirectCapture ? 'true' : 'false');
+  };
+
+  const [whatsappSettings, setWhatsappSettings] = useState(() => {
+    try {
+      const saved = localStorage.getItem('whatsappSettings');
+      return saved ? JSON.parse(saved) : {
+        enabled: true,
+        phoneNumber: '',
+        message: 'Bonjour, j\'ai une question concernant la plateforme Gima.',
+        position: 'right',
+        tooltipText: 'Besoin d\'aide ?'
+      };
+    } catch {
+      return {
+        enabled: true,
+        phoneNumber: '',
+        message: 'Bonjour, j\'ai une question concernant la plateforme Gima.',
+        position: 'right',
+        tooltipText: 'Besoin d\'aide ?'
+      };
+    }
+  });
+
+  const updateWhatsAppSettingsConfig = async (settings) => {
+    setWhatsappSettings(settings);
+    localStorage.setItem('whatsappSettings', JSON.stringify(settings));
+
+    if (SUPABASE_ENABLED) {
+      try {
+        await saveWhatsAppSettingsConfig(settings);
+      } catch (e) {
+        console.error('[Supabase] Failed to save WhatsApp settings config:', e);
+      }
+    }
   };
 
   // ── Supabase Auth listener ───────────────────────────────────────────────
@@ -1424,6 +1458,7 @@ export function AuthProvider({ children }) {
           flashcardConfigRes,
           pdfConfigRes,
           omrScannerConfigRes,
+          whatsappConfigRes,
           fbPlansRes,
           fbExamsRes
         ] = await Promise.allSettled([
@@ -1432,6 +1467,7 @@ export function AuthProvider({ children }) {
           getFlashcardSettingsConfig(),
           getPdfSettingsConfig(),
           getOmrScannerSettingsConfig(),
+          getWhatsAppSettingsConfig(),
           getPlans(),
           getAllExams()
         ]);
@@ -1441,6 +1477,7 @@ export function AuthProvider({ children }) {
         const flashcardConfig = flashcardConfigRes.status === 'fulfilled' ? flashcardConfigRes.value : null;
         const pdfConfig = pdfConfigRes.status === 'fulfilled' ? pdfConfigRes.value : null;
         const omrScannerConfig = omrScannerConfigRes.status === 'fulfilled' ? omrScannerConfigRes.value : null;
+        const whatsappConfig = whatsappConfigRes.status === 'fulfilled' ? whatsappConfigRes.value : null;
         const fbPlans = fbPlansRes.status === 'fulfilled' ? fbPlansRes.value : null;
         const fbExams = fbExamsRes.status === 'fulfilled' ? fbExamsRes.value : null;
 
@@ -1537,6 +1574,14 @@ export function AuthProvider({ children }) {
           };
           await saveOmrScannerSettingsConfig(defaultOmr);
           localStorage.setItem('scanner_direct_capture_enabled', String(defaultOmr.scannerDirectCapture));
+        }
+
+        // Process WhatsApp Settings
+        if (whatsappConfig) {
+          setWhatsappSettings(whatsappConfig);
+          localStorage.setItem('whatsappSettings', JSON.stringify(whatsappConfig));
+        } else {
+          await saveWhatsAppSettingsConfig(whatsappSettings);
         }
 
         // Process Plans
@@ -1739,6 +1784,7 @@ export function AuthProvider({ children }) {
       refreshAdminData,
       loading,
       profName, profPhone, profSite, updateBrandingConfig, updateFlashcardSettingsConfig, updatePdfSettingsConfig, updateOmrScannerSettingsConfig,
+      whatsappSettings, updateWhatsAppSettingsConfig,
     }}>
       {children}
     </AuthContext.Provider>

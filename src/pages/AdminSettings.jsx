@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, RefreshCw, Layers, MousePointerClick, Crown, Download, Sliders, FileText, Camera } from 'lucide-react';
+import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, RefreshCw, Layers, MousePointerClick, Crown, Download, Sliders, FileText, Camera, MessageCircle } from 'lucide-react';
 
 export default function AdminSettings() {
   const { 
@@ -13,7 +13,9 @@ export default function AdminSettings() {
     updateBrandingConfig,
     updateFlashcardSettingsConfig,
     updatePdfSettingsConfig,
-    updateOmrScannerSettingsConfig
+    updateOmrScannerSettingsConfig,
+    whatsappSettings,
+    updateWhatsAppSettingsConfig
   } = useAuth();
   const [newSchool, setNewSchool] = useState('');
   const [activeTab, setActiveTab] = useState('general');
@@ -90,6 +92,36 @@ export default function AdminSettings() {
   // OMR Scanner Settings
   const [scannerDirectCapture, setScannerDirectCapture] = useState(() => localStorage.getItem('scanner_direct_capture_enabled') !== 'false');
   const [scannerSaved, setScannerSaved] = useState(false);
+
+  // WhatsApp Floating Button Settings
+  const [waEnabled, setWaEnabled] = useState(true);
+  const [waPhone, setWaPhone] = useState('');
+  const [waMessage, setWaMessage] = useState('');
+  const [waPosition, setWaPosition] = useState('right');
+  const [waTooltip, setWaTooltip] = useState('');
+  const [waSaved, setWaSaved] = useState(false);
+
+  React.useEffect(() => {
+    if (whatsappSettings) {
+      setWaEnabled(!!whatsappSettings.enabled);
+      setWaPhone(whatsappSettings.phoneNumber || '');
+      setWaMessage(whatsappSettings.message || '');
+      setWaPosition(whatsappSettings.position || 'right');
+      setWaTooltip(whatsappSettings.tooltipText || '');
+    }
+  }, [whatsappSettings]);
+
+  const saveWhatsAppSettings = async () => {
+    await updateWhatsAppSettingsConfig({
+      enabled: waEnabled,
+      phoneNumber: waPhone.trim(),
+      message: waMessage.trim(),
+      position: waPosition,
+      tooltipText: waTooltip.trim()
+    });
+    setWaSaved(true);
+    setTimeout(() => setWaSaved(false), 2500);
+  };
 
   React.useEffect(() => {
     Promise.resolve().then(() => {
@@ -285,6 +317,7 @@ export default function AdminSettings() {
         <div className="settings-tabs">
           {[
             { id: 'general', label: 'Général & Branding', icon: Sliders, desc: 'Identité PDF & Écoles' },
+            { id: 'whatsapp', label: 'Support WhatsApp', icon: MessageCircle, desc: 'Bouton flottant & message' },
             { id: 'pdf', label: 'Design & Impression PDF', icon: FileText, desc: 'Marges, polices & sauts' },
             { id: 'flashcards', label: 'Méthode Flashcards', icon: Layers, desc: 'Animations & Révélation' },
             { id: 'apis', label: 'Clés API & IA', icon: KeyRound, desc: 'Claude, Gemini' },
@@ -310,6 +343,141 @@ export default function AdminSettings() {
 
         {/* Right Content Column */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', width: '100%', minWidth: 0 }}>
+
+        {/* ── WhatsApp Floating Button Settings ── */}
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'whatsapp' ? 'block' : 'none' }}>
+          <h3 style={{ marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <MessageCircle size={20} style={{ color: '#25D366' }} /> Paramètres du Bouton Flottant WhatsApp
+          </h3>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+            Activez et configurez un bouton WhatsApp flottant pour permettre aux élèves de vous contacter directement pour du support ou des questions.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            
+            {/* Toggle Switch */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem 1rem', borderRadius: 12, background: 'var(--bg-glass)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <MessageCircle size={18} style={{ color: '#25D366' }} />
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>Afficher le bouton WhatsApp</p>
+                  <p style={{ fontSize: '0.73rem', color: 'var(--text-subtle)', margin: 0 }}>Rendre le bouton flottant visible sur le tableau de bord et la page d'accueil</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setWaEnabled(v => !v)}
+                style={{
+                  width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+                  background: waEnabled ? '#25D366' : 'var(--bg-card)',
+                  position: 'relative', transition: 'background 0.2s',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                }}
+              >
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                  position: 'absolute', top: 3, transition: 'left 0.2s',
+                  left: waEnabled ? 25 : 3,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                }} />
+              </button>
+            </div>
+
+            {/* Inputs Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem', opacity: waEnabled ? 1 : 0.5, transition: 'opacity 0.2s' }}>
+              
+              {/* Phone number */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                  Numéro de Téléphone WhatsApp
+                </label>
+                <input
+                  type="text"
+                  disabled={!waEnabled}
+                  className="input-control"
+                  placeholder={profPhone ? `${profPhone} (Téléphone général)` : "+212 600-000000"}
+                  value={waPhone}
+                  onChange={e => setWaPhone(e.target.value)}
+                />
+                <p style={{ marginTop: '0.35rem', fontSize: '0.72rem', color: 'var(--text-subtle)', lineHeight: 1.3 }}>
+                  Laissez vide pour utiliser par défaut le numéro de téléphone général de l'identité : <strong>{profPhone || 'Non configuré'}</strong>.
+                </p>
+              </div>
+
+              {/* Tooltip Text */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                  Texte de l'infobulle (Tooltip)
+                </label>
+                <input
+                  type="text"
+                  disabled={!waEnabled}
+                  className="input-control"
+                  placeholder="Besoin d'aide ?"
+                  value={waTooltip}
+                  onChange={e => setWaTooltip(e.target.value)}
+                />
+                <p style={{ marginTop: '0.35rem', fontSize: '0.72rem', color: 'var(--text-subtle)', lineHeight: 1.3 }}>
+                  Le message court affiché à côté du bouton au survol (ex: "Besoin d'aide ?", "Support client").
+                </p>
+              </div>
+
+              {/* Position */}
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                  Position sur l'écran
+                </label>
+                <select
+                  disabled={!waEnabled}
+                  value={waPosition}
+                  onChange={e => setWaPosition(e.target.value)}
+                  className="input-control"
+                >
+                  <option value="right">En bas à Droite (Recommandé)</option>
+                  <option value="left">En bas à Gauche</option>
+                </select>
+                <p style={{ marginTop: '0.35rem', fontSize: '0.72rem', color: 'var(--text-subtle)', lineHeight: 1.3 }}>
+                  Choisissez de quel côté le bouton flottant s'affichera à l'écran.
+                </p>
+              </div>
+
+            </div>
+
+            {/* Default pre-filled message */}
+            <div style={{ opacity: waEnabled ? 1 : 0.5, transition: 'opacity 0.2s' }}>
+              <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                Message prédéfini par défaut
+              </label>
+              <textarea
+                disabled={!waEnabled}
+                className="input-control"
+                placeholder="Bonjour, j'ai une question concernant la plateforme Gima."
+                rows={3}
+                value={waMessage}
+                onChange={e => setWaMessage(e.target.value)}
+                style={{ fontFamily: 'inherit', resize: 'vertical' }}
+              />
+              <p style={{ marginTop: '0.35rem', fontSize: '0.72rem', color: 'var(--text-subtle)', lineHeight: 1.3 }}>
+                Le texte qui sera pré-rempli dans l'application WhatsApp de l'utilisateur lorsqu'il clique sur le bouton.
+              </p>
+            </div>
+
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+            <button
+              onClick={saveWhatsAppSettings}
+              className="btn"
+              style={{
+                padding: '0.75rem 2rem',
+                background: waSaved ? 'linear-gradient(135deg,var(--emerald),#34d399)' : undefined,
+                boxShadow: waSaved ? '0 4px 16px rgba(16,185,129,0.35)' : undefined,
+                transition: 'all 0.3s'
+              }}
+            >
+              {waSaved ? <><CheckCircle2 size={16} /> Enregistré !</> : 'Enregistrer les paramètres'}
+            </button>
+          </div>
+        </div>
 
         {/* ── PDF Page Layout Settings ── */}
         <div className="col-span-12 glass-panel" style={{ display: activeTab === 'pdf' ? 'block' : 'none' }}>

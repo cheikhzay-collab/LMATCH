@@ -129,51 +129,78 @@ function ResultRow({ row }) {
   };
   const status = row.detected === null ? 'empty' : row.result;
   const c = cfg[status];
+  const isDark = document.body.classList.contains('light-theme') === false;
+
   return (
-    <div style={{
-      display: 'flex', 
-      flexDirection: 'column', 
-      gap: '0.5rem',
-      padding: '0.85rem 1rem',
-      background: c.bg, 
-      borderRadius: '1rem',
-      borderLeft: `4px solid ${c.border}`,
-      borderTop: '1px solid var(--border)',
-      borderRight: '1px solid var(--border)',
-      borderBottom: '1px solid var(--border)',
-      boxShadow: '0 2px 6px rgba(0,0,0,0.02)'
-    }}>
+    <div 
+      className="result-row-card-2026"
+      style={{
+        display: 'flex', 
+        flexDirection: 'column', 
+        gap: '0.65rem',
+        padding: '1.1rem 1.35rem',
+        background: c.bg, 
+        borderRadius: '1.25rem',
+        borderLeft: `4px solid ${c.border}`,
+        borderTop: '1px solid var(--border)',
+        borderRight: '1px solid var(--border)',
+        borderBottom: '1px solid var(--border)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.015)',
+        transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1)'
+      }}
+    >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <span style={{ fontWeight: 900, fontSize: '0.95rem', color: 'var(--text-main)' }}>Question {row.q}</span>
-        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: c.color, fontSize: '0.8rem', fontWeight: 800 }}>
+        <span style={{ fontWeight: 900, fontSize: '0.98rem', color: 'var(--text-main)' }}>Question {row.q}</span>
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem', color: c.color, fontSize: '0.82rem', fontWeight: 800 }}>
           {c.icon} {c.label}
         </span>
       </div>
       
-      <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block' }}>
+      <span style={{ fontSize: '0.88rem', color: 'var(--text-muted)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', display: 'block', margin: '0.1rem 0' }}>
         {renderMathSnippet(row.question)}
       </span>
       
-      <div className="result-row-details">
-        <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Réponse cochée :</span>
+      <div className="result-row-details" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap', fontSize: '0.82rem', marginTop: '0.2rem' }}>
+        <span style={{ color: 'var(--text-subtle)', fontWeight: 600 }}>Réponse cochée :</span>
         <span style={{ 
-          padding: '0.2rem 0.6rem', 
-          borderRadius: '0.35rem', 
+          padding: '0.25rem 0.65rem', 
+          borderRadius: '0.5rem', 
           background: status === 'correct' ? 'rgba(16, 185, 129, 0.12)' : status === 'wrong' ? 'rgba(239, 68, 68, 0.12)' : 'rgba(255, 255, 255, 0.05)', 
           fontWeight: 900, 
-          color: status === 'correct' ? 'var(--emerald)' : status === 'wrong' ? 'var(--danger)' : 'var(--text-muted)' 
+          color: status === 'correct' ? 'var(--emerald)' : status === 'wrong' ? 'var(--danger)' : 'var(--text-muted)',
+          border: `1.5px solid ${status === 'correct' ? 'rgba(16, 185, 129, 0.25)' : status === 'wrong' ? 'rgba(239, 68, 68, 0.25)' : 'var(--border)'}`
         }}>
           {row.detected || '—'}
         </span>
         {status !== 'correct' && (
           <>
-            <span style={{ color: 'var(--text-subtle)' }}>→</span>
-            <span style={{ color: 'var(--text-muted)', fontWeight: 500 }}>Réponse attendue :</span>
-            <span style={{ padding: '0.2rem 0.6rem', borderRadius: '0.35rem', background: 'rgba(16, 185, 129, 0.12)', fontWeight: 900, color: 'var(--emerald)' }}>
+            <span style={{ color: 'var(--text-subtle)', opacity: 0.5 }}>→</span>
+            <span style={{ color: 'var(--text-subtle)', fontWeight: 600 }}>Réponse attendue :</span>
+            <span style={{ 
+              padding: '0.25rem 0.65rem', 
+              borderRadius: '0.5rem', 
+              background: 'rgba(16, 185, 129, 0.12)', 
+              fontWeight: 900, 
+              color: 'var(--emerald)',
+              border: '1.5px solid rgba(16, 185, 129, 0.25)'
+            }}>
               {row.correct}
             </span>
           </>
         )}
+        <span style={{ flexGrow: 1 }} />
+        {/* Topic Badge */}
+        <span style={{
+          fontSize: '0.72rem',
+          padding: '0.2rem 0.6rem',
+          background: isDark ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.03)',
+          border: '1px solid var(--border)',
+          borderRadius: '6px',
+          color: 'var(--text-muted)',
+          fontWeight: 700
+        }}>
+          {row.topic}
+        </span>
       </div>
     </div>
   );
@@ -857,139 +884,401 @@ export default function OMRScannerPage() {
 
           {/* ── RESULTS PHASE ── */}
           {phase === 'results' && score && activeExam && (
-            <div style={{ maxWidth: 840, margin: '0 auto' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
+            <div style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+              
+              {/* Bento Grid Scorecard */}
+              <div className="scorecard-bento-grid">
                 
-                {/* Visual scorecard header */}
-                <div className="scorecard-header">
-                  {/* Left part: glowing glass badge with dynamic gradients based on score */}
-                  <div className="scorecard-left" style={{ 
-                    padding: isMobile ? '1.25rem 1rem' : '2.5rem 2rem',
-                    background: `linear-gradient(135deg, ${score.pct >= 70 ? 'rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.05)' : score.pct >= 50 ? 'rgba(245, 158, 11, 0.15), rgba(217, 119, 6, 0.05)' : 'rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.05)'})`
+                {/* Main Bento Cell: Score Circle Gauge */}
+                <div className="bento-score-main" style={{
+                  background: isDark 
+                    ? 'radial-gradient(circle at top right, rgba(113, 109, 242, 0.1), rgba(24, 24, 27, 0.7))'
+                    : 'radial-gradient(circle at top right, rgba(113, 109, 242, 0.04), #ffffff)',
+                  border: '1px solid var(--border)',
+                  borderRadius: '2rem',
+                  padding: '2rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  boxShadow: 'var(--shadow-card)',
+                  textAlign: 'center'
+                }}>
+                  {/* Glowing aura */}
+                  <div style={{
+                    position: 'absolute',
+                    top: '-20%',
+                    right: '-20%',
+                    width: '180px',
+                    height: '180px',
+                    background: score.pct >= 70 ? 'var(--emerald-soft)' : score.pct >= 50 ? 'var(--warning-soft)' : 'var(--danger-soft)',
+                    filter: 'blur(50px)',
+                    borderRadius: '50%',
+                    pointerEvents: 'none'
+                  }} />
+
+                  <p style={{ 
+                    color: 'var(--text-muted)', 
+                    fontSize: '0.75rem', 
+                    fontWeight: 800, 
+                    textTransform: 'uppercase', 
+                    letterSpacing: '0.15em', 
+                    marginBottom: '1rem',
+                    position: 'relative',
+                    zIndex: 2
                   }}>
-                    <p style={{ color: textMutedColor, fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '0.5rem' }}>NOTE SUR 20</p>
-                    <h2 style={{ 
-                      color: score.pct >= 70 ? emeraldColor : score.pct >= 50 ? warningColor : dangerColor, 
-                      fontSize: isMobile ? '2.8rem' : '4.2rem', 
-                      fontWeight: 900, 
-                      lineHeight: 1, 
-                      margin: 0,
-                      letterSpacing: '-0.03em',
-                      textShadow: `0 0 20px ${score.pct >= 70 ? 'rgba(16,185,129,0.3)' : score.pct >= 50 ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)'}`
-                    }}>
-                      {((score.pts / Q) * 20).toFixed(2)}
-                    </h2>
-                    <p style={{ color: textMutedColor, fontSize: isMobile ? '0.78rem' : '0.85rem', marginTop: isMobile ? '0.4rem' : '0.75rem', fontWeight: 600 }}>
-                      Score : <strong style={{ color: textMainColor }}>{score.pts.toFixed(2)}</strong> / {Q} pts
+                    Note obtenue
+                  </p>
+
+                  {/* Circular Gauge */}
+                  <div style={{ position: 'relative', width: 140, height: 140, display: 'flex', alignItems: 'center', justifycontent: 'center', marginBottom: '1.25rem', zIndex: 2 }}>
+                    <svg width="140" height="140" viewBox="0 0 100 100" style={{ transform: 'rotate(-90deg)' }}>
+                      {/* Background circle */}
+                      <circle 
+                        cx="50" 
+                        cy="50" 
+                        r="42" 
+                        fill="none" 
+                        stroke={isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.03)'} 
+                        strokeWidth="7" 
+                      />
+                      {/* Progress circle */}
+                      <circle 
+                        cx="50" 
+                        cy="50" 
+                        r="42" 
+                        fill="none" 
+                        stroke={score.pct >= 70 ? 'var(--emerald)' : score.pct >= 50 ? 'var(--warning)' : 'var(--danger)'} 
+                        strokeWidth="8" 
+                        strokeDasharray="263.89" 
+                        strokeDashoffset={263.89 - (263.89 * Math.max(0, Math.min(100, score.pct))) / 100} 
+                        strokeLinecap="round" 
+                        style={{ 
+                          transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                          filter: `drop-shadow(0 0 8px ${score.pct >= 70 ? 'rgba(16,185,129,0.3)' : score.pct >= 50 ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)'})`
+                        }}
+                      />
+                    </svg>
+                    
+                    {/* Score value in the center */}
+                    <div style={{ position: 'absolute', left: '50%', top: '50%', transform: 'translate(-50%, -50%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ 
+                        fontSize: '2rem', 
+                        fontWeight: 900, 
+                        color: score.pct >= 70 ? 'var(--emerald)' : score.pct >= 50 ? 'var(--warning)' : 'var(--danger)',
+                        lineHeight: 1
+                      }}>
+                        {((score.pts / Q) * 20).toFixed(2)}
+                      </span>
+                      <span style={{ fontSize: '0.78rem', color: 'var(--text-subtle)', fontWeight: 600, marginTop: '2px' }}>
+                        sur 20
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Score details */}
+                  <div style={{ zIndex: 2 }}>
+                    <p style={{ color: 'var(--text-main)', fontSize: '0.95rem', fontWeight: 800, margin: 0 }}>
+                      Score : {score.pts.toFixed(2)} / {Q} pts
                     </p>
-                    <p style={{ color: textSubtleColor, fontSize: '0.75rem', marginTop: '0.25rem', fontStyle: 'italic' }}>
-                      Pénalités : -{score.neg.toFixed(2)} pts (Faux: {wrongCount})
+                    <p style={{ color: 'var(--text-subtle)', fontSize: '0.78rem', marginTop: '0.25rem', margin: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem' }}>
+                      <span>Pénalités : -{score.neg.toFixed(2)} pts</span>
+                      <span style={{ opacity: 0.3 }}>•</span>
+                      <span>Faux : {wrongCount}</span>
                     </p>
                   </div>
+                </div>
+
+                {/* Sub-grid of stats bento cells */}
+                <div className="bento-stats-subgrid">
                   
-                  {/* Right part: stats breakdown list */}
-                  <div className="scorecard-right" style={{ flexWrap: isMobile ? 'nowrap' : 'wrap' }}>
-                    {[{l:'Correctes',v:correctCount,c:emeraldColor,bg:emeraldSoftColor},{l:'Fausses',v:wrongCount,c:dangerColor,bg:dangerSoftColor}].map((s, sIdx)=>(
-                      <div key={s.l} style={{ flex: 1, padding: isMobile ? '1rem 0.5rem' : '2rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', borderRight: sIdx === 0 ? `1px solid ${borderCol}` : 'none' }}>
-                        <div style={{ 
-                          width: isMobile ? 32 : 44, 
-                          height: isMobile ? 32 : 44, 
-                          borderRadius: '50%', 
-                          background: s.bg, 
-                          color: s.c, 
-                          display: 'flex', 
-                          alignItems: 'center', 
-                          justifyContent: 'center',
-                          marginBottom: isMobile ? '0.4rem' : '0.75rem',
-                          fontWeight: 800
-                        }}>
-                          {sIdx === 0 ? <Check size={isMobile ? 14 : 18} strokeWidth={2.5} /> : <XCircle size={isMobile ? 14 : 18} />}
-                        </div>
-                        <p style={{ fontWeight: 900, fontSize: isMobile ? '1.35rem' : '1.75rem', color: s.c, margin: 0 }}>{s.v}</p>
-                        <p style={{ fontSize: isMobile ? '0.72rem' : '0.8rem', color: textMutedColor, fontWeight: 700, marginTop: '2px' }}>{s.l}</p>
+                  {/* Correct Answers Card */}
+                  <div className="bento-card-stat" style={{
+                    background: isDark ? 'rgba(16, 185, 129, 0.04)' : 'rgba(16, 185, 129, 0.02)',
+                    border: '1px solid rgba(16, 185, 129, 0.12)',
+                    borderRadius: '1.5rem',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: 'var(--shadow-card)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--emerald)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Correctes</span>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--emerald)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Check size={14} strokeWidth={3} />
                       </div>
+                    </div>
+                    <div style={{ marginTop: '1rem' }}>
+                      <h3 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--emerald)', margin: 0 }}>{correctCount}</h3>
+                      <p style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', margin: '0.15rem 0 0 0', fontWeight: 500 }}>
+                        {((correctCount / Q) * 100).toFixed(0)}% des questions lues
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Wrong Answers Card */}
+                  <div className="bento-card-stat" style={{
+                    background: isDark ? 'rgba(239, 68, 68, 0.04)' : 'rgba(239, 68, 68, 0.02)',
+                    border: '1px solid rgba(239, 68, 68, 0.12)',
+                    borderRadius: '1.5rem',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: 'var(--shadow-card)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--danger)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fausses</span>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <XCircle size={14} />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '1rem' }}>
+                      <h3 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--danger)', margin: 0 }}>{wrongCount}</h3>
+                      <p style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', margin: '0.15rem 0 0 0', fontWeight: 500 }}>
+                        {((wrongCount / Q) * 100).toFixed(0)}% des questions lues
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Empty Answers Card */}
+                  <div className="bento-card-stat" style={{
+                    background: 'rgba(255, 255, 255, 0.015)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '1.5rem',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: 'var(--shadow-card)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-muted)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Vides</span>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <AlertCircle size={14} />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '1rem' }}>
+                      <h3 style={{ fontSize: '2rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>{Q - correctCount - wrongCount}</h3>
+                      <p style={{ fontSize: '0.72rem', color: 'var(--text-subtle)', margin: '0.15rem 0 0 0', fontWeight: 500 }}>
+                        Sans pénalité appliquée
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Rules / Scale Card */}
+                  <div className="bento-card-stat" style={{
+                    background: 'rgba(255, 255, 255, 0.015)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '1.5rem',
+                    padding: '1.25rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    boxShadow: 'var(--shadow-card)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ color: 'var(--text-muted)', fontWeight: 800, fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Barème</span>
+                      <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <TrendingUp size={14} />
+                      </div>
+                    </div>
+                    <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Correcte :</span>
+                        <span style={{ color: 'var(--emerald)' }}>+{rules.correct} pt</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Fausse :</span>
+                        <span style={{ color: 'var(--danger)' }}>{rules.wrong} pt</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Vide :</span>
+                        <span>{rules.empty === 0 ? '0' : rules.empty} pt</span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* SRS Reminder Card */}
+              {wrongCount > 0 && (
+                <div className="srs-reminder-card-futuristic" style={{
+                  padding: '1.5rem',
+                  background: isDark
+                    ? 'linear-gradient(135deg, rgba(113, 109, 242, 0.15) 0%, rgba(24, 24, 27, 0.8) 100%)'
+                    : 'linear-gradient(135deg, rgba(113, 109, 242, 0.06) 0%, #ffffff 100%)',
+                  border: '1px solid rgba(113, 109, 242, 0.25)',
+                  borderRadius: '2rem',
+                  display: 'flex',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  justifyContent: 'space-between',
+                  alignItems: isMobile ? 'stretch' : 'center',
+                  gap: '1.25rem',
+                  boxShadow: 'var(--shadow-card)',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  {/* Subtle blur background icon decoration */}
+                  <div style={{
+                    position: 'absolute',
+                    right: '-5%',
+                    bottom: '-15%',
+                    opacity: 0.06,
+                    color: 'var(--violet)',
+                    pointerEvents: 'none'
+                  }}>
+                    <BrainCircuit size={120} />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <div style={{ 
+                      width: 48, 
+                      height: 48, 
+                      borderRadius: '1rem', 
+                      background: 'var(--violet-soft)', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      flexShrink: 0,
+                      boxShadow: '0 4px 12px rgba(113, 109, 242, 0.15)'
+                    }}>
+                      <BrainCircuit size={22} color="var(--violet)" />
+                    </div>
+                    <div>
+                      <h4 style={{ fontWeight: 800, fontSize: '0.98rem', margin: 0, color: 'var(--text-main)' }}>Planification SRS Activée</h4>
+                      <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0.35rem 0 0 0', lineHeight: 1.5 }}>
+                        Les <strong>{wrongCount} questions incorrectes</strong> ont été injectées dans votre cycle d'apprentissage personnalisé pour révision.
+                      </p>
+                    </div>
+                  </div>
+                  <button 
+                    className="btn" 
+                    onClick={() => navigate(`/study?exam=${activeExam.id}`)} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      gap: '0.5rem', 
+                      fontSize: '0.85rem', 
+                      fontWeight: 800, 
+                      whiteSpace: 'nowrap', 
+                      padding: '0.75rem 1.5rem', 
+                      borderRadius: '1rem',
+                      background: 'var(--violet)',
+                      boxShadow: '0 4px 14px var(--violet-glow)'
+                    }}
+                  >
+                    <Zap size={14} /> Lancer la révision
+                  </button>
+                </div>
+              )}
+
+              {/* Tab Selector & Corrections List */}
+              <div style={{ 
+                background: isDark ? 'rgba(24, 24, 27, 0.4)' : '#ffffff', 
+                border: '1px solid var(--border)', 
+                borderRadius: '2rem', 
+                padding: isMobile ? '1rem' : '1.5rem',
+                boxShadow: 'var(--shadow-card)' 
+              }}>
+                <div className="results-tabs-wrapper" style={{ marginBottom: '1.5rem' }}>
+                  <div className="results-tabs-container" style={{ 
+                    display: 'flex', 
+                    gap: '0.4rem', 
+                    background: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.02)', 
+                    padding: '0.3rem', 
+                    borderRadius: '1.25rem',
+                    border: '1px solid var(--border)',
+                    width: '100%'
+                  }}>
+                    {[
+                      { id: 'list', label: 'Feuille de Correction', icon: <CheckCircle2 size={15}/> },
+                      { id: 'diagnostic', label: 'Analyse Thématique', icon: <TrendingUp size={15}/> }
+                    ].map(t => (
+                      <button 
+                        key={t.id} 
+                        onClick={() => setResultsTab(t.id)}
+                        className="results-tab-button"
+                        style={{ 
+                          flex: 1,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.5rem',
+                          padding: '0.75rem 1rem',
+                          borderRadius: '1rem',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontWeight: 800,
+                          fontSize: '0.85rem',
+                          fontFamily: 'inherit',
+                          transition: 'all 0.25s',
+                          background: resultsTab === t.id ? 'var(--violet)' : 'transparent',
+                          color: resultsTab === t.id ? '#fff' : 'var(--text-muted)',
+                          boxShadow: resultsTab === t.id ? '0 4px 12px var(--violet-glow)' : 'none'
+                        }}
+                      >
+                        {t.icon}
+                        {t.label}
+                      </button>
                     ))}
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.5rem' }}>
-                  {/* SRS Reminder card */}
-                  {wrongCount > 0 && (
-                    <div className="srs-reminder-card">
-                      <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'center' }}>
-                        <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'rgba(113, 109, 242, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <BrainCircuit size={22} color="var(--violet)" />
-                        </div>
-                        <div>
-                          <h4 style={{ fontWeight: 800, fontSize: '0.95rem', margin: 0, color: 'var(--text-main)' }}>Planification SRS Activée</h4>
-                          <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', margin: '0.25rem 0 0 0', lineHeight: 1.45 }}>
-                            Les {wrongCount} questions incorrectes ont été ajoutées à votre cycle de révision espacée.
-                          </p>
-                        </div>
-                      </div>
-                      <button className="btn" onClick={() => navigate(`/study?exam=${activeExam.id}`)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.82rem', fontWeight: 800, whiteSpace: 'nowrap', padding: '0.6rem 1.25rem', borderRadius: '0.75rem' }}>
-                        <Zap size={14} /> Lancer la révision
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Corrections / Diagnostics details */}
-                  <div style={{ background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--border)', borderRadius: '1.5rem', padding: '1.25rem' }}>
-                    <div className="results-tabs-wrapper">
-                      <div className="results-tabs-container">
-                        {[{id:'list',label:'Feuille de Correction',icon:<CheckCircle2 size={14}/>},{id:'diagnostic',label:'Analyse Thématique',icon:<TrendingUp size={14}/>}].map(t=>(
-                          <button key={t.id} onClick={()=>setResultsTab(t.id)}
-                            className="results-tab-button"
-                            style={{ 
-                              background: resultsTab === t.id ? 'var(--violet)' : 'transparent',
-                              color: resultsTab === t.id ? '#fff' : 'var(--text-muted)',
-                              boxShadow: resultsTab === t.id ? '0 2px 8px var(--violet-glow)' : 'none'
-                            }}>
-                            {t.icon}{t.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    {resultsTab === 'list' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: 400, overflowY: 'auto', paddingRight: '4px' }}>
-                        {corrected.map(row => <ResultRow key={row.q} row={row} />)}
-                      </div>
-                    )}
-
-                    {resultsTab === 'diagnostic' && (
-                      <div style={{ maxHeight: 400, overflowY: 'auto' }}>
-                        <DiagnosticReport corrected={corrected} exam={activeExam} onClose={() => {}} />
-                      </div>
-                    )}
+                {resultsTab === 'list' && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', maxHeight: 440, overflowY: 'auto', paddingRight: '6px' }}>
+                    {corrected.map(row => <ResultRow key={row.q} row={row} />)}
                   </div>
-                </div>
+                )}
 
+                {resultsTab === 'diagnostic' && (
+                  <div style={{ maxHeight: 440, overflowY: 'auto' }}>
+                    <DiagnosticReport corrected={corrected} exam={activeExam} onClose={() => {}} />
+                  </div>
+                )}
               </div>
 
-              {/* Action row */}
-              <div className="results-actions-row" style={isMobile ? {
+              {/* Action Buttons Row */}
+              <div className="results-actions-row-modern" style={isMobile ? {
                 position: 'fixed',
                 bottom: 0,
                 left: 0,
                 right: 0,
                 background: 'var(--bg-card)',
                 borderTop: '1px solid var(--border)',
-                padding: '0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom))',
+                padding: '0.75rem 1.1rem calc(0.75rem + env(safe-area-inset-bottom))',
                 zIndex: 400,
                 display: 'flex',
-                gap: '0.5rem',
+                gap: '0.75rem',
                 margin: 0,
-                boxShadow: '0 -4px 16px rgba(0,0,0,0.1)',
-                flexDirection: 'row',
-                justifyContent: 'space-between'
-              } : {}}>
+                boxShadow: '0 -4px 16px rgba(0,0,0,0.1)'
+              } : {
+                display: 'flex',
+                justifyContent: 'flex-end',
+                gap: '1rem',
+                marginTop: '0.5rem'
+              }}>
                 <button 
                   className="btn-outline" 
                   onClick={reset} 
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem', padding: '0.7rem 1rem', borderRadius: '0.875rem', flex: 1, fontSize: '0.82rem' }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    gap: '0.5rem', 
+                    padding: '0.85rem 1.5rem', 
+                    borderRadius: '1.1rem', 
+                    flex: isMobile ? 1 : 'none', 
+                    fontSize: '0.88rem',
+                    fontWeight: 700
+                  }}
                 >
-                  <RotateCcw size={15} /> {isMobile ? 'Recommencer' : 'Scanner une autre copie'}
+                  <RotateCcw size={16} /> {isMobile ? 'Recommencer' : 'Scanner une autre copie'}
                 </button>
                 <button 
                   className="btn" 
@@ -998,25 +1287,37 @@ export default function OMRScannerPage() {
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'center',
-                    gap: '0.4rem', 
-                    padding: '0.7rem 1.2rem', 
-                    borderRadius: '0.875rem',
-                    fontWeight: 700,
-                    flex: 1.2,
-                    fontSize: '0.82rem'
+                    gap: '0.5rem', 
+                    padding: '0.85rem 2rem', 
+                    borderRadius: '1.1rem',
+                    fontWeight: 800,
+                    flex: isMobile ? 2 : 'none',
+                    fontSize: '0.88rem'
                   }}
                 >
-                  <Printer size={15} /> {isMobile ? 'Rapport PDF' : 'Télécharger le Rapport PDF'}
+                  <Printer size={16} /> {isMobile ? 'Rapport PDF' : 'Télécharger le Rapport PDF'}
                 </button>
-                <button 
-                  className="btn-outline" 
-                  onClick={() => navigate('/dashboard')} 
-                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0.7rem', borderRadius: '0.875rem', width: 44, height: 44, flexShrink: 0 }}
-                  title="Retour à l'accueil"
-                >
-                  <Home size={17} />
-                </button>
+                {!isMobile && (
+                  <button 
+                    className="btn-outline" 
+                    onClick={() => navigate('/dashboard')} 
+                    style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center', 
+                      padding: '0.85rem', 
+                      borderRadius: '1.1rem', 
+                      width: 46, 
+                      height: 46, 
+                      flexShrink: 0 
+                    }}
+                    title="Retour à l'accueil"
+                  >
+                    <Home size={18} />
+                  </button>
+                )}
               </div>
+
             </div>
           )}
 
@@ -1052,75 +1353,52 @@ export default function OMRScannerPage() {
           }
         }
 
-        /* Responsive Scorecard Header */
+        /* Responsive Scorecard Header (legacy class cleanups) */
         .scorecard-header {
-          border-radius: 1.5rem; 
-          overflow: hidden; 
-          border: 1px solid ${borderCol}; 
-          box-shadow: var(--shadow-card);
-          display: flex;
-          flex-direction: row;
-          background: ${cardBg};
-        }
-        @media (max-width: 600px) {
-          .scorecard-header {
-            flex-direction: column !important;
-          }
-        }
-        .scorecard-left {
-          text-align: center;
-          flex: 1.2;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          border-right: 1px solid ${borderCol};
-          position: relative;
-        }
-        @media (max-width: 600px) {
-          .scorecard-left {
-            border-right: none !important;
-            border-bottom: 1px solid ${borderCol} !important;
-            padding: 1.5rem 1rem !important;
-          }
-        }
-        .scorecard-left h2 {
-          font-weight: 900 !important;
-          line-height: 1 !important;
-          margin: 0 !important;
-          letter-spacing: -0.03em !important;
-        }
-        .scorecard-right {
-          flex: 1; 
-          display: flex; 
-          background: rgba(255, 255, 255, 0.015);
+          display: none;
         }
 
-        /* Responsive SRS Card */
-        .srs-reminder-card {
-          padding: 1.5rem; 
-          background: var(--violet-soft); 
-          border: 1px solid rgba(113, 109, 242, 0.15); 
-          border-radius: 1.5rem; 
-          display: flex; 
-          flex-direction: column; 
-          justify-content: space-between;
-          align-items: center;
-          gap: 1.25rem;
+        /* 2026 Bento grid layouts */
+        .scorecard-bento-grid {
+          display: grid;
+          grid-template-columns: 1fr 1.25fr;
+          gap: 1.5rem;
+          width: 100%;
         }
-        @media (min-width: 640px) {
-          .srs-reminder-card {
-            flex-direction: row;
+        @media (max-width: 768px) {
+          .scorecard-bento-grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
           }
+        }
+
+        .bento-stats-subgrid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          grid-template-rows: 1fr 1fr;
+          gap: 1rem;
         }
         @media (max-width: 480px) {
-          .srs-reminder-card {
-            padding: 1.25rem 1rem;
-            align-items: stretch;
+          .bento-stats-subgrid {
+            grid-template-columns: 1fr;
           }
-          .srs-reminder-card button {
-            width: 100%;
-          }
+        }
+
+        .bento-card-stat {
+          transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+        }
+        .bento-card-stat:hover {
+          transform: translateY(-2px);
+          border-color: rgba(113, 109, 242, 0.2) !important;
+          box-shadow: 0 8px 20px rgba(0,0,0,0.03) !important;
+        }
+
+        .result-row-card-2026 {
+          transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .result-row-card-2026:hover {
+          transform: translateX(3px);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.02) !important;
         }
 
         /* Responsive Exam Banner in Verify */
@@ -1162,22 +1440,13 @@ export default function OMRScannerPage() {
           justify-content: flex-end;
           flex-wrap: wrap;
         }
-        .results-actions-row {
-          display: flex; 
-          gap: 0.85rem; 
-          margin-top: 3rem; 
-          border-top: 1px solid var(--border); 
-          padding-top: 1.5rem; 
-          justify-content: flex-end; 
-          flex-wrap: wrap;
-        }
         @media (max-width: 600px) {
-          .actions-row, .results-actions-row {
+          .actions-row {
             flex-direction: column;
             align-items: stretch;
             width: 100%;
           }
-          .actions-row button, .results-actions-row button {
+          .actions-row button {
             width: 100%;
             justify-content: center;
           }
@@ -1187,7 +1456,6 @@ export default function OMRScannerPage() {
         .results-tabs-wrapper {
           display: flex;
           align-items: center;
-          margin-bottom: 1.25rem;
         }
         .results-tabs-container {
           display: flex;

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { BrainCircuit, Zap, CheckCircle2, Trophy, ArrowRight, Sparkles, Sun, Moon } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import LconqLogo from '../components/LconqLogo';
+import WhatsAppButton from '../components/WhatsAppButton';
 
 function XIcon() {
   return (
@@ -327,6 +328,9 @@ export default function LandingPage() {
           })}
         </div>
       </section>
+
+      {/* Floating WhatsApp Button */}
+      <WhatsAppButton />
     </div>
   );
 }

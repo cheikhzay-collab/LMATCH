@@ -196,5 +196,40 @@ export const saveOmrScannerSettingsConfig = async (settings) => {
   }
 };
 
+/**
+ * Fetch WhatsApp floating button settings from Supabase.
+ */
+export const getWhatsAppSettingsConfig = async () => {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('config')
+    .select('value')
+    .eq('key', 'whatsapp_settings')
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.value;
+};
+
+/**
+ * Save WhatsApp floating button settings to Supabase.
+ */
+export const saveWhatsAppSettingsConfig = async (settings) => {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('config')
+    .upsert({
+      key: 'whatsapp_settings',
+      value: settings,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('[Supabase] Failed to save WhatsApp settings config:', error);
+    throw error;
+  }
+};
+
+
 
 

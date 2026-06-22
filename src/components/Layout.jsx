@@ -3,6 +3,7 @@ import { Outlet, Navigate, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
+import WhatsAppButton from './WhatsAppButton';
 
 // Routes that enter Focus Mode (no nav, full-screen)
 const FOCUS_ROUTES = ['/exam', '/study'];
@@ -159,6 +160,9 @@ export default function Layout() {
 
       {/* Mobile bottom nav — hidden on desktop via CSS */}
       <BottomNav />
+
+      {/* Floating WhatsApp Support Button */}
+      <WhatsAppButton />
     </div>
   );
 }
