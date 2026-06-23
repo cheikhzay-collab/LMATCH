@@ -28,8 +28,10 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   import('virtual:pwa-register').then(({ registerSW }) => {
     registerSW({
       onNeedRefresh() {
-        // Silent auto-update — new SW takes over on next navigation
-        console.log('[PWA] Nouvelle version disponible — mise à jour silencieuse...');
+        console.log('[PWA] Nouvelle version disponible — demande de rechargement...');
+        if (confirm("Une mise à jour importante de L'CONQ est disponible. Voulez-vous recharger la page pour l'appliquer ?")) {
+          window.location.reload();
+        }
       },
       onOfflineReady() {
         console.log('[PWA] Application disponible hors ligne');

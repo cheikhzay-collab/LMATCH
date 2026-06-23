@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
-import { getUserDoc, createUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard, addLoginLog, getLoginLogs } from '../services/userService';
+import { getUserDoc, createUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, getProgressDeltas, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard, addLoginLog, getLoginLogs } from '../services/userService';
 import { getAllExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam, getExamQuestionsOnly } from '../services/examService';
 import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig, getOmrScannerSettingsConfig, saveOmrScannerSettingsConfig, getWhatsAppSettingsConfig, saveWhatsAppSettingsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, redeemCodeViaRPC } from '../services/planService';
@@ -886,6 +886,15 @@ export function AuthProvider({ children }) {
     if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
       try { await logoutUser(); } catch { /* ignore */ }
     }
+    // Clean up local review cache and sync info for privacy/security
+    localStorage.removeItem('progress');
+    localStorage.removeItem('progress_last_synced_at');
+    localStorage.removeItem('last_synced_user_id');
+    localStorage.removeItem('dailyActivity');
+    localStorage.removeItem('reviewDates');
+    localStorage.removeItem('mockExamHistory');
+    setProgress({});
+    setMockExamHistory([]);
     setUser(null);
   };
 
@@ -1687,14 +1696,36 @@ export function AuthProvider({ children }) {
 
     const loadStudentData = async () => {
       const userId = user.uid || user.id;
+      
+      // Clear local storage and state if logging in as a different user to prevent data cross-talk
+      const lastSyncedUser = localStorage.getItem('last_synced_user_id');
+      let lastSyncedAt = localStorage.getItem('progress_last_synced_at');
+      
+      if (lastSyncedUser !== userId) {
+        localStorage.removeItem('progress_last_synced_at');
+        localStorage.setItem('last_synced_user_id', userId);
+        lastSyncedAt = null;
+        setProgress({});
+      }
+
       try {
-        const [fbProgress, fbHistory, fbActivity, fbLeaderboard] = await Promise.all([
-          getAllProgress(userId),
+        const syncStartTime = new Date().toISOString();
+        const [fbProgressDeltas, fbHistory, fbActivity, fbLeaderboard] = await Promise.all([
+          getProgressDeltas(userId, lastSyncedAt),
           getMockHistory(userId),
           getRecentActivity(userId),
           getLeaderboard()
         ]);
-        setProgress(fbProgress || {});
+
+        if (fbProgressDeltas) {
+          setProgress(prev => {
+            // If it is a full sync, replace. Otherwise, merge deltas
+            const merged = lastSyncedAt ? { ...prev, ...fbProgressDeltas } : fbProgressDeltas;
+            return merged;
+          });
+          localStorage.setItem('progress_last_synced_at', syncStartTime);
+        }
+
         setMockExamHistory(fbHistory || []);
         setLeaderboard(fbLeaderboard || []);
 

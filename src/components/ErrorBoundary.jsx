@@ -13,8 +13,28 @@ export default class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // You can also log the error to an error reporting service
     console.error('[ErrorBoundary] Caught runtime error:', error, errorInfo);
+    
+    // Tentative de récupération automatique en cas d'erreur de chargement de chunk (déploiements récents)
+    const errorStr = error?.toString() || '';
+    const isChunkError = 
+      errorStr.includes('ChunkLoadError') || 
+      errorStr.includes('Failed to fetch dynamically imported module') ||
+      errorStr.includes('TypeError: Failed to fetch');
+      
+    if (isChunkError) {
+      const hasReloaded = sessionStorage.getItem('chunk_load_retry_failed') === '1';
+      if (!hasReloaded) {
+        sessionStorage.setItem('chunk_load_retry_failed', '1');
+        console.warn('[ErrorBoundary] Chunk loading error detected. Auto-reloading page...');
+        window.location.reload();
+        return;
+      } else {
+        // En cas d'échec persistant, on nettoie le drapeau et on affiche l'écran d'erreur standard
+        sessionStorage.removeItem('chunk_load_retry_failed');
+      }
+    }
+    
     this.setState({ errorInfo });
   }
 

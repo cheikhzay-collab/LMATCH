@@ -417,3 +417,42 @@ export const getLoginLogs = async (uid) => {
   }));
 };
 
+/**
+ * Fetch only progress cards updated since a specific timestamp.
+ * @param {string} uid
+ * @param {string|null} sinceTimestamp - ISO String
+ * @returns {Promise<Record<string, Object>>}
+ */
+export const getProgressDeltas = async (uid, sinceTimestamp) => {
+  if (!supabase) return {};
+  
+  let query = supabase
+    .from('progress')
+    .select('*')
+    .eq('user_id', uid);
+    
+  if (sinceTimestamp) {
+    query = query.gt('updated_at', sinceTimestamp);
+  }
+  
+  const { data, error } = await query;
+  if (error) {
+    console.error('[Supabase] Failed to fetch progress deltas:', error);
+    return null;
+  }
+  
+  const result = {};
+  data.forEach((row) => {
+    result[row.question_id] = {
+      difficulty: row.difficulty,
+      stability: row.stability,
+      repetitions: row.repetitions,
+      easeFactor: row.ease_factor,
+      lastReviewDate: row.last_review_date,
+      nextReviewDate: row.next_review_date,
+      updatedAt: row.updated_at
+    };
+  });
+  return result;
+};
+
