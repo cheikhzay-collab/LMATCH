@@ -275,14 +275,8 @@ export function AuthProvider({ children }) {
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
-  // Optimistically set loading to false if user session is already cached in localStorage
-  const [loading, setLoading] = useState(() => {
-    if (SUPABASE_ENABLED) {
-      const cached = localStorage.getItem('user');
-      return !cached;
-    }
-    return false;
-  });
+  // Initialize loading to true if Supabase is enabled so we can check and verify the session first
+  const [loading, setLoading] = useState(SUPABASE_ENABLED);
 
   const [profName, setProfName] = useState(() => localStorage.getItem('profName') || '');
   const [profPhone, setProfPhone] = useState(() => localStorage.getItem('profPhone') || '');
@@ -403,92 +397,151 @@ export function AuthProvider({ children }) {
       return;
     }
 
-    // Safety net: force loading to false if auth doesn't resolve within 2.5 seconds (prevents loading screen hangs on network issues)
+    let active = true;
+
+    // Safety net: force loading to false if auth doesn't resolve within 3 seconds
     const safetyTimeout = setTimeout(() => {
       console.warn('[Auth] Auth state resolution timed out. Forcing loading screen dismissal.');
-      setLoading(false);
-    }, 2500);
-
-    // Handle hash-based OAuth redirect (when Supabase returns #access_token= in the URL)
-    // This happens when the redirect URL in Supabase dashboard doesn't exactly match
-    // what the app sent, so Supabase falls back to the Site URL with a hash fragment
-    const hash = window.location.hash;
-    if (hash && hash.includes('access_token=') && window.location.pathname !== '/auth/callback') {
-      // The supabase client will automatically parse the hash and set the session
-      // We just need to wait for the SIGNED_IN event below
-    }
-
-    const unsubscribe = onAuthChange(async (supabaseUser) => {
-      clearTimeout(safetyTimeout);
-      try {
-        if (supabaseUser) {
-          // Optimistically dismiss the loading screen if we have a cached user session
-          const cached = localStorage.getItem('user');
-          if (cached) {
-            setLoading(false);
-          }
+      if (active) {
+        // Offline fallback: restore from cached user if we haven't loaded yet
+        const cached = localStorage.getItem('user');
+        if (cached) {
           try {
-            let profile = await getUserDoc(supabaseUser.id);
-            if (!profile) {
-              // Auto-create profile if missing (e.g. first-time Google OAuth)
-              const defaultProfile = {
-                name:         supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || split_part_email(supabaseUser.email) || 'Élève',
-                email:        supabaseUser.email,
-                role:         'student',
-                tier:         'freemium',
-                xp:           0,
-                streak:       0,
-                rank:         null,
-                totalStudents: 1200,
-                joined:       new Date().toISOString(),
-                subscription: null,
-              };
-              try {
-                await createUserDoc(supabaseUser.id, defaultProfile);
-                profile = { ...defaultProfile, uid: supabaseUser.id, id: supabaseUser.id };
-              } catch (createErr) {
-                console.warn('[Supabase] Failed to auto-create user profile:', createErr.message);
-              }
-            }
-
-            if (profile) {
-              const enriched = {
-                uid:          supabaseUser.id,
-                id:           supabaseUser.id,
-                name:         profile.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || 'Élève',
-                email:        supabaseUser.email,
-                role:         profile.role || 'student',
-                tier:         profile.tier || 'freemium',
-                xp:           profile.xp   || 0,
-                streak:       profile.streak || 0,
-                rank:         profile.rank  || null,
-                totalStudents: profile.totalStudents || 1200,
-                subscription: profile.subscription || null,
-                phone:        profile.phone || supabaseUser.user_metadata?.phone || '',
-                city:         profile.city  || supabaseUser.user_metadata?.city  || '',
-              };
-              setUser(enriched);
-
-              // Log session access log entry
-              if (SUPABASE_ENABLED && !sessionStorage.getItem('logged_this_session')) {
-                addLoginLog(supabaseUser.id).catch(err => console.warn('[Auth] Failed to add access log:', err));
-                sessionStorage.setItem('logged_this_session', '1');
-              }
-            }
-          } catch (e) {
-            console.warn('[Supabase] Failed to fetch or initialize user profile:', e.message);
+            setUser(JSON.parse(cached));
+          } catch (err) {
+            console.warn('[Auth] Failed to parse cached user on timeout:', err);
           }
-        } else {
-          // Supabase signed out — only clear if we were using Supabase auth
-          const saved = localStorage.getItem('user');
-          const localUser = saved ? JSON.parse(saved) : null;
-          if (localUser?.uid || localUser?.id) setUser(null);
         }
-      } finally {
         setLoading(false);
       }
+    }, 3000);
+
+    const initializeAuthAndListen = async () => {
+      try {
+        const { supabase } = await import('../lib/supabase');
+        if (!supabase) {
+          if (active) setLoading(false);
+          return;
+        }
+
+        // 1. Fetch initial session using the official method
+        const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+        if (sessionErr) throw sessionErr;
+
+        if (session?.user && active) {
+          const supabaseUser = session.user;
+          let profile = await getUserDoc(supabaseUser.id);
+          if (!profile && active) {
+            // Auto-create profile if missing (e.g. first-time Google OAuth)
+            const defaultProfile = {
+              name:         supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || split_part_email(supabaseUser.email) || 'Élève',
+              email:        supabaseUser.email,
+              role:         'student',
+              tier:         'freemium',
+              xp:           0,
+              streak:       0,
+              rank:         null,
+              totalStudents: 1200,
+              joined:       new Date().toISOString(),
+              subscription: null,
+            };
+            try {
+              await createUserDoc(supabaseUser.id, defaultProfile);
+              profile = { ...defaultProfile, uid: supabaseUser.id, id: supabaseUser.id };
+            } catch (createErr) {
+              console.warn('[Supabase] Failed to auto-create user profile:', createErr.message);
+            }
+          }
+
+          if (profile && active) {
+            const enriched = {
+              uid:          supabaseUser.id,
+              id:           supabaseUser.id,
+              name:         profile.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || 'Élève',
+              email:        supabaseUser.email,
+              role:         profile.role || 'student',
+              tier:         profile.tier || 'freemium',
+              xp:           profile.xp   || 0,
+              streak:       profile.streak || 0,
+              rank:         profile.rank  || null,
+              totalStudents: profile.totalStudents || 1200,
+              subscription: profile.subscription || null,
+              phone:        profile.phone || supabaseUser.user_metadata?.phone || '',
+              city:         profile.city  || supabaseUser.user_metadata?.city  || '',
+            };
+            setUser(enriched);
+
+            // Log session access log entry
+            if (SUPABASE_ENABLED && !sessionStorage.getItem('logged_this_session')) {
+              addLoginLog(supabaseUser.id).catch(err => console.warn('[Auth] Failed to add access log:', err));
+              sessionStorage.setItem('logged_this_session', '1');
+            }
+          }
+        } else if (active) {
+          // No user session found
+          setUser(null);
+        }
+      } catch (e) {
+        console.warn('[Auth] Error during initial session recovery:', e.message);
+        if (active) {
+          // Offline fallback
+          const cached = localStorage.getItem('user');
+          if (cached) {
+            try {
+              setUser(JSON.parse(cached));
+            } catch (err) {
+              console.warn('[Auth] Failed to parse cached user:', err);
+            }
+          }
+        }
+      } finally {
+        clearTimeout(safetyTimeout);
+        if (active) {
+          setLoading(false);
+        }
+      }
+    };
+
+    // Run session recovery
+    initializeAuthAndListen();
+
+    // 2. Subscribe to subsequent auth changes
+    const unsubscribe = onAuthChange(async (event, session) => {
+      // Ignore initial session event since we just recovered it
+      if (event === 'INITIAL_SESSION') return;
+
+      try {
+        const supabaseUser = session?.user || null;
+        if (supabaseUser) {
+          let profile = await getUserDoc(supabaseUser.id);
+          if (profile && active) {
+            const enriched = {
+              uid:          supabaseUser.id,
+              id:           supabaseUser.id,
+              name:         profile.name || supabaseUser.user_metadata?.name || supabaseUser.user_metadata?.full_name || 'Élève',
+              email:        supabaseUser.email,
+              role:         profile.role || 'student',
+              tier:         profile.tier || 'freemium',
+              xp:           profile.xp   || 0,
+              streak:       profile.streak || 0,
+              rank:         profile.rank  || null,
+              totalStudents: profile.totalStudents || 1200,
+              subscription: profile.subscription || null,
+              phone:        profile.phone || supabaseUser.user_metadata?.phone || '',
+              city:         profile.city  || supabaseUser.user_metadata?.city  || '',
+            };
+            setUser(enriched);
+          }
+        } else if (event === 'SIGNED_OUT' && active) {
+          setUser(null);
+        }
+      } catch (e) {
+        console.warn('[Auth] Error handling subsequent auth change:', e.message);
+      }
     });
+
     return () => {
+      active = false;
       clearTimeout(safetyTimeout);
       unsubscribe();
     };
