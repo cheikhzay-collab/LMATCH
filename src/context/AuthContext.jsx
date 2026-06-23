@@ -5,6 +5,8 @@ import { getAllExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteEx
 import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig, getOmrScannerSettingsConfig, saveOmrScannerSettingsConfig, getWhatsAppSettingsConfig, saveWhatsAppSettingsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, redeemCodeViaRPC } from '../services/planService';
 import { sanitizeInputString, validatePhoneNumber } from '../utils/security';
+import { supabase } from '../lib/supabase';
+
 
 
 // ── Supabase availability guard ───────────────────────────────────────────────
@@ -275,6 +277,7 @@ export function AuthProvider({ children }) {
     const saved = localStorage.getItem('user');
     return saved ? JSON.parse(saved) : null;
   });
+  const [upgradedPlan, setUpgradedPlan] = useState(null);
   // Initialize loading to true if Supabase is enabled so we can check and verify the session first
   const [loading, setLoading] = useState(SUPABASE_ENABLED);
 
@@ -1742,6 +1745,62 @@ export function AuthProvider({ children }) {
     loadStudentData();
   }, [user]);
 
+  // Real-time listener for profile upgrades (e.g. manager activating premium)
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !user) return;
+    const userId = user.uid || user.id;
+    if (!userId || userId === 'mock_student' || userId === 'mock_google_student' || userId === 'admin') return;
+
+    // Create channel
+    const channel = supabase
+      .channel(`profile-realtime-${userId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'profiles',
+          filter: `id=eq.${userId}`,
+        },
+        (payload) => {
+          const newProfile = payload.new;
+          if (newProfile) {
+            // Check if user tier was upgraded from non-premium (or freemium) to premium
+            setUser(prevUser => {
+              if (prevUser && prevUser.tier !== 'premium' && newProfile.tier === 'premium') {
+                // Find the new plan details to display in the celebration modal
+                const planId = newProfile.subscription?.planId || 'plan_lconq';
+                const plan = plans.find(p => p.id === planId) || plans[0] || {
+                  name: "Premium L'Conq",
+                  durationDays: 30
+                };
+                
+                // Trigger global success modal
+                setUpgradedPlan(plan);
+              }
+              
+              // Return new state
+              return {
+                ...prevUser,
+                tier: newProfile.tier,
+                subscription: newProfile.subscription,
+                phone: newProfile.phone || prevUser.phone,
+                city: newProfile.city || prevUser.city,
+                xp: newProfile.xp !== undefined ? newProfile.xp : prevUser.xp,
+                streak: newProfile.streak !== undefined ? newProfile.streak : prevUser.streak,
+                rank: newProfile.rank !== undefined ? newProfile.rank : prevUser.rank
+              };
+            });
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.uid, user?.id, plans]);
+
   const refreshAdminData = useCallback(async () => {
     if (!SUPABASE_ENABLED || user?.role !== 'admin') return;
     try {
@@ -1886,6 +1945,7 @@ export function AuthProvider({ children }) {
       loading,
       profName, profPhone, profSite, updateBrandingConfig, updateFlashcardSettingsConfig, updatePdfSettingsConfig, updateOmrScannerSettingsConfig,
       whatsappSettings, updateWhatsAppSettingsConfig,
+      upgradedPlan, setUpgradedPlan,
     }}>
       {children}
     </AuthContext.Provider>
