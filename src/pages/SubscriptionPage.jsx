@@ -135,7 +135,7 @@ export default function SubscriptionPage() {
                 </p>
               </div>
             </div>
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
               <button 
                 onClick={() => navigate('/schools')} 
                 className="btn"
@@ -147,6 +147,19 @@ export default function SubscriptionPage() {
                 }}
               >
                 Accéder aux examens
+              </button>
+              <button 
+                onClick={() => setUpgradedPlan(currentPlan || plans[0])} 
+                className="btn-outline"
+                style={{ 
+                  fontWeight: 700, 
+                  width: isMobile ? '100%' : 'auto',
+                  borderRadius: '10px',
+                  borderColor: 'rgba(124, 58, 237, 0.4)',
+                  color: 'var(--violet)'
+                }}
+              >
+                🎉 Rejouer l'animation
               </button>
             </div>
           </div>
@@ -721,7 +734,7 @@ export default function SubscriptionPage() {
             </h2>
             <p style={{
               fontSize: '1.1rem',
-              color: 'var(--text-main)',
+              color: '#FFFFFF',
               fontWeight: 700,
               margin: 0
             }}>
@@ -738,14 +751,14 @@ export default function SubscriptionPage() {
               textAlign: 'left'
             }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-subtle)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Abonnement activé</span>
+                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Abonnement activé</span>
                 <span className="badge badge-pro" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>Premium</span>
               </div>
-              <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: 'var(--text-main)' }}>
+              <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
                 {upgradedPlan.name}
               </h4>
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Durée d'accès : <strong style={{ color: 'var(--text-main)' }}>{upgradedPlan.durationDays} jours</strong> complets
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.7)' }}>
+                Durée d'accès : <strong style={{ color: '#FFFFFF' }}>{upgradedPlan.durationDays} jours</strong> complets
               </p>
             </div>
 
@@ -759,7 +772,7 @@ export default function SubscriptionPage() {
                 "Astuces IA (Cheat codes) pour chaque QCM",
                 "Simulateur de concours et Heatmaps des faiblesses"
               ].map((feat, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.9)' }}>
                   <CheckCircle2 size={16} color="var(--emerald)" style={{ flexShrink: 0 }} />
                   <span>{feat}</span>
                 </div>
