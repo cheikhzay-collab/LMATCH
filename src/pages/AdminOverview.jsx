@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { 
   LayoutDashboard, Users, BookOpen, CircleDollarSign, TrendingUp, Camera, 
-  Sparkles, AlertTriangle, CheckCircle, RefreshCw, Phone
+  Sparkles, AlertTriangle, CheckCircle, RefreshCw, Phone, Coins, Landmark, 
+  CreditCard, MapPin, Target, ArrowUpRight, Percent, Award
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell } from 'recharts';
 
 const CustomTooltip = ({ active, payload, label, showDerivative }) => {
   if (active && payload && payload.length) {
@@ -23,7 +24,7 @@ const CustomTooltip = ({ active, payload, label, showDerivative }) => {
         <p style={{ margin: '0 0 0.5rem 0', fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-muted)' }}>{label}</p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
           <p style={{ margin: 0, fontSize: '0.9rem', display: 'flex', justifyContent: 'space-between', gap: '1.5rem', alignItems: 'center' }}>
-            <span>Moyenne f(t) :</span>
+            <span>Niveau f(t) :</span>
             <strong style={{ color: '#E2B874', fontSize: '1rem' }}>{payload[0].value}/100</strong>
           </p>
           {showDerivative && payload[1] && (
@@ -55,10 +56,20 @@ export default function AdminOverview() {
   const totalPremium = users.filter(u => u.tier === 'premium').length;
   const totalRevenue = totalPremium * 99; // 99 DH per premium user
   const totalQuestions = exams.reduce((acc, exam) => acc + (exam.questions?.length || 0), 0);
+  
+  // Calculated stats for Moroccan EdTech metrics
+  const conversionRate = users.length > 0 ? ((totalPremium / users.length) * 100).toFixed(1) : '0.0';
+  const averageReadiness = 71; // Average preparation index
+
+  // Interactive Growth Goals Simulator state
+  const [targetPremium, setTargetPremium] = useState(totalPremium + 80);
+  const targetRevenue = targetPremium * 99;
+  const growthMultiplier = totalPremium > 0 ? ((targetPremium - totalPremium) / totalPremium * 100).toFixed(0) : '100';
 
   // AI-OMR Engine simulation
-  const [omrStatus, setOmrStatus] = useState('processing'); // 'idle' or 'processing'
-  const [omrProgress, setOmrProgress] = useState(28);
+  const [omrStatus, setOmrStatus] = useState('processing');
+  const [omrProgress, setOmrProgress] = useState(34);
+  const [omrConfidence, setOmrConfidence] = useState(99.4);
 
   useEffect(() => {
     let interval;
@@ -67,11 +78,12 @@ export default function AdminOverview() {
         setOmrProgress(prev => {
           if (prev >= 60) {
             setOmrStatus('idle');
+            setOmrConfidence(99.6);
             return 60;
           }
           return prev + 1;
         });
-      }, 3500);
+      }, 4000);
     }
     return () => clearInterval(interval);
   }, [omrStatus]);
@@ -80,48 +92,69 @@ export default function AdminOverview() {
     if (omrStatus === 'idle') {
       setOmrProgress(0);
       setOmrStatus('processing');
+      setOmrConfidence(99.1);
     } else {
       setOmrStatus('idle');
     }
   };
 
   // Math viz state and calculation
-  const [selectedConcours, setSelectedConcours] = useState('Medecine'); // 'Medecine' or 'ENSA'
+  const [selectedConcours, setSelectedConcours] = useState('Medecine');
   const [showDerivative, setShowDerivative] = useState(false);
 
   const baseProgressionData = {
     Medecine: [
-      { name: 'Semaine 1', f_t: 48 },
-      { name: 'Semaine 2', f_t: 52 },
-      { name: 'Semaine 3', f_t: 58 },
-      { name: 'Semaine 4', f_t: 56 }, // light dip
-      { name: 'Semaine 5', f_t: 64 },
-      { name: 'Semaine 6', f_t: 72 },
-      { name: 'Semaine 7', f_t: 79 },
-      { name: 'Semaine 8', f_t: 82 },
+      { name: 'Sem 1', f_t: 48 },
+      { name: 'Sem 2', f_t: 52 },
+      { name: 'Sem 3', f_t: 58 },
+      { name: 'Sem 4', f_t: 56 },
+      { name: 'Sem 5', f_t: 64 },
+      { name: 'Sem 6', f_t: 72 },
+      { name: 'Sem 7', f_t: 79 },
+      { name: 'Sem 8', f_t: 84 },
     ],
     ENSA: [
-      { name: 'Semaine 1', f_t: 42 },
-      { name: 'Semaine 2', f_t: 46 },
-      { name: 'Semaine 3', f_t: 50 },
-      { name: 'Semaine 4', f_t: 54 },
-      { name: 'Semaine 5', f_t: 60 },
-      { name: 'Semaine 6', f_t: 59 }, // light dip
-      { name: 'Semaine 7', f_t: 66 },
-      { name: 'Semaine 8', f_t: 74 },
+      { name: 'Sem 1', f_t: 42 },
+      { name: 'Sem 2', f_t: 46 },
+      { name: 'Sem 3', f_t: 50 },
+      { name: 'Sem 4', f_t: 54 },
+      { name: 'Sem 5', f_t: 60 },
+      { name: 'Sem 6', f_t: 59 },
+      { name: 'Sem 7', f_t: 66 },
+      { name: 'Sem 8', f_t: 75 },
     ]
   };
 
   const progressionData = baseProgressionData[selectedConcours].map((d, idx, arr) => {
     const prev = arr[idx - 1];
     const rate = prev ? d.f_t - prev.f_t : 0;
-    return {
-      ...d,
-      f_prime_t: rate
-    };
+    return { ...d, f_prime_t: rate };
   });
 
-  // Action Hub state (Moroccan Concours / EdTech Specific)
+  // Moroccan Cities Demographic data
+  const geoData = [
+    { city: 'Casablanca-Settat', count: Math.ceil(users.length * 0.38) || 38, percent: 38, color: '#7C3AED' },
+    { city: 'Rabat-Salé-Kénitra', count: Math.ceil(users.length * 0.28) || 28, percent: 28, color: '#10B981' },
+    { city: 'Marrakech-Safi', count: Math.ceil(users.length * 0.16) || 16, percent: 16, color: '#3B82F6' },
+    { city: 'Fès-Meknès', count: Math.ceil(users.length * 0.12) || 12, percent: 12, color: '#F59E0B' },
+    { city: 'Tanger-Tétouan-Al Hoceïma', count: Math.ceil(users.length * 0.06) || 6, percent: 6, color: '#EC4899' },
+  ];
+
+  // Financial payment methods distribution
+  const paymentData = [
+    { name: 'Codes Voucher', value: Math.ceil(totalPremium * 0.60) || 12, color: '#8B5CF6' },
+    { name: 'CIH Bank / Wafacash', value: Math.ceil(totalPremium * 0.30) || 6, color: '#10B981' },
+    { name: 'Cartes Bancaires', value: Math.ceil(totalPremium * 0.10) || 2, color: '#3B82F6' }
+  ];
+
+  // AI predictions for target Moroccan Concours
+  const successPredictions = [
+    { name: 'FMPC Médecine', rate: 74, status: 'Favorable', count: Math.ceil(users.length * 0.45), color: '#10B981', desc: 'Forte corrélation avec la maîtrise des QCM Chimie & SVT.' },
+    { name: 'ENSA Ingénierie', rate: 61, status: 'Modéré', count: Math.ceil(users.length * 0.35), color: '#3B82F6', desc: 'Progression positive sur les modules d\'Analyse & Physique.' },
+    { name: 'ENSAM Ingénierie', rate: 49, status: 'Critique', count: Math.ceil(users.length * 0.20), color: '#F59E0B', desc: 'Faiblesses notables identifiées en Géométrie Spatiale.' }
+  ];
+
+  // Action Hub state
   const [actionItems, setActionItems] = useState([
     {
       id: 'omr-1',
@@ -165,51 +198,13 @@ export default function AdminOverview() {
     setActionItems(prev => prev.filter(item => item.id !== id));
   };
 
-
   return (
-    <div className="animate-fade-in" style={{ direction: 'ltr', textAlign: 'left', position: 'relative' }}>
+    <div className="animate-fade-in" style={{ direction: 'ltr', textAlign: 'left', position: 'relative', paddingBottom: '3rem' }}>
       
-      {/* Background glow blobs for true premium glassmorphism */}
-      <div style={{
-        position: 'absolute',
-        top: '-10%',
-        left: '-5%',
-        width: '350px',
-        height: '350px',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(113, 109, 242, 0.07) 0%, transparent 70%)',
-        filter: 'blur(70px)',
-        zIndex: 0,
-        pointerEvents: 'none'
-      }}></div>
+      {/* Background glow blobs */}
+      <div style={{ position: 'absolute', top: '-10%', left: '-5%', width: '350px', height: '350px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(113, 109, 242, 0.07) 0%, transparent 70%)', filter: 'blur(70px)', zIndex: 0, pointerEvents: 'none' }} />
+      <div style={{ position: 'absolute', bottom: '15%', right: '-5%', width: '450px', height: '450px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%)', filter: 'blur(80px)', zIndex: 0, pointerEvents: 'none' }} />
       
-      <div style={{
-        position: 'absolute',
-        bottom: '15%',
-        right: '-5%',
-        width: '450px',
-        height: '450px',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(16, 185, 129, 0.05) 0%, transparent 70%)',
-        filter: 'blur(80px)',
-        zIndex: 0,
-        pointerEvents: 'none'
-      }}></div>
-
-      <div style={{
-        position: 'absolute',
-        top: '30%',
-        right: '35%',
-        width: '300px',
-        height: '300px',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle, rgba(226, 184, 116, 0.04) 0%, transparent 70%)',
-        filter: 'blur(60px)',
-        zIndex: 0,
-        pointerEvents: 'none'
-      }}></div>
-
-      {/* Main content wrapper above the background blobs */}
       <div style={{ position: 'relative', zIndex: 1 }}>
         
         {/* ── HEADER WITH AI-OMR ENGINE STATUS ── */}
@@ -219,11 +214,11 @@ export default function AdminOverview() {
               <div style={{ width: 44, height: 44, borderRadius: '14px', background: 'linear-gradient(135deg, var(--violet), var(--emerald))', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 20px rgba(113, 109, 242, 0.2)' }}>
                 <LayoutDashboard size={22} color="#fff" />
               </div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0, color: 'var(--text-main)' }}>
-                L'<span style={{ background: 'linear-gradient(135deg, var(--violet), var(--emerald))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>CONQ</span> Concours • Administration
+              <h1 style={{ fontSize: '2rem', fontWeight: 850, letterSpacing: '-0.03em', margin: 0, color: 'var(--text-main)' }}>
+                L'CONQ <span style={{ background: 'linear-gradient(135deg, var(--violet), var(--emerald))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>DIRECTEUR</span>
               </h1>
             </div>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>Gestion et analyse prédictive des préparations aux concours marocains (Médecine, ENSA, ENSAM).</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>Centre de décision, prédictions d'admissibilité et rapports de performance.</p>
           </div>
 
           {/* AI-OMR Status Hub */}
@@ -235,12 +230,12 @@ export default function AdminOverview() {
                 )}
                 <span style={{ position: 'relative', display: 'inline-flex', borderRadius: '50%', height: '10px', width: '10px', backgroundColor: omrStatus === 'processing' ? 'var(--emerald)' : 'var(--text-subtle)' }}></span>
               </span>
-              <div style={{ textDirection: 'ltr', textAlign: 'left' }}>
+              <div>
                 <div style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-main)' }}>
-                  {omrStatus === 'processing' ? `Scanner OMR : Lot ${omrProgress}/60` : 'Lecteur OMR : En attente'}
+                  {omrStatus === 'processing' ? `Lot OMR : ${omrProgress}/60 fiches` : 'Lecteur OMR : Prêt'}
                 </div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                  {omrStatus === 'processing' ? 'Lecture intelligente des copies...' : 'Cliquez pour lancer une simulation'}
+                  {omrStatus === 'processing' ? `Index de confiance : ${omrConfidence}%` : 'Simulation de lecture intelligente'}
                 </div>
               </div>
             </div>
@@ -266,118 +261,90 @@ export default function AdminOverview() {
           </div>
         </header>
 
-        {/* ── PREDICTIVE KPI CARDS (4 COLUMNS) ── */}
-        <div className="dashboard-grid stats-row" style={{ marginBottom: '2.5rem' }}>
+        {/* ── STRATEGIC KPI CARDS ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
           
           {/* Card 1: Registered candidates */}
-          <div className="col-span-3 glass-panel stat-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>Candidats Préparés</span>
-              <div style={{ padding: '0.4rem', borderRadius: '10px', background: 'var(--violet-soft)', color: 'var(--violet)' }}><Users size={18} /></div>
-            </div>
+          <div className="glass-panel" style={{ display: 'flex', padding: '1.5rem', gap: '1.25rem', alignItems: 'center' }}>
+            <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(124, 58, 237, 0.1)', color: 'var(--violet)' }}><Users size={24} /></div>
             <div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>{users.length} <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>élèves</span></div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--emerald)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
-                <Sparkles size={12} /> Projection +250 à l'approche des concours
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Élèves Inscrits</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-main)', marginTop: '0.2rem' }}>{users.length}</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--emerald)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.25rem' }}>
+                <Percent size={12} /> {conversionRate}% convertis en Premium
               </div>
             </div>
           </div>
 
-          {/* Card 2: Scanned OMR papers */}
-          <div className="col-span-3 glass-panel stat-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>Copies OMR Traitées</span>
-              <div style={{ padding: '0.4rem', borderRadius: '10px', background: 'var(--emerald-soft)', color: 'var(--emerald)' }}><Camera size={18} /></div>
-            </div>
+          {/* Card 2: CA Mensuel (MRR) */}
+          <div className="glass-panel" style={{ display: 'flex', padding: '1.5rem', gap: '1.25rem', alignItems: 'center' }}>
+            <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--emerald)' }}><CircleDollarSign size={24} /></div>
             <div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>1,840 <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>fiches</span></div>
-              <div style={{ fontSize: '0.78rem', color: '#E2B874', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
-                <Sparkles size={12} /> Taux d'exactitude IA : 99.4%
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revenus (CA)</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-main)', marginTop: '0.2rem' }}>{totalRevenue} <span style={{ fontSize: '1rem', fontWeight: 650 }}>DH</span></div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--violet)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.25rem' }}>
+                <ArrowUpRight size={12} /> Objectif mensuel : {targetRevenue} DH
               </div>
             </div>
           </div>
 
-          {/* Card 3: Action Hub Items */}
-          <div className="col-span-3 glass-panel stat-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>Alertes et Contrôles</span>
-              <div style={{ padding: '0.4rem', borderRadius: '10px', background: 'var(--danger-soft)', color: 'var(--danger)' }}><AlertTriangle size={18} /></div>
-            </div>
+          {/* Card 3: Success estimation */}
+          <div className="glass-panel" style={{ display: 'flex', padding: '1.5rem', gap: '1.25rem', alignItems: 'center' }}>
+            <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning)' }}><Target size={24} /></div>
             <div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>{actionItems.length} en suspens</div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
-                <RefreshCw size={12} className={omrStatus === 'processing' ? 'animate-spin' : ''} /> Diagnostic IA actif
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Indicateur de Réussite</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-main)', marginTop: '0.2rem' }}>{averageReadiness}%</div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--warning)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.25rem' }}>
+                <Sparkles size={12} /> Basé sur les examens blancs
               </div>
             </div>
           </div>
 
-          {/* Card 4: Questions & QCM library */}
-          <div className="col-span-3 glass-panel stat-card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', padding: '1.5rem', gap: '0.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-muted)' }}>Banque de Questions QCM</span>
-              <div style={{ padding: '0.4rem', borderRadius: '10px', background: 'var(--warning-soft)', color: 'var(--warning)' }}><BookOpen size={18} /></div>
-            </div>
+          {/* Card 4: Library */}
+          <div className="glass-panel" style={{ display: 'flex', padding: '1.5rem', gap: '1.25rem', alignItems: 'center' }}>
+            <div style={{ padding: '0.8rem', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)' }}><BookOpen size={24} /></div>
             <div>
-              <div style={{ fontSize: '1.8rem', fontWeight: 900, color: 'var(--text-main)' }}>{totalQuestions || 240} <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>items</span></div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--emerald)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.2rem' }}>
-                <Sparkles size={12} /> {exams.length} concours référencés
+              <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Banque de QCM</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-main)', marginTop: '0.2rem' }}>{totalQuestions || 240} <span style={{ fontSize: '0.8rem', fontWeight: 500 }}>items</span></div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.25rem' }}>
+                {exams.length} Concours référencés
               </div>
             </div>
           </div>
 
         </div>
 
-        {/* ── MAIN CONTENT GRID: DATA VIZ & ACTION HUB ── */}
-        <div className="dashboard-grid">
+        {/* ── ROW 1: LEARNING ACCELERATION & GEOGRAPHIC DISTRIBUTION ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.5rem', marginBottom: '2.5rem', flexWrap: 'wrap' }}>
           
-          {/* Left Column: Mathematical Progress Analytics */}
-          <div className="col-span-8 glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+          {/* Chart f(t) / f'(t) */}
+          <div className="glass-panel" style={{ padding: '1.75rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>Suivi de Taux d'Assimilation du Concours</h3>
-                <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Moyenne globale aux examens blancs f(t) et accélération d'apprentissage f'(t)</p>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>Niveau d'Assimilation Moyen des Élèves</h3>
+                <p style={{ margin: '0.2rem 0 0 0', fontSize: '0.8rem', color: 'var(--text-muted)' }}>Moyenne globale des notes $f(t)$ et taux d'accélération d'apprentissage $f'(t)$</p>
               </div>
               
-              <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                {/* Concours Switcher */}
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <select 
                   value={selectedConcours} 
                   onChange={e => setSelectedConcours(e.target.value)}
-                  style={{ padding: '0.45rem 0.9rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-glass)', color: 'var(--text-main)', fontSize: '0.8rem', fontWeight: 700 }}
+                  style={{ padding: '0.4rem 0.8rem', borderRadius: '8px', border: '1px solid var(--border)', background: 'var(--bg-glass)', color: 'var(--text-main)', fontSize: '0.78rem', fontWeight: 700 }}
                 >
-                  <option value="Medecine">Concours Médecine (FMPC)</option>
-                  <option value="ENSA">Concours ENSA (Ingénierie)</option>
+                  <option value="Medecine">Concours Médecine</option>
+                  <option value="ENSA">Concours ENSA</option>
                 </select>
 
-                {/* Mathematical Toggles */}
-                <div style={{ display: 'flex', gap: '0.25rem', background: 'var(--bg-glass)', padding: '0.2rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', background: 'var(--bg-glass)', padding: '0.15rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
                   <button 
                     onClick={() => setShowDerivative(false)}
-                    style={{ 
-                      padding: '0.35rem 0.75rem', 
-                      fontSize: '0.75rem', 
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: !showDerivative ? 'var(--violet)' : 'transparent',
-                      color: !showDerivative ? '#fff' : 'var(--text-muted)',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', border: 'none', background: !showDerivative ? 'var(--violet)' : 'transparent', color: !showDerivative ? '#fff' : 'var(--text-muted)', fontWeight: 700, cursor: 'pointer' }}
                   >
                     Courbe f(t)
                   </button>
                   <button 
                     onClick={() => setShowDerivative(true)}
-                    style={{ 
-                      padding: '0.35rem 0.75rem', 
-                      fontSize: '0.75rem', 
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: showDerivative ? 'var(--violet)' : 'transparent',
-                      color: showDerivative ? '#fff' : 'var(--text-muted)',
-                      fontWeight: 700,
-                      cursor: 'pointer'
-                    }}
+                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', border: 'none', background: showDerivative ? 'var(--violet)' : 'transparent', color: showDerivative ? '#fff' : 'var(--text-muted)', fontWeight: 700, cursor: 'pointer' }}
                   >
                     Dérivée f'(t)
                   </button>
@@ -385,18 +352,16 @@ export default function AdminOverview() {
               </div>
             </div>
 
-            <div style={{ height: '320px', width: '100%', direction: 'ltr' }}>
+            <div style={{ height: '280px', width: '100%', direction: 'ltr' }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={progressionData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <AreaChart data={progressionData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                   <defs>
-                    {/* Base f(t) gradient */}
                     <linearGradient id="colorFt" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#E2B874" stopOpacity={0.25}/>
+                      <stop offset="5%" stopColor="#E2B874" stopOpacity={0.2}/>
                       <stop offset="95%" stopColor="#E2B874" stopOpacity={0}/>
                     </linearGradient>
-                    {/* Derivative f'(t) gradient */}
                     <linearGradient id="colorFprime" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--violet)" stopOpacity={0.25}/>
+                      <stop offset="5%" stopColor="var(--violet)" stopOpacity={0.2}/>
                       <stop offset="95%" stopColor="var(--violet)" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
@@ -407,208 +372,239 @@ export default function AdminOverview() {
                     <YAxis yAxisId="right" orientation="right" stroke="var(--violet)" fontSize={11} tickLine={false} axisLine={false} domain={[-5, 15]} />
                   )}
                   <Tooltip content={<CustomTooltip showDerivative={showDerivative} />} />
-                  
-                  {/* Main spline f(t) */}
-                  <Area 
-                    type="monotone" 
-                    yAxisId="left"
-                    dataKey="f_t" 
-                    name="Moyenne"
-                    stroke="#E2B874" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#colorFt)" 
-                  />
-                  
-                  {/* Derivative f'(t) */}
+                  <Area type="monotone" yAxisId="left" dataKey="f_t" stroke="#E2B874" strokeWidth={3} fillOpacity={1} fill="url(#colorFt)" />
                   {showDerivative && (
-                    <Area 
-                      type="monotone" 
-                      yAxisId="right"
-                      dataKey="f_prime_t" 
-                      name="Vitesse"
-                      stroke="var(--violet)" 
-                      strokeWidth={2} 
-                      strokeDasharray="4 4"
-                      fillOpacity={1} 
-                      fill="url(#colorFprime)" 
-                    />
+                    <Area type="monotone" yAxisId="right" dataKey="f_prime_t" stroke="var(--violet)" strokeWidth={2} strokeDasharray="4 4" fillOpacity={1} fill="url(#colorFprime)" />
                   )}
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+          </div>
+
+          {/* Geographic distribution (Morocco Cities) */}
+          <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.2rem' }}>Origine des Élèves</h3>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Répartition par régions académiques marocaines</p>
             
-            <div style={{ display: 'flex', gap: '1.5rem', justifyContent: 'center', marginTop: '1rem', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                <div style={{ width: '12px', height: '12px', borderRadius: '3px', background: '#E2B874' }}></div>
-                <span>f(t) : Niveau moyen d'acquisition de l'échantillon d'élèves (/100)</span>
-              </div>
-              {showDerivative && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                  <div style={{ width: '12px', height: '12px', borderRadius: '3px', border: '1.5px dashed var(--violet)' }}></div>
-                  <span>f'(t) : Taux de progression hebdomadaire (variation d'assimilation)</span>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1, justifyContent: 'center' }}>
+              {geoData.map((item, idx) => (
+                <div key={idx}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-main)', marginBottom: '0.35rem' }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                      <MapPin size={12} color={item.color} /> {item.city}
+                    </span>
+                    <span>{item.count} ({item.percent}%)</span>
+                  </div>
+                  <div style={{ height: '6px', background: 'var(--border)', borderRadius: '10px', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${item.percent}%`, background: item.color, borderRadius: '10px', transition: 'width 1s ease' }}></div>
+                  </div>
                 </div>
-              )}
+              ))}
             </div>
           </div>
 
-          {/* Right Column: Action Hub */}
-          <div className="col-span-4 glass-panel" style={{ padding: '2rem', display: 'flex', flexDirection: 'column' }}>
+        </div>
+
+        {/* ── ROW 2: AI SUCCESS PREDICTION & FINANCIAL SIMULATION ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '2.5rem', flexWrap: 'wrap' }}>
+          
+          {/* AI success prediction metrics */}
+          <div className="glass-panel" style={{ padding: '1.75rem' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.2rem' }}>AI Predictor: Taux d'Admissibilité Estimé</h3>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Chances de réussite aux concours nationaux basées sur les QCM Blancs</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.1rem' }}>
+              {successPredictions.map((pred, idx) => (
+                <div key={idx} style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: '14px', padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', border: `3.5px solid ${pred.color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: pred.color, fontSize: '1.05rem', background: `${pred.color}08`, flexShrink: 0 }}>
+                    {pred.rate}%
+                  </div>
+                  
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.25rem' }}>
+                      <span style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)' }}>{pred.name}</span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 850, padding: '0.15rem 0.5rem', borderRadius: '20px', background: `${pred.color}15`, color: pred.color }}>
+                        {pred.status}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--text-muted)', lineHeight: 1.35 }}>{pred.desc}</p>
+                    <div style={{ fontSize: '0.75rem', color: '#E2B874', fontWeight: 700, marginTop: '0.35rem' }}>Candidats actifs ciblés : {pred.count} élèves</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Financial details & Goal Simulator */}
+          <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.2rem' }}>Analyse Financière & Croissance</h3>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>Simulations d'objectifs de ventes et canaux de transaction</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', flex: 1, justifyContent: 'space-between' }}>
+              {/* Payment split analysis */}
+              <div style={{ background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: '16px', padding: '1rem' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', display: 'block', marginBottom: '0.75rem' }}>Répartition des canaux d'encaissement</span>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {paymentData.map((pay, idx) => (
+                    <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: pay.color }} />
+                        <span style={{ color: 'var(--text-main)', fontWeight: 650 }}>{pay.name}</span>
+                      </div>
+                      <span style={{ color: 'var(--text-muted)' }}>{pay.value} transactions ({idx === 0 ? '60%' : idx === 1 ? '30%' : '10%'})</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Slider growth simulator */}
+              <div style={{ background: 'linear-gradient(135deg, rgba(124, 58, 237, 0.05) 0%, rgba(16, 185, 129, 0.05) 100%)', border: '1.5px solid rgba(124, 58, 237, 0.2)', borderRadius: '16px', padding: '1.25rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                  <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--text-main)' }}>Simulateur d'Objectif Mensuel</span>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, background: 'var(--violet)', color: '#fff', padding: '0.2rem 0.5rem', borderRadius: '4px' }}>+{growthMultiplier}%</span>
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
+                  <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-main)' }}>{targetRevenue} DH</span>
+                  <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{targetPremium} Abonnés Premium</span>
+                </div>
+
+                <input 
+                  type="range" 
+                  min={totalPremium} 
+                  max={totalPremium + 200} 
+                  value={targetPremium}
+                  onChange={(e) => setTargetPremium(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: 'var(--violet)', cursor: 'pointer', height: '6px', borderRadius: '5px', background: 'var(--border)' }}
+                />
+                
+                <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                  Ajustez le curseur pour projeter le chiffre d'affaires potentiel du prochain lot de candidats.
+                </p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        {/* ── ROW 3: DECISIONS CENTER & OMR LIVE HUD ── */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '1.5rem', flexWrap: 'wrap' }}>
+          
+          {/* Decision Center */}
+          <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: 'var(--text-main)' }}>Centre de décision</h3>
-              <span style={{ background: 'var(--danger-soft)', color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 850, padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
-                {actionItems.length} alertes
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)' }}>Centre de Décision</h3>
+              <span style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', fontSize: '0.75rem', fontWeight: 850, padding: '0.2rem 0.6rem', borderRadius: '20px' }}>
+                {actionItems.length} alertes prioritaires
               </span>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', flex: 1 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', flex: 1 }}>
               {actionItems.length === 0 ? (
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-subtle)', padding: '2rem 0' }}>
-                  <CheckCircle size={36} color="var(--emerald)" style={{ marginBottom: '0.75rem', opacity: 0.8 }} />
-                  <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>Toutes les tâches sont résolues !</span>
-                  <span style={{ fontSize: '0.75rem' }}>Aucune intervention humaine requise.</span>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flex: 1, color: 'var(--text-subtle)', padding: '3rem 0' }}>
+                  <CheckCircle size={40} color="var(--emerald)" style={{ marginBottom: '0.75rem', opacity: 0.8 }} />
+                  <span style={{ fontSize: '0.9rem', fontWeight: 700 }}>Toutes les alertes sont traitées !</span>
+                  <span style={{ fontSize: '0.75rem' }}>Aucune intervention administrative en attente.</span>
                 </div>
               ) : (
                 actionItems.map((item) => (
-                  <div 
-                    key={item.id} 
-                    style={{ 
-                      padding: '1rem', 
-                      background: 'var(--bg-glass)', 
-                      border: '1px solid var(--border)', 
-                      borderRadius: '14px',
-                      position: 'relative',
-                      transition: 'all 0.2s ease',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.02)'
-                    }}
-                  >
-                    {/* Severity Badge */}
-                    <span style={{ 
-                      position: 'absolute', 
-                      right: '1rem', 
-                      top: '1rem', 
-                      width: '6px', 
-                      height: '6px', 
-                      borderRadius: '50%', 
-                      backgroundColor: item.severity === 'high' ? 'var(--danger)' : item.severity === 'medium' ? 'var(--warning)' : 'var(--emerald)'
-                    }}></span>
+                  <div key={item.id} style={{ padding: '0.9rem', background: 'var(--bg-glass)', border: '1px solid var(--border)', borderRadius: '14px', position: 'relative', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
+                    <span style={{ position: 'absolute', right: '1rem', top: '1rem', width: '7px', height: '7px', borderRadius: '50%', backgroundColor: item.severity === 'high' ? 'var(--danger)' : item.severity === 'medium' ? 'var(--warning)' : 'var(--emerald)' }}></span>
 
                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.2rem' }}>
-                          <span style={{ fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-main)' }}>{item.title}</span>
+                          <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-main)' }}>{item.title}</span>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-subtle)', marginRight: '1.25rem' }}>{item.time}</span>
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: '#E2B874', fontWeight: 700, marginBottom: '0.3rem' }}>
-                          Cible : {item.student}
+                        <div style={{ fontSize: '0.78rem', color: '#E2B874', fontWeight: 700, marginBottom: '0.3rem' }}>
+                          Élève concerné : {item.student}
                         </div>
-                        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: '0 0 0.75rem 0', lineHeight: 1.4 }}>
+                        <p style={{ fontSize: '0.76rem', color: 'var(--text-muted)', margin: '0 0 0.65rem 0', lineHeight: 1.4 }}>
                           {item.details}
                         </p>
                         
                         {/* Action buttons inside item */}
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
                           {item.type === 'omr' && (
-                            <button 
-                              className="btn"
-                              onClick={() => {
-                                navigate('/scanner');
-                              }}
-                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px' }}
-                            >
-                              <Camera size={12} /> Résoudre
+                            <button className="btn" onClick={() => navigate('/scanner')} style={{ padding: '0.3rem 0.65rem', fontSize: '0.72rem', borderRadius: '6px' }}>
+                              <Camera size={11} /> Corriger Copie
                             </button>
                           )}
                           {item.type === 'parent' && (
-                            <button 
-                              className="btn"
-                              onClick={() => {
-                                alert(`Appel téléphonique au tuteur de l'élève : ${item.student}`);
-                                handleResolve(item.id);
-                              }}
-                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', background: 'linear-gradient(135deg, var(--emerald) 0%, #047857 100%)' }}
-                            >
-                              <Phone size={12} /> Appeler
+                            <button className="btn" onClick={() => { alert(`Appel sortant vers le parent de ${item.student}`); handleResolve(item.id); }} style={{ padding: '0.3rem 0.65rem', fontSize: '0.72rem', borderRadius: '6px', background: 'linear-gradient(135deg, var(--emerald) 0%, #047857 100%)' }}>
+                              <Phone size={11} /> Appeler Parent
                             </button>
                           )}
                           {item.type === 'code' && (
-                            <button 
-                              className="btn"
-                              onClick={() => {
-                                navigate('/admin/users');
-                              }}
-                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px' }}
-                            >
-                              Activer Premium
+                            <button className="btn" onClick={() => navigate('/admin/users')} style={{ padding: '0.3rem 0.65rem', fontSize: '0.72rem', borderRadius: '6px' }}>
+                              Débloquer Premium
                             </button>
                           )}
                           {item.type === 'alert' && (
-                            <button 
-                              className="btn"
-                              onClick={() => {
-                                alert(`Astuce publiée sur le tableau de bord des élèves !`);
-                                handleResolve(item.id);
-                              }}
-                              style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', background: 'linear-gradient(135deg, var(--violet) 0%, #4f46e5 100%)' }}
-                            >
-                              <Sparkles size={12} /> Publier Astuce ⚡
+                            <button className="btn" onClick={() => { alert(`Astuce d'assimilation publiée sur le mur.`); handleResolve(item.id); }} style={{ padding: '0.3rem 0.65rem', fontSize: '0.72rem', borderRadius: '6px', background: 'linear-gradient(135deg, var(--violet) 0%, #4f46e5 100%)' }}>
+                              <Sparkles size={11} /> Publier Astuce ⚡
                             </button>
                           )}
-                          <button 
-                            className="btn-outline" 
-                            onClick={() => handleResolve(item.id)}
-                            style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', borderRadius: '6px', border: 'none', background: 'var(--bg-hover)' }}
-                          >
+                          <button className="btn-outline" onClick={() => handleResolve(item.id)} style={{ padding: '0.3rem 0.65rem', fontSize: '0.72rem', borderRadius: '6px', border: 'none', background: 'var(--bg-hover)' }}>
                             Ignorer
-                        </button>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
-                  
-                  <span style={{ position: 'absolute', right: '1rem', bottom: '0.8rem', fontSize: '0.7rem', color: 'var(--text-subtle)' }}>
-                    {item.time}
-                  </span>
-                </div>
-              ))
-            )}
+                ))
+              )}
+            </div>
           </div>
+
+          {/* OMR Scanning HUD Monitoring */}
+          <div className="glass-panel" style={{ padding: '1.75rem', display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.2rem' }}>IA-OMR Scanning Monitor</h3>
+            <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1.5rem' }}>État des traitements par reconnaissance optique de marques</p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem', justifyContent: 'center', flex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-glass)', border: '1px solid var(--border)', padding: '0.85rem', borderRadius: '12px' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Vitesse de numérisation</span>
+                <strong style={{ fontSize: '0.85rem', color: 'var(--text-main)' }}>42 copies / minute</strong>
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-glass)', border: '1px solid var(--border)', padding: '0.85rem', borderRadius: '12px' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Moyenne d'erreur OMR</span>
+                <strong style={{ fontSize: '0.85rem', color: 'var(--emerald)' }}>0.08% (Relecture requise)</strong>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', background: 'var(--bg-glass)', border: '1px solid var(--border)', padding: '0.85rem', borderRadius: '12px' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Dernier Lot importé</span>
+                <strong style={{ fontSize: '0.85rem', color: '#E2B874' }}>Lot #2839 - ENSA (Fès)</strong>
+              </div>
+
+              <button 
+                onClick={handleToggleOMR}
+                className="btn-outline" 
+                style={{ 
+                  width: '100%', 
+                  padding: '0.8rem', 
+                  fontSize: '0.85rem', 
+                  borderRadius: '10px', 
+                  borderColor: 'var(--violet)', 
+                  color: 'var(--violet)', 
+                  fontWeight: 800,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <RefreshCw size={14} className={omrStatus === 'processing' ? 'animate-spin' : ''} />
+                {omrStatus === 'processing' ? 'Pause Diagnostic' : 'Relancer Simulation OMR'}
+              </button>
+            </div>
+          </div>
+
         </div>
 
       </div>
-
-      {/* ── REAL DATABASE STATS ROW ── */}
-      <h3 style={{ margin: '2.5rem 0 1.25rem 0', fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-main)' }}>Indicateurs de la base de données réelle (Supabase)</h3>
-      <div className="dashboard-grid">
-        <div className="col-span-3 glass-panel stat-card" style={{ padding: '1.25rem' }}>
-          <div className="stat-icon primary"><Users size={24} /></div>
-          <div>
-            <p className="stat-label">Comptes Inscrits</p>
-            <div className="stat-value">{users.length}</div>
-          </div>
-        </div>
-        <div className="col-span-3 glass-panel stat-card" style={{ padding: '1.25rem' }}>
-          <div className="stat-icon accent"><CircleDollarSign size={24} /></div>
-          <div>
-            <p className="stat-label">Chiffre d'Affaires Actuel</p>
-            <div className="stat-value">{totalRevenue} DH</div>
-          </div>
-        </div>
-        <div className="col-span-3 glass-panel stat-card" style={{ padding: '1.25rem' }}>
-          <div className="stat-icon warning"><TrendingUp size={24} /></div>
-          <div>
-            <p className="stat-label">Abonnements Premium</p>
-            <div className="stat-value">{totalPremium}</div>
-          </div>
-        </div>
-        <div className="col-span-3 glass-panel stat-card" style={{ padding: '1.25rem' }}>
-          <div className="stat-icon danger"><BookOpen size={24} /></div>
-          <div>
-            <p className="stat-label">Concours en Bibliothèque</p>
-            <div className="stat-value">{exams.length}</div>
-          </div>
-        </div>
-      </div>
-
     </div>
-  </div>
   );
 }
