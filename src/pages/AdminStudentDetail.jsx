@@ -35,7 +35,7 @@ const getWhatsAppLink = (phone) => {
 export default function AdminStudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { users, plans, activateSubscription, cancelSubscription } = useAuth();
+  const { users, plans, activateSubscription, cancelSubscription, deleteStudent } = useAuth();
   
   const [isWaHovered, setIsWaHovered] = useState(false);
   
@@ -43,6 +43,21 @@ export default function AdminStudentDetail() {
 
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [selectedDuration, setSelectedDuration] = useState('365');
+  
+  const handleDeleteStudent = async () => {
+    const confirmDelete = window.confirm(
+      `Êtes-vous sûr de vouloir supprimer définitivement l'élève "${student.name || 'cet étudiant'}" et toutes ses données associées (progression, historique des examens, etc.) ? Cette action est irréversible.`
+    );
+    if (!confirmDelete) return;
+
+    try {
+      await deleteStudent(student.id || student.uid);
+      alert("L'élève a été supprimé avec succès.");
+      navigate('/admin/users');
+    } catch (e) {
+      alert("Échec de la suppression de l'élève: " + (e.message || e));
+    }
+  };
   
   // Real Database Student Details
   const [realHistory, setRealHistory] = useState([]);
@@ -197,7 +212,36 @@ export default function AdminStudentDetail() {
                   </div>
                </div>
              </div>
-          </div>
+
+              {/* Delete Student Section */}
+              <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                <button 
+                  type="button"
+                  onClick={handleDeleteStudent}
+                  className="btn-outline"
+                  style={{ 
+                    width: '100%', 
+                    borderColor: 'rgba(239, 68, 68, 0.4)', 
+                    color: 'var(--danger)', 
+                    background: 'rgba(239, 68, 68, 0.02)', 
+                    padding: '0.65rem', 
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    borderRadius: '12px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem',
+                    transition: 'all 0.2s',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.08)'; e.currentTarget.style.borderColor = 'var(--danger)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.02)'; e.currentTarget.style.borderColor = 'rgba(239, 68, 68, 0.4)'; }}
+                >
+                  Supprimer l'élève
+                </button>
+              </div>
+           </div>
 
           {/* ── Coordonnées de l'élève ── */}
           <div className="glass-panel" style={{ padding: '2rem' }}>

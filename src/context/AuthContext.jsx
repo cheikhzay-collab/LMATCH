@@ -1238,6 +1238,21 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const deleteStudent = async (userId) => {
+    if (SUPABASE_ENABLED) {
+      try {
+        const { error } = await supabase.rpc('delete_user', { uid: userId });
+        if (error) throw error;
+        setUsers(prev => prev.filter(u => u.id !== userId && u.uid !== userId));
+      } catch (e) {
+        console.error('[Supabase] Failed to delete user:', e);
+        throw e;
+      }
+    } else {
+      setUsers(prev => prev.filter(u => u.id !== userId));
+    }
+  };
+
   const [activationCodes, setActivationCodes] = useState(() => {
     const saved = localStorage.getItem('activationCodes');
     if (saved) {
@@ -1930,7 +1945,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{ 
       user, users, login, logout, register, loginWithGoogle: loginGoogle, exams, addExam, updateUserTier, updateProfile,
       toggleExamStatus, updateExamDetails, deleteExam, toggleArchiveExam,
-      plans, activateSubscription, cancelSubscription, addPlan, removePlan, updatePlan,
+      plans, activateSubscription, cancelSubscription, deleteStudent, addPlan, removePlan, updatePlan,
       activationCodes, generateActivationCodes, redeemActivationCode,
       progress, updateCardProgress, getStudentStats, dueTodayCount,
       theme, toggleTheme,
