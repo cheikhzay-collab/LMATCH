@@ -183,114 +183,181 @@ export default function Layout() {
       {upgradedPlan && (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999,
-          background: 'rgba(2, 6, 23, 0.85)',
-          backdropFilter: 'blur(16px)',
+          background: 'rgba(255, 253, 245, 0.82)',
+          backdropFilter: 'blur(12px)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           padding: '1.5rem',
           animation: 'fadeIn 0.25s ease'
         }}>
-          {/* Confetti container */}
+          {/* Confetti container with stars and shapes */}
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 10001 }}>
-            {Array.from({ length: 50 }).map((_, i) => {
+            {Array.from({ length: 70 }).map((_, i) => {
               const left = Math.random() * 100;
               const delay = Math.random() * 5;
-              const duration = 3 + Math.random() * 4;
-              const size = 6 + Math.random() * 8;
-              const colors = ['#7C3AED', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#EC4899'];
+              const duration = 2.5 + Math.random() * 3.5;
+              const size = 10 + Math.random() * 12;
+              const colors = ['#FFC72C', '#FF5A5F', '#00A699', '#7C3AED', '#3B82F6', '#EC4899', '#F59E0B', '#10B981'];
               const color = colors[Math.floor(Math.random() * colors.length)];
+              const isStar = Math.random() > 0.6;
               return (
                 <div 
                   key={i}
                   style={{
                     position: 'absolute',
-                    top: '-20px',
+                    top: '-30px',
                     left: `${left}%`,
-                    width: `${size}px`,
-                    height: `${size}px`,
-                    background: color,
-                    borderRadius: Math.random() > 0.5 ? '50%' : '2px',
-                    opacity: 0.8,
-                    animation: `confettiFall ${duration}s linear ${delay}s infinite`
+                    fontSize: isStar ? `${size}px` : undefined,
+                    color: isStar ? color : undefined,
+                    width: isStar ? undefined : `${size}px`,
+                    height: isStar ? undefined : `${size}px`,
+                    background: isStar ? undefined : color,
+                    borderRadius: isStar ? undefined : (Math.random() > 0.5 ? '50%' : '3px'),
+                    opacity: 0.9,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    animation: `confettiFall ${duration}s linear ${delay}s infinite`,
+                    pointerEvents: 'none'
                   }}
-                />
+                >
+                  {isStar && '★'}
+                </div>
               );
             })}
           </div>
 
           <div style={{
             position: 'absolute',
-            width: '250px',
-            height: '250px',
-            background: 'radial-gradient(circle, rgba(124, 58, 237, 0.25) 0%, rgba(0,0,0,0) 70%)',
+            width: '300px',
+            height: '300px',
+            background: 'radial-gradient(circle, rgba(255, 199, 44, 0.4) 0%, rgba(255, 255, 255, 0) 70%)',
             filter: 'blur(30px)',
             pointerEvents: 'none',
             zIndex: 10000
           }} />
 
-          <div className="glass-panel animate-modal" style={{
-            maxWidth: '480px', width: '100%',
-            padding: isMobile ? '2rem 1.5rem' : '3rem 2.5rem', position: 'relative',
-            background: 'rgba(20, 20, 25, 0.8)', border: '1px solid rgba(124, 58, 237, 0.3)',
-            boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.8)',
-            textAlign: 'center', zIndex: 10002
+          <div className="animate-modal" style={{
+            maxWidth: '440px', width: '100%',
+            padding: isMobile ? '2.25rem 1.25rem' : '3rem 2rem', position: 'relative',
+            background: '#FFFFFF', 
+            border: '6px solid #FFC72C', 
+            borderRadius: '32px',
+            boxShadow: '0 16px 0px #D97706, 0 35px 60px rgba(0, 0, 0, 0.15)',
+            textAlign: 'center', zIndex: 10002,
+            overflow: 'hidden'
           }}>
-            {/* Crown Icon */}
-            <div className="upgrade-success-icon-container">
-              <Crown size={42} color="#fff" />
+            {/* Center Header Wrapper with Spinning Sunburst and Crown Badge */}
+            <div style={{ position: 'relative', height: '140px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '0.5rem', zIndex: 2 }}>
+              {/* Spinning Sunburst Background */}
+              <div style={{
+                position: 'absolute',
+                top: '50%', left: '50%',
+                transform: 'translate(-50%, -50%)',
+                width: '360px',
+                height: '360px',
+                background: 'conic-gradient(from 0deg, rgba(255, 215, 0, 0.18) 0deg 18deg, transparent 18deg 36deg, rgba(255, 215, 0, 0.18) 36deg 54deg, transparent 54deg 72deg, rgba(255, 215, 0, 0.18) 72deg 90deg, transparent 90deg 108deg, rgba(255, 215, 0, 0.18) 108deg 126deg, transparent 126deg 144deg, rgba(255, 215, 0, 0.18) 144deg 162deg, transparent 162deg 180deg, rgba(255, 215, 0, 0.18) 180deg 198deg, transparent 198deg 216deg, rgba(255, 215, 0, 0.18) 216deg 234deg, transparent 234deg 252deg, rgba(255, 215, 0, 0.18) 252deg 270deg, transparent 270deg 288deg, rgba(255, 215, 0, 0.18) 288deg 306deg, transparent 306deg 324deg, rgba(255, 215, 0, 0.18) 324deg 342deg, transparent 342deg 360deg)',
+                borderRadius: '50%',
+                pointerEvents: 'none',
+                animation: 'spinSunburst 10s linear infinite',
+                zIndex: 1
+              }} />
+              
+              {/* Crown Icon Badge */}
+              <div className="upgrade-success-icon-container" style={{ position: 'relative', zIndex: 2 }}>
+                <Crown size={52} color="#fff" fill="#fff" />
+              </div>
             </div>
 
             {/* Congratulatory Text */}
-            <h2 className="text-gradient" style={{
+            <h2 style={{
               fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontSize: '2rem',
+              fontSize: isMobile ? '2rem' : '2.5rem',
               fontWeight: 900,
-              letterSpacing: '-0.03em',
-              margin: '1.5rem 0 0.5rem 0'
+              background: 'linear-gradient(to bottom, #FFE875 0%, #F59E0B 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              WebkitTextStroke: '2px #78350F',
+              textShadow: '0 4px 0px rgba(120, 53, 15, 0.3)',
+              letterSpacing: '-0.02em',
+              margin: '1rem 0 0.25rem 0',
+              textTransform: 'uppercase',
+              position: 'relative', zIndex: 2
             }}>
-              Félicitations ! 👑
+              VICTOIRE ! 🎉
             </h2>
             <p style={{
-              fontSize: '1.1rem',
-              color: '#FFFFFF',
-              fontWeight: 700,
-              margin: 0
+              fontSize: '1.25rem',
+              color: '#78350F',
+              fontWeight: 800,
+              margin: '0 0 1.25rem 0',
+              position: 'relative', zIndex: 2
             }}>
-              Vous êtes désormais Premium !
+              Accès Premium Activé
             </p>
 
             {/* Plan Details Summary */}
             <div style={{
-              background: 'rgba(124, 58, 237, 0.06)',
-              border: '1px solid rgba(124, 58, 237, 0.15)',
-              borderRadius: '16px',
-              padding: '1.25rem',
-              margin: '1.75rem 0',
-              textAlign: 'left'
+              background: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 100%)',
+              border: '3px solid #FCD34D',
+              borderRadius: '20px',
+              padding: '1rem',
+              margin: '1.25rem 0',
+              textAlign: 'center',
+              boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.05)',
+              position: 'relative', zIndex: 2
             }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '0.8rem', fontWeight: 700, color: 'rgba(255, 255, 255, 0.5)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Abonnement activé</span>
-                <span className="badge badge-pro" style={{ fontSize: '0.7rem', padding: '0.15rem 0.5rem' }}>Premium</span>
-              </div>
-              <h4 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF' }}>
+              <span style={{ 
+                fontSize: '0.8rem', 
+                padding: '0.25rem 0.75rem',
+                background: '#FF8C00',
+                color: '#fff',
+                fontWeight: 900,
+                borderRadius: '50px',
+                textTransform: 'uppercase',
+                boxShadow: '0 3px 0px #B26200',
+                display: 'inline-block',
+                marginBottom: '0.5rem'
+              }}>
+                Statut : PREMIUM 👑
+              </span>
+              <h4 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 900, color: '#78350F' }}>
                 {upgradedPlan.name}
               </h4>
-              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.85rem', color: 'rgba(255, 255, 255, 0.7)' }}>
-                Durée d'accès : <strong style={{ color: '#FFFFFF' }}>{upgradedPlan.durationDays} jours</strong> complets
+              <p style={{ margin: '0.25rem 0 0 0', fontSize: '0.95rem', color: '#B45309', fontWeight: 700 }}>
+                Durée : {upgradedPlan.durationDays} jours de préparation
               </p>
             </div>
 
             {/* Unlocked Features Checkmarks */}
             <div style={{
               display: 'flex', flexDirection: 'column', gap: '0.75rem',
-              textAlign: 'left', marginBottom: '2.25rem', paddingLeft: '0.5rem'
+              textAlign: 'left', marginBottom: '2rem',
+              position: 'relative', zIndex: 2
             }}>
               {[
                 "Accès illimité à toutes les archives (2010–2025)",
                 "Astuces IA (Cheat codes) pour chaque QCM",
                 "Simulateur de concours et Heatmaps des faiblesses"
               ].map((feat, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', fontSize: '0.9rem', color: 'rgba(255, 255, 255, 0.9)' }}>
-                  <CheckCircle2 size={16} color="var(--emerald)" style={{ flexShrink: 0 }} />
+                <div key={idx} style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.75rem', 
+                  fontSize: '0.95rem', 
+                  color: '#4B5563', 
+                  fontWeight: 700,
+                  background: '#F9FAFB',
+                  border: '2px solid #E5E7EB',
+                  borderRadius: '16px',
+                  padding: '0.75rem 1rem',
+                  boxShadow: '0 4px 0px #E5E7EB'
+                }}>
+                  <div style={{
+                    width: 26, height: 26, borderRadius: '50%',
+                    background: '#10B981', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                    boxShadow: '0 2px 0px #047857'
+                  }}>
+                    <CheckCircle2 size={16} color="#fff" />
+                  </div>
                   <span>{feat}</span>
                 </div>
               ))}
@@ -302,22 +369,22 @@ export default function Layout() {
                 setUpgradedPlan(null);
                 navigate('/dashboard');
               }}
-              className="btn"
+              className="btn btn-game"
               style={{
                 width: '100%',
-                padding: '0.9rem',
-                fontSize: '1.05rem',
-                fontWeight: 800,
-                background: 'linear-gradient(135deg, var(--violet), #818cf8)',
+                padding: '1.1rem',
+                fontSize: '1.25rem',
+                fontWeight: 900,
+                background: '#10B981',
                 color: '#fff',
-                borderRadius: '14px',
+                borderRadius: '20px',
                 border: 'none',
-                boxShadow: '0 10px 25px rgba(124, 58, 237, 0.3)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '0.5rem'
+                gap: '0.5rem',
+                position: 'relative', zIndex: 2
               }}
             >
               C'est parti ! 🚀
@@ -326,37 +393,56 @@ export default function Layout() {
 
           <style dangerouslySetInnerHTML={{__html: `
             .animate-modal {
-              animation: modalScale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+              animation: modalBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
             }
             .upgrade-success-icon-container {
-              width: 90px;
-              height: 90px;
+              width: 104px;
+              height: 104px;
               border-radius: 50%;
-              background: linear-gradient(135deg, var(--violet), #818cf8);
+              border: 4px solid #FFFFFF;
+              background: linear-gradient(135deg, #FFD700 0%, #FF8C00 100%);
               display: flex;
               align-items: center;
-              justifyContent: center;
+              justify-content: center;
               margin: 0 auto;
-              animation: glowPulse 2.5s infinite ease-in-out, floatIcon 4s infinite ease-in-out;
-              box-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
+              animation: floatIcon 3s infinite ease-in-out;
+              box-shadow: 0 6px 0px #B45309, 0 12px 24px rgba(245, 158, 11, 0.4);
             }
-            @keyframes modalScale {
-              0% { transform: scale(0.92); opacity: 0; }
+            .btn-game {
+              background: #10B981 !important;
+              border: none !important;
+              border-bottom: 6px solid #059669 !important;
+              box-shadow: 0 8px 0px rgba(5, 150, 105, 0.2), 0 12px 24px rgba(16, 185, 129, 0.3) !important;
+              transition: all 0.1s ease !important;
+              transform: translateY(0px);
+            }
+            .btn-game:hover {
+              background: #059669 !important;
+              border-bottom-width: 6px !important;
+              transform: translateY(-2px) !important;
+              box-shadow: 0 10px 0px rgba(4, 120, 87, 0.2), 0 16px 28px rgba(16, 185, 129, 0.4) !important;
+            }
+            .btn-game:active {
+              transform: translateY(4px) !important;
+              border-bottom-width: 2px !important;
+              box-shadow: 0 2px 0px rgba(4, 120, 87, 0.2), 0 6px 12px rgba(16, 185, 129, 0.3) !important;
+            }
+            @keyframes modalBounce {
+              0% { transform: scale(0.85); opacity: 0; }
               100% { transform: scale(1); opacity: 1; }
             }
-            @keyframes glowPulse {
-              0% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.4); }
-              50% { box-shadow: 0 0 35px rgba(124, 58, 237, 0.7), 0 0 20px rgba(16, 185, 129, 0.4); }
-              100% { box-shadow: 0 0 20px rgba(124, 58, 237, 0.4); }
+            @keyframes spinSunburst {
+              0% { transform: translate(-50%, -50%) rotate(0deg); }
+              100% { transform: translate(-50%, -50%) rotate(360deg); }
             }
             @keyframes floatIcon {
               0% { transform: translateY(0px) rotate(0deg); }
-              50% { transform: translateY(-8px) rotate(3deg); }
+              50% { transform: translateY(-8px) rotate(6deg); }
               100% { transform: translateY(0px) rotate(0deg); }
             }
             @keyframes confettiFall {
-              0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
-              100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+              0% { transform: translateY(-30px) rotate(0deg); opacity: 1; }
+              100% { transform: translateY(105vh) rotate(360deg); opacity: 0; }
             }
           `}} />
         </div>
