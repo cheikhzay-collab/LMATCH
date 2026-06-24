@@ -1,10 +1,22 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Papa from 'papaparse';
 import { useAuth } from '../context/AuthContext';
 import { UploadCloud, CheckCircle2, Copy, Check, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function AdminUpload() {
+  const isMobile = useIsMobile();
   const { addExam, schools } = useAuth();
   const [examName, setExamName] = useState('');
   const [school, setSchool] = useState(schools[0] || 'Médecine');
@@ -374,7 +386,7 @@ Langue : Français (termes mathématiques en LaTeX)`;
             </div>
           </div>
 
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2rem' }}>
+          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '1rem' : '2rem' }}>
             {/* CSV Upload */}
             <div className="input-group">
               <label>Contenu de l'examen (.csv)</label>
@@ -429,7 +441,9 @@ Langue : Français (termes mathématiques en LaTeX)`;
                 borderRadius:'1rem', 
                 border:'1px solid var(--border)',
                 maxHeight: '400px',
+                overflowX: 'auto',
                 overflowY: 'auto',
+                width: '100%',
                 padding: '1px'
               }}>
                 <table style={{ width:'100%', borderCollapse:'collapse', fontSize:'0.85rem' }}>

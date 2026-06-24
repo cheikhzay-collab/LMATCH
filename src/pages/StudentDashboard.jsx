@@ -25,6 +25,7 @@ export default function StudentDashboard() {
     profPhone, 
     profSite, 
     updateProfile,
+    trackDownload,
     loadExamQuestions,
     loading: authLoading,
     supabaseEnabled
@@ -36,12 +37,12 @@ export default function StudentDashboard() {
   const stats = useMemo(() => getStudentStats(), [getStudentStats]);
   const [toastMessage, setToastMessage] = useState(null);
   const [showOnboarding, setShowOnboarding] = useState(() => {
-    return !!(user && user.role === 'student' && (!user.phone || !user.city));
+    return !!(user && user.role === 'student' && (!user.phone || !user.city || !user.school));
   });
 
   // Auto-trigger onboarding if fields are empty
   useEffect(() => {
-    const shouldShow = !!(user && user.role === 'student' && (!user.phone || !user.city));
+    const shouldShow = !!(user && user.role === 'student' && (!user.phone || !user.city || !user.school));
     if (shouldShow !== showOnboarding) {
       const timer = setTimeout(() => {
         setShowOnboarding(shouldShow);
@@ -50,8 +51,8 @@ export default function StudentDashboard() {
     }
   }, [user, showOnboarding]);
 
-  const handleOnboardingSubmit = useCallback(async ({ phone, city }) => {
-    await updateProfile({ phone, city });
+  const handleOnboardingSubmit = useCallback(async ({ phone, city, school }) => {
+    await updateProfile({ phone, city, school });
     setShowOnboarding(false);
   }, [updateProfile]);
 
@@ -247,7 +248,15 @@ export default function StudentDashboard() {
     
     const html = generateStudentReportHTML({ ...exam, questions }, scoreObj, corrected, settings);
     openPrintWindow(html);
-  }, [exams, profName, profPhone, profSite, loadExamQuestions]);
+
+    if (trackDownload) {
+      trackDownload({
+        type: 'report',
+        id: item.examId || 'unknown',
+        title: `Bulletin : ${item.examName || 'Examen Blanc'}`
+      });
+    }
+  }, [exams, profName, profPhone, profSite, loadExamQuestions, trackDownload]);
 
   const onNavigateToSchools = useCallback(() => navigate('/schools'), [navigate]);
   const onNavigateToScanner = useCallback(() => navigate('/scanner'), [navigate]);
@@ -561,6 +570,7 @@ export default function StudentDashboard() {
         <OnboardingModal 
           initialPhone={user?.phone || ''} 
           initialCity={user?.city || ''} 
+          initialSchool={user?.school || ''}
           onSubmit={handleOnboardingSubmit} 
         />
       )}

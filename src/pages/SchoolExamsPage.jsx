@@ -54,7 +54,7 @@ function useIsMobile() {
 export default function SchoolExamsPage() {
   const { schoolName } = useParams();
   const school = decodeURIComponent(schoolName);
-  const { exams, user, schoolBranding, schools, isExamLocked, loadExamQuestions } = useAuth();
+  const { exams, user, schoolBranding, schools, isExamLocked, loadExamQuestions, trackDownload } = useAuth();
   const navigate = useNavigate();
   const [scanExam, setScanExam] = useState(null);
   const isMobile = useIsMobile();
@@ -358,6 +358,9 @@ export default function SchoolExamsPage() {
                         navigate(user ? '/subscription' : '/login');
                         return;
                       }
+                      if (typeof trackDownload === 'function') {
+                        trackDownload({ type: 'sujet', id: exam.id, title: `${exam.name} - Sujet` });
+                      }
                       if (exam.pdfUrl) {
                         window.open(exam.pdfUrl, '_blank');
                       } else {
@@ -413,6 +416,9 @@ export default function SchoolExamsPage() {
                         navigate(user ? '/subscription' : '/login');
                         return;
                       }
+                      if (typeof trackDownload === 'function') {
+                        trackDownload({ type: 'corrige', id: exam.id, title: `${exam.name} - Corrigé` });
+                      }
                       if (isMobile) {
                         // On mobile, open the dedicated print view in a new tab synchronously to bypass popup blockers
                         window.open(`/print?examId=${exam.id}&type=corrige`, '_blank');
@@ -463,6 +469,9 @@ export default function SchoolExamsPage() {
                       if (locked) {
                         navigate(user ? '/subscription' : '/login');
                         return;
+                      }
+                      if (typeof trackDownload === 'function') {
+                        trackDownload({ type: 'grille', id: exam.id, title: `${exam.name} - Grille OMR` });
                       }
                       handleDownloadPDF(exam);
                     }}

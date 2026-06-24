@@ -9,10 +9,22 @@ import {
   CheckCircle, Loader2, ChevronUp, ChevronDown 
 } from 'lucide-react';
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function AdminLessonEdit() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { schools, user, loading: authLoading } = useAuth();
+  const isMobile = useIsMobile();
 
   // Role Guard
   if (!authLoading && user?.role !== 'admin') {
@@ -468,7 +480,7 @@ export default function AdminLessonEdit() {
                 </div>
 
                 {/* Section Title */}
-                <div style={{ display: 'flex', gap: '1rem', width: '80%', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', width: '100%', marginBottom: '1.25rem' }}>
                   <div style={{ flex: 1 }}>
                     <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)' }}>Titre du Bloc</label>
                     <input 
@@ -479,7 +491,7 @@ export default function AdminLessonEdit() {
                       style={{ fontWeight: 800, fontSize: '1rem' }}
                     />
                   </div>
-                  <div style={{ width: '150px' }}>
+                  <div style={{ width: isMobile ? '100%' : '150px' }}>
                     <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)' }}>Type</label>
                     <select 
                       className="input-control"
@@ -493,7 +505,7 @@ export default function AdminLessonEdit() {
                 </div>
 
                 {/* Section Metadata Grid */}
-                <div style={{ display: 'grid', gridTemplateColumns: '80px 1.5fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '80px 1.5fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>N° Section</label>
                     <input 
@@ -540,13 +552,13 @@ export default function AdminLessonEdit() {
                     </div>
 
                     {sec.items?.map((item, itemIdx) => (
-                      <div key={itemIdx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start', borderBottom: '1px solid rgba(255,255,255,0.01)', paddingBottom: '0.75rem' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                      <div key={itemIdx} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '0.75rem', alignItems: isMobile ? 'stretch' : 'flex-start', borderBottom: '1px solid rgba(255,255,255,0.01)', paddingBottom: '0.75rem', width: '100%' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', width: isMobile ? '100%' : 'auto' }}>
                           <select
                             className="input-control"
                             value={item.type}
                             onChange={e => handleUpdateContentItem(secIdx, itemIdx, 'type', e.target.value)}
-                            style={{ width: '140px', flexShrink: 0, padding: '0.4rem' }}
+                            style={{ width: isMobile ? '100%' : '140px', flexShrink: 0, padding: '0.4rem' }}
                           >
                             <option value="text">Texte Standard</option>
                             <option value="bullet">Puce (Bullet)</option>
@@ -725,7 +737,7 @@ export default function AdminLessonEdit() {
 
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                         {sec.interactive_answers?.map((ans, ansIdx) => (
-                          <div key={ansIdx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                          <div key={ansIdx} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '0.75rem', alignItems: isMobile ? 'stretch' : 'center', width: '100%' }}>
                             <span style={{ fontSize: '0.8rem', fontWeight: 900 }}>Q{ans.question_idx} :</span>
                             <input
                               type="text"
@@ -733,7 +745,7 @@ export default function AdminLessonEdit() {
                               value={ans.label}
                               onChange={e => handleUpdateInteractiveAnswer(secIdx, ansIdx, 'label', e.target.value)}
                               placeholder="Libellé (ex: Entrez la valeur de x)"
-                              style={{ flex: 1, padding: '0.4rem' }}
+                              style={{ flex: 1, width: isMobile ? '100%' : 'auto', padding: '0.4rem' }}
                             />
                             <input
                               type="text"
@@ -741,7 +753,7 @@ export default function AdminLessonEdit() {
                               value={ans.expected_answer}
                               onChange={e => handleUpdateInteractiveAnswer(secIdx, ansIdx, 'expected_answer', e.target.value)}
                               placeholder="Réponse exacte attendue"
-                              style={{ width: '180px', padding: '0.4rem' }}
+                              style={{ width: isMobile ? '100%' : '180px', padding: '0.4rem' }}
                             />
                             <button
                               onClick={() => handleRemoveInteractiveAnswer(secIdx, ansIdx)}
@@ -760,11 +772,11 @@ export default function AdminLessonEdit() {
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-          <button onClick={() => navigate('/admin/lessons')} className="btn-outline" style={{ padding: '1rem 2rem' }} disabled={saving}>
+        <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem', width: '100%' }}>
+          <button onClick={() => navigate('/admin/lessons')} className="btn-outline" style={{ padding: '1rem 2rem', width: isMobile ? '100%' : 'auto', justifyContent: 'center', display: 'flex' }} disabled={saving}>
             Annuler
           </button>
-          <button onClick={handleSaveLesson} className="btn" style={{ padding: '1rem 2rem' }} disabled={saving}>
+          <button onClick={handleSaveLesson} className="btn" style={{ padding: '1rem 2rem', width: isMobile ? '100%' : 'auto', justifyContent: 'center', display: 'flex' }} disabled={saving}>
             {saving ? (
               <>
                 <Loader2 className="animate-spin" size={18} style={{ marginRight: '0.5rem' }} />

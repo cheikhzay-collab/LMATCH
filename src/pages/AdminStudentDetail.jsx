@@ -5,7 +5,7 @@ import { getAllProgress, getMockHistory, getLoginLogs } from '../services/userSe
 import { 
   ArrowLeft, Crown, User, Calendar, Target, 
   BarChart3, Clock, BookOpen, TrendingUp, Loader2,
-  Phone, MapPin
+  Phone, MapPin, FileDown, FileText
 } from 'lucide-react';
 
 const WhatsAppIcon = ({ size = 20, ...props }) => (
@@ -32,10 +32,22 @@ const getWhatsAppLink = (phone) => {
   return `https://wa.me/${cleaned}`;
 };
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function AdminStudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { users, plans, activateSubscription, cancelSubscription, deleteStudent } = useAuth();
+  const isMobile = useIsMobile();
   
   const [isWaHovered, setIsWaHovered] = useState(false);
   
@@ -59,11 +71,11 @@ export default function AdminStudentDetail() {
     }
   };
   
-  // Real Database Student Details
   const [realHistory, setRealHistory] = useState([]);
   const [realProgress, setRealProgress] = useState({});
   const [realLoginLogs, setRealLoginLogs] = useState([]);
   const [loadingStats, setLoadingStats] = useState(true);
+  const [examTab, setExamTab] = useState('online');
 
   useEffect(() => {
     if (!student) return;
@@ -147,8 +159,11 @@ export default function AdminStudentDetail() {
     );
   }
 
-  // 5. Format real history items
-  const recentHistory = realHistory.slice(0, 10).map(item => {
+  // 5. Format real history items by type
+  const onlineHistory = realHistory.filter(item => item.mode !== 'omr');
+  const omrHistory = realHistory.filter(item => item.mode === 'omr');
+
+  const formatHistoryItem = (item) => {
     const percentage = Math.round(item.pct || 0);
     const dateStr = item.date 
       ? new Date(item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) 
@@ -157,9 +172,15 @@ export default function AdminStudentDetail() {
       exam: item.examName,
       date: dateStr,
       result: `${item.score}/${item.maxScore} (${percentage}%)`,
-      status: percentage >= 50 ? 'pass' : 'fail'
+      status: percentage >= 50 ? 'pass' : 'fail',
+      correctCount: item.correctCount,
+      wrongCount: item.wrongCount,
+      emptyCount: item.emptyCount
     };
-  });
+  };
+
+  const formattedOnlineHistory = onlineHistory.slice(0, 20).map(formatHistoryItem);
+  const formattedOmrHistory = omrHistory.slice(0, 20).map(formatHistoryItem);
 
   return (
     <div className="animate-fade-in" style={{ maxWidth: '1200px', margin: '0 auto', direction: 'ltr', textAlign: 'left' }}>
@@ -192,14 +213,42 @@ export default function AdminStudentDetail() {
             }}>
               {student.name ? student.name.charAt(0) : 'U'}
             </div>
-            <h2 style={{ margin: '0 0 0.5rem 0' }}>{student.name || 'Étudiant'}</h2>
+            <h2 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+              {student.name || 'Étudiant'}
+              {(() => {
+                const isOnline = student.updatedAt && (new Date() - new Date(student.updatedAt) < 5 * 60 * 1000);
+                return (
+                  <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    fontSize: '0.65rem',
+                    fontWeight: 800,
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '99px',
+                    background: isOnline ? 'rgba(16, 185, 129, 0.12)' : 'rgba(156, 163, 175, 0.08)',
+                    color: isOnline ? '#10B981' : '#9CA3AF',
+                    border: `1px solid ${isOnline ? 'rgba(16, 185, 129, 0.25)' : 'rgba(156, 163, 175, 0.15)'}`
+                  }}>
+                    <span style={{
+                      width: '6px',
+                      height: '6px',
+                      borderRadius: '50%',
+                      background: isOnline ? '#10B981' : '#9CA3AF',
+                      boxShadow: isOnline ? '0 0 6px #10B981' : 'none'
+                    }} />
+                    {isOnline ? 'EN LIGNE' : 'HORS LIGNE'}
+                  </span>
+                );
+              })()}
+            </h2>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'0.5rem', color:'var(--text-muted)', marginBottom:'1.5rem' }}>
               <Calendar size={16} />
               <span>Membre depuis {student.joined ? new Date(student.joined).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) : 'Mai 2026'}</span>
             </div>
             
-            <div style={{ display:'flex', gap:'1rem' }}>
-               <div style={{ flex:1, padding:'1rem', background:'rgba(255,255,255,0.02)', borderRadius:'12px', border:'1px solid var(--border)' }}>
+            <div style={{ display:'flex', flexDirection: isMobile ? 'column' : 'row', gap:'1rem' }}>
+               <div style={{ flex: 1, padding:'1rem', background:'rgba(255,255,255,0.02)', borderRadius:'12px', border:'1px solid var(--border)' }}>
                   <div style={{ fontSize:'0.75rem', color:'var(--text-muted)', marginBottom:'0.25rem' }}>Type de Compte</div>
                   <div style={{ fontWeight:800, color: student.tier === 'premium' ? 'var(--warning)' : 'var(--text-main)', display:'flex', alignItems:'center', justifyContent:'center', gap:'0.4rem' }}>
                     {student.tier === 'premium' ? <><Crown size={16}/> PREMIUM</> : <><User size={16}/> GRATUIT</>}
@@ -272,6 +321,19 @@ export default function AdminStudentDetail() {
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Ville</div>
                   <div style={{ fontWeight: 700, fontSize: '0.95rem', color: student.city ? 'var(--text-main)' : 'var(--text-subtle)' }}>
                     {student.city || 'Non renseignée'}
+                  </div>
+                </div>
+              </div>
+
+              {/* École Ciblée */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', background: 'rgba(255, 255, 255, 0.01)', border: '1px solid var(--border)', padding: '0.85rem 1rem', borderRadius: '12px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(129, 140, 248, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#818CF8' }}>
+                  <Target size={18} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>École Ciblée</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.95rem', color: student.school ? 'var(--text-main)' : 'var(--text-subtle)' }}>
+                    {student.school || 'Non renseignée'}
                   </div>
                 </div>
               </div>
@@ -455,7 +517,7 @@ export default function AdminStudentDetail() {
                 <Loader2 className="animate-spin" size={32} color="var(--primary)" />
               </div>
             ) : (
-              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'2rem' }}>
+              <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '1rem' : '2rem' }}>
                 {performanceData.map(data => (
                   <div key={data.subject}>
                     <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.5rem', fontSize:'0.9rem' }}>
@@ -473,46 +535,212 @@ export default function AdminStudentDetail() {
 
           {/* Exam Result History */}
           <div className="glass-panel" style={{ padding:'2rem' }}>
-            <h3 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
-              <Clock size={24} color="var(--violet)" /> Historique Réel des Examens Blancs
-            </h3>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <Clock size={24} color="var(--violet)" /> Historique des Examens
+              </h3>
+              
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.02)',
+                border: '1px solid var(--border)',
+                borderRadius: '8px',
+                padding: '2px',
+                display: 'flex',
+                gap: '2px'
+              }}>
+                <button
+                  onClick={() => setExamTab('online')}
+                  style={{
+                    border: 'none',
+                    background: examTab === 'online' ? 'var(--violet)' : 'transparent',
+                    color: examTab === 'online' ? '#fff' : 'var(--text-muted)',
+                    padding: '0.4rem 0.8rem',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Examens en Ligne
+                </button>
+                <button
+                  onClick={() => setExamTab('omr')}
+                  style={{
+                    border: 'none',
+                    background: examTab === 'omr' ? 'var(--violet)' : 'transparent',
+                    color: examTab === 'omr' ? '#fff' : 'var(--text-muted)',
+                    padding: '0.4rem 0.8rem',
+                    borderRadius: '6px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Scans OMR (Papier)
+                </button>
+              </div>
+            </div>
             
             {loadingStats ? (
               <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
                 <Loader2 className="animate-spin" size={32} color="var(--primary)" />
               </div>
-            ) : recentHistory.length === 0 ? (
+            ) : examTab === 'online' ? (
+              formattedOnlineHistory.length === 0 ? (
+                <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
+                  Aucun examen blanc n'a été passé en ligne pour le moment.
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+                  {formattedOnlineHistory.map((item, idx) => (
+                    <div key={idx} style={{ padding:'1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'1rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '1rem' : '0' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', textAlign: 'left' }}>
+                        <div style={{ 
+                          width:'48px', height:'48px', borderRadius:'12px', 
+                          background: item.status === 'pass' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                          color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)'
+                        }}>
+                          <BookOpen size={24} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight:800, fontSize:'1.05rem' }}>{item.exam}</div>
+                          <div style={{ fontSize:'0.85rem', color:'var(--text-muted)' }}>Date : {item.date}</div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign:'right' }}>
+                        <div style={{ fontSize:'1.25rem', fontWeight:900, color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)' }}>
+                          {item.result}
+                        </div>
+                        <div style={{ fontSize:'0.75rem', fontWeight:800, textTransform:'uppercase', color:'var(--text-muted)' }}>
+                          {item.status === 'pass' ? 'REÇU' : 'ÉCHEC'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : (
+              formattedOmrHistory.length === 0 ? (
+                <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
+                  Aucun scan OMR n'a été importé pour le moment.
+                </div>
+              ) : (
+                <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+                  {formattedOmrHistory.map((item, idx) => (
+                    <div key={idx} style={{ padding:'1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'1rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '1rem' : '0' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', textAlign: 'left' }}>
+                        <div style={{ 
+                          width:'48px', height:'48px', borderRadius:'12px', 
+                          background: item.status === 'pass' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                          color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)'
+                        }}>
+                          <BookOpen size={24} />
+                        </div>
+                        <div>
+                          <div style={{ fontWeight:800, fontSize:'1.05rem' }}>{item.exam}</div>
+                          <div style={{ fontSize:'0.85rem', color:'var(--text-muted)' }}>Date : {item.date}</div>
+                          
+                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', background: 'rgba(16, 185, 129, 0.08)', color: 'var(--emerald)', fontWeight: 800 }}>
+                              {item.correctCount || 0} Corrects
+                            </span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', fontWeight: 800 }}>
+                              {item.wrongCount || 0} Incorrects
+                            </span>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', fontWeight: 800 }}>
+                              {item.emptyCount || 0} Vides
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign:'right' }}>
+                        <div style={{ fontSize:'1.25rem', fontWeight:900, color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)' }}>
+                          {item.result}
+                        </div>
+                        <div style={{ fontSize:'0.75rem', fontWeight:800, textTransform:'uppercase', color:'var(--text-muted)' }}>
+                          {item.status === 'pass' ? 'REÇU' : 'ÉCHEC'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
+
+          {/* Historique des Téléchargements */}
+          <div className="glass-panel" style={{ padding:'2rem' }}>
+            <h3 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
+              <FileDown size={24} color="var(--violet)" /> Historique des Téléchargements
+            </h3>
+            
+            {!student.downloads || student.downloads.length === 0 ? (
               <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
-                Aucun examen blanc n'a été passé pour le moment.
+                Aucun téléchargement enregistré pour le moment.
               </div>
             ) : (
-              <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-                {recentHistory.map((item, idx) => (
-                  <div key={idx} style={{ padding:'1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'1rem', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:'1.25rem' }}>
-                      <div style={{ 
-                        width:'48px', height:'48px', borderRadius:'12px', 
-                        background: item.status === 'pass' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                        display:'flex', alignItems:'center', justifyContent:'center',
-                        color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)'
-                      }}>
-                        <BookOpen size={24} />
+              <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                {student.downloads.map((item, idx) => {
+                  const dateObj = new Date(item.downloadedAt || item.date || new Date());
+                  const dateStr = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+                  const timeStr = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                  
+                  let TypeIcon = FileText;
+                  let typeColor = 'var(--violet)';
+                  let typeLabel = 'DOCUMENT';
+                  
+                  if (item.type === 'sujet') {
+                    typeColor = 'var(--primary)';
+                    typeLabel = 'SUJET';
+                  } else if (item.type === 'corrige') {
+                    typeColor = 'var(--emerald)';
+                    typeLabel = 'CORRIGÉ';
+                  } else if (item.type === 'grille') {
+                    typeColor = 'var(--warning)';
+                    typeLabel = 'GRILLE OMR';
+                  } else if (item.type === 'lesson') {
+                    typeColor = 'var(--accent)';
+                    typeLabel = 'COURS';
+                  } else if (item.type === 'report') {
+                    typeColor = '#A78BFA';
+                    typeLabel = 'RAPPORT';
+                  }
+                  
+                  return (
+                    <div key={idx} style={{ padding:'0.85rem 1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'0.75rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0.5rem' : '0' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', textAlign: 'left' }}>
+                        <div style={{ 
+                          width: '36px', height: '36px', borderRadius: '8px', 
+                          background: `${typeColor}15`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          color: typeColor
+                        }}>
+                          <TypeIcon size={18} />
+                        </div>
+                        <div>
+                          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>{item.title || 'Téléchargement'}</span>
+                          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
+                            <span style={{
+                              fontSize: '0.65rem',
+                              fontWeight: 800,
+                              padding: '0.1rem 0.4rem',
+                              borderRadius: '4px',
+                              background: `${typeColor}15`,
+                              color: typeColor
+                            }}>
+                              {typeLabel}
+                            </span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontWeight:800, fontSize:'1.05rem' }}>{item.exam}</div>
-                        <div style={{ fontSize:'0.85rem', color:'var(--text-muted)' }}>Date : {item.date}</div>
-                      </div>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>{dateStr} à {timeStr}</span>
                     </div>
-                    <div style={{ textAlign:'right' }}>
-                      <div style={{ fontSize:'1.25rem', fontWeight:900, color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)' }}>
-                        {item.result}
-                      </div>
-                      <div style={{ fontSize:'0.75rem', fontWeight:800, textTransform:'uppercase', color:'var(--text-muted)' }}>
-                        {item.status === 'pass' ? 'REÇU' : 'ÉCHEC'}
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -538,8 +766,8 @@ export default function AdminStudentDetail() {
                   const dateStr = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
                   const timeStr = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
                   return (
-                    <div key={log.id || idx} style={{ padding:'0.85rem 1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'0.75rem', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                    <div key={log.id || idx} style={{ padding:'0.85rem 1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'0.75rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0.5rem' : '0' }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', textAlign: 'left' }}>
                         <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--emerald)', boxShadow: '0 0 8px var(--emerald)' }}></div>
                         <span style={{ fontWeight:700, fontSize:'0.9rem', color: 'var(--text-main)' }}>Connexion réussie</span>
                       </div>

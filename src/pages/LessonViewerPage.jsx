@@ -45,7 +45,7 @@ const parseExerciseTitle = (title, fallbackIdx) => {
 export default function LessonViewerPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, loading: authLoading, profName, profPhone } = useAuth();
+  const { user, loading: authLoading, profName, profPhone, trackDownload } = useAuth();
 
   if (!authLoading && user?.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
@@ -124,6 +124,9 @@ export default function LessonViewerPage() {
     if (isExporting || !lesson) return;
     setIsExporting(true);
     try {
+      if (typeof trackDownload === 'function') {
+        trackDownload({ type: 'lesson', id: lesson.id, title: lesson.content?.header?.fiche_title || lesson.title || 'Fiche de Cours' });
+      }
       openLessonPrintWindow(lesson);
     } catch (err) {
       console.error('[PDF Export] Error:', err);

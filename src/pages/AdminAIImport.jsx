@@ -282,7 +282,19 @@ Pour chaque question:
 - question_number = numéro ORIGINAL du document (pas le rang dans la liste)
 - Ne retourne QUE le tableau JSON brut [ {...}, {...} ], ZÉRO texte avant ou après`;
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function AdminAIImport() {
+  const isMobile = useIsMobile();
   const { addExam, schools } = useAuth();
   const navigate = useNavigate();
 
@@ -881,7 +893,7 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
           {/* AI Provider Toggle */}
           <div className="input-group" style={{ marginBottom: '1.5rem' }}>
             <label>Moteur d'intelligence artificielle</label>
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.25rem' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '0.75rem', marginTop: '0.25rem' }}>
               <button
                 type="button"
                 onClick={() => { setProvider('gemini'); localStorage.setItem('aiImportProvider', 'gemini'); }}
@@ -1077,7 +1089,7 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
           )}
 
           {/* Exam metadata */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1.5rem' }}>
             <div className="input-group">
               <label>École cible</label>
               <select className="input-control" value={school} onChange={e => setSchool(e.target.value)}>

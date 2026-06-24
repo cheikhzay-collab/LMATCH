@@ -23,8 +23,20 @@ const saveSettings = (data) => localStorage.setItem(SETTINGS_KEY, JSON.stringify
 const estimatePages = (qCount, qPerPage, hasCover) =>
   (hasCover ? 1 : 0) + Math.max(1, Math.ceil(qCount / Math.max(1, qPerPage)));
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function AdminEbooks() {
   const { exams, profName, profPhone, profSite } = useAuth();
+  const isMobile = useIsMobile();
   
   // UI Tabs State
   const [activeTab, setActiveTab] = useState('topics'); // 'topics' | 'compilations'
@@ -431,7 +443,7 @@ export default function AdminEbooks() {
         )
       ) : (
         /* ── Compilation Generator UI ── */
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(450px, 1fr))', gap: '1.5rem', marginTop: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(450px, 1fr))', gap: '1.5rem', marginTop: '1rem' }}>
           
           {/* Left Panel: Structure selection */}
           <div className="glass-panel" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1.2rem' }}>
@@ -545,7 +557,7 @@ export default function AdminEbooks() {
                 📖 Options d'Inclusion
               </p>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '0.5rem' }}>
                 {[
                   { label: 'Page de Couverture principale', val: incCover, set: setIncCover },
                   { label: 'Sommaire (Fohros)', val: incTOC, set: setIncTOC },

@@ -1,6 +1,6 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useMemo } from 'react';
 import { onAuthChange, loginWithEmail, logoutUser, registerStudent, loginWithGoogle } from '../services/authService';
-import { getUserDoc, createUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, getProgressDeltas, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard, addLoginLog, getLoginLogs } from '../services/userService';
+import { getUserDoc, createUserDoc, updateUserDoc, saveQuestionProgress, getAllProgress, getProgressDeltas, saveMockResult, getMockHistory, incrementDailyActivity, getRecentActivity, getAllUsers, setUserSubscription, getLeaderboard, addLoginLog, getLoginLogs, syncStudentsWithSupabase, logUserDownload } from '../services/userService';
 import { getAllExams, addExam as dbAddExam, updateExam as dbUpdateExam, deleteExam as dbDeleteExam, toggleExamStatus as dbToggleExamStatus, toggleArchiveExam as dbToggleArchiveExam, getExamQuestionsOnly } from '../services/examService';
 import { getSchoolsConfig, saveSchoolsConfig, getBrandingConfig, saveBrandingConfig, getFlashcardSettingsConfig, saveFlashcardSettingsConfig, getPdfSettingsConfig, savePdfSettingsConfig, getOmrScannerSettingsConfig, saveOmrScannerSettingsConfig, getWhatsAppSettingsConfig, saveWhatsAppSettingsConfig } from '../services/schoolService';
 import { getPlans, savePlans, getAllCodes, saveActivationCodes, redeemCodeViaRPC } from '../services/planService';
@@ -1013,6 +1013,7 @@ export function AuthProvider({ children }) {
       sanitizedUpdates.phone = sanitizeInputString(updates.phone);
     }
     if (updates.city !== undefined) sanitizedUpdates.city = sanitizeInputString(updates.city);
+    if (updates.school !== undefined) sanitizedUpdates.school = sanitizeInputString(updates.school);
 
     if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
       const userId = user.uid || user.id;
@@ -1832,6 +1833,76 @@ export function AuthProvider({ children }) {
     }
   }, [user?.role]);
 
+  const syncStudentsList = useCallback(async () => {
+    if (!SUPABASE_ENABLED || user?.role !== 'admin') return { success: false, synchronized_count: 0 };
+    try {
+      const result = await syncStudentsWithSupabase();
+      // Reload admin users list after sync
+      await refreshAdminData();
+      return result;
+    } catch (e) {
+      console.error('[Auth] Failed to sync students list:', e);
+      throw e;
+    }
+  }, [user?.role, refreshAdminData]);
+
+  const trackDownload = async (downloadData) => {
+    if (!user || (!user.uid && !user.id)) return;
+    const userId = user.uid || user.id;
+    
+    const newEntry = {
+      ...downloadData,
+      downloadedAt: new Date().toISOString()
+    };
+    
+    const updatedDownloads = [newEntry, ...(user.downloads || [])].slice(0, 100);
+    setUser(prev => ({ ...prev, downloads: updatedDownloads }));
+    
+    if (SUPABASE_ENABLED) {
+      try {
+        await logUserDownload(userId, downloadData);
+      } catch (e) {
+        console.warn('[Supabase] Failed to log download:', e);
+      }
+    } else {
+      const updatedUsers = users.map(u => {
+        if (u.id === userId) {
+          return {
+            ...u,
+            downloads: updatedDownloads
+          };
+        }
+        return u;
+      });
+      setUsers(updatedUsers);
+    }
+  };
+
+  // Live online status heartbeat (pings Supabase to update updated_at every 2 minutes)
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !user || (!user.uid && !user.id) || user.role === 'admin') return;
+    
+    const sendHeartbeat = async () => {
+      try {
+        const userId = user.uid || user.id;
+        const { supabase } = await import('../lib/supabase');
+        if (supabase) {
+          await supabase
+            .from('profiles')
+            .update({ updated_at: new Date().toISOString() })
+            .eq('id', userId);
+        }
+      } catch (err) {
+        console.warn('[Heartbeat] Failed to update online status:', err);
+      }
+    };
+    
+    sendHeartbeat();
+    const interval = setInterval(sendHeartbeat, 120000); // 2 minutes
+    
+    return () => clearInterval(interval);
+  }, [user?.uid, user?.id]);
+
   // Fetch all registered users for Admin Dashboard when Admin is logged in
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -1957,6 +2028,8 @@ export function AuthProvider({ children }) {
       loadExamQuestions,
       supabaseEnabled: SUPABASE_ENABLED,
       refreshAdminData,
+      syncStudentsList,
+      trackDownload,
       loading,
       profName, profPhone, profSite, updateBrandingConfig, updateFlashcardSettingsConfig, updatePdfSettingsConfig, updateOmrScannerSettingsConfig,
       whatsappSettings, updateWhatsAppSettingsConfig,

@@ -231,10 +231,22 @@ function CardPreview({ question, side, onFlip }) {
 /* ─────────────────────────────────────────────────────────────
    MAIN PAGE
 ───────────────────────────────────────────────────────────── */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function AdminExamEdit() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { exams, updateExamDetails, schools } = useAuth();
+  const isMobile = useIsMobile();
 
   const exam = useMemo(() => exams.find(e => e.id === id), [exams, id]);
 
@@ -525,7 +537,7 @@ export default function AdminExamEdit() {
   /* ───────────────── RENDER ───────────────── */
   return (
     <>
-    <div className="animate-fade-in" style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', flexDirection: 'column', height: 'calc(100vh - 80px)', minHeight: 600 }}>
+    <div className="animate-fade-in" style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', flexDirection: 'column', height: isMobile ? 'auto' : 'calc(100vh - 80px)', minHeight: isMobile ? 'auto' : 600 }}>
 
       {/* ══ Top header bar ══════════════════════════════════════ */}
       <div style={{
@@ -707,7 +719,7 @@ export default function AdminExamEdit() {
               </select>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem' }}>
               <div>
                 <label style={{ display: 'block', marginBottom: '0.45rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   Année
@@ -767,10 +779,10 @@ export default function AdminExamEdit() {
 
         {/* ── TAB 2: Questions (3-column layout) ── */}
         {activeTab === 'questions' && (
-          <div className="animate-fade-in" style={{ flex: 1, display: 'grid', gridTemplateColumns: '260px 1fr 380px', gap: '1.5rem', overflow: 'hidden' }}>
+          <div className="animate-fade-in" style={{ flex: 1, display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '260px 1fr 380px', gap: '1.5rem', overflow: isMobile ? 'visible' : 'hidden' }}>
 
             {/* ── Column A: Question list ── */}
-            <div className="glass-panel" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', overflowY: 'auto', scrollbarWidth: 'thin' }}>
+            <div className="glass-panel" style={{ padding: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', overflowY: 'auto', scrollbarWidth: 'thin', maxHeight: isMobile ? '250px' : 'none' }}>
               <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', padding: '0 0.25rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: 6 }}>
                 Questions ({localQuestions.length})
                 {questionsLoading && (
@@ -842,7 +854,7 @@ export default function AdminExamEdit() {
             </div>
 
             {/* ── Column B: Question editor ── */}
-            <div className="glass-panel" style={{ padding: '1.5rem 2rem', overflowY: 'auto', scrollbarWidth: 'thin', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+            <div className="glass-panel" style={{ padding: isMobile ? '1rem' : '1.5rem 2rem', overflowY: 'auto', scrollbarWidth: 'thin', display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
               {/* Navigation header */}
               {localQuestions.length > 0 && (
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
@@ -916,7 +928,7 @@ export default function AdminExamEdit() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 800, fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--violet)', marginBottom: '0.6rem' }}>
                       <BrainCircuit size={13} /> 2 · Catégorie & Réponse
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
                       <div>
                         <label style={{ display: 'block', marginBottom: '0.45rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 700 }}>Thème / Domaine</label>
                         <input
@@ -987,7 +999,7 @@ export default function AdminExamEdit() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 800, fontSize: '0.82rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--violet)', marginBottom: '0.6rem' }}>
                       <Lightbulb size={13} /> 4 · Astuce & Trick
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.25rem' }}>
                       <div>
                         <label style={{ display: 'block', marginBottom: '0.45rem', color: 'var(--text-muted)', fontSize: '0.8rem', fontWeight: 700 }}>Astuce / Explication</label>
                         <LatexToolbar onInsert={latex => insertLatex(`q-astuce-${selectedIdx}`, latex, 'astuce')} />
@@ -1077,7 +1089,7 @@ export default function AdminExamEdit() {
                       </div>
 
                       {q.image && (
-                        <div className="glass-panel" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', padding: '1rem', borderRadius: 12, border: '1px solid var(--border)' }}>
+                        <div className="glass-panel" style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '1rem', padding: '1rem', borderRadius: 12, border: '1px solid var(--border)' }}>
                           <div>
                             <label style={{ display: 'block', marginBottom: '0.45rem', color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: 700 }}>Position de la figure</label>
                             <select
@@ -1129,7 +1141,7 @@ export default function AdminExamEdit() {
             </div>
 
             {/* ── Column C: Live preview ── */}
-            <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div className="glass-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: isMobile ? '350px' : 'none' }}>
               <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
                 <Eye size={11} /> Aperçu en direct
               </div>

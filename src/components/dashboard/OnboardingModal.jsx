@@ -10,9 +10,20 @@ const MOROCCAN_CITIES = [
   "Autre"
 ];
 
-const OnboardingModal = React.memo(({ initialPhone = '', initialCity = '', onSubmit }) => {
+const SCHOOLS_LIST = [
+  "Médecine / Pharmacie",
+  "ENSA",
+  "ENSAM",
+  "ENCG",
+  "INPT",
+  "INSEA",
+  "Général (Prépa)"
+];
+
+const OnboardingModal = React.memo(({ initialPhone = '', initialCity = '', initialSchool = '', onSubmit }) => {
   const [phone, setPhone] = useState(initialPhone);
   const [city, setCity] = useState(initialCity);
+  const [school, setSchool] = useState(initialSchool);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -50,12 +61,26 @@ const OnboardingModal = React.memo(({ initialPhone = '', initialCity = '', onSub
       return;
     }
 
+    const schoolClean = school.trim();
+    if (!schoolClean) {
+      setError('Veuillez sélectionner votre école cible.');
+      setLoading(false);
+      return;
+    }
+
+    if (!SCHOOLS_LIST.includes(schoolClean)) {
+      setError('Sélection d\'école cible invalide.');
+      setLoading(false);
+      return;
+    }
+
     // Sanitize values to prevent XSS/injection before propagation
     const sanitizedPhone = sanitizeInputString(phoneClean);
     const sanitizedCity = sanitizeInputString(cityClean);
+    const sanitizedSchool = sanitizeInputString(schoolClean);
 
     try {
-      await onSubmit({ phone: sanitizedPhone, city: sanitizedCity });
+      await onSubmit({ phone: sanitizedPhone, city: sanitizedCity, school: sanitizedSchool });
     } catch (err) {
       console.error('[Onboarding] Error:', err);
       setError(err.message || "Impossible de sauvegarder votre profil. Veuillez réessayer.");
@@ -160,6 +185,25 @@ const OnboardingModal = React.memo(({ initialPhone = '', initialCity = '', onSub
               <option value="">Sélectionnez votre ville...</option>
               {MOROCCAN_CITIES.map(c => (
                 <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label style={{ display: 'block', fontSize: '0.78rem', color: 'var(--text-muted)', fontWeight: 600, marginBottom: '0.4rem' }}>
+              Votre école cible
+            </label>
+            <select
+              className="input-control"
+              value={school}
+              onChange={e => setSchool(e.target.value)}
+              disabled={loading}
+              required
+              style={{ width: '100%', borderRadius: '10px', background: 'var(--bg-card)', color: 'var(--text-main)' }}
+            >
+              <option value="">Sélectionnez votre école cible...</option>
+              {SCHOOLS_LIST.map(s => (
+                <option key={s} value={s}>{s}</option>
               ))}
             </select>
           </div>

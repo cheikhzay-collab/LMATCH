@@ -18,6 +18,8 @@ const mapProfileToDB = (profile) => ({
   subscription: profile.subscription,
   phone: profile.phone,
   city: profile.city,
+  school: profile.school,
+  downloads: profile.downloads,
 });
 
 // Helper to map snake_case DB columns to camelCase fields
@@ -40,6 +42,8 @@ const mapDBToProfile = (row) => {
     updatedAt: row.updated_at,
     phone: row.phone,
     city: row.city,
+    school: row.school,
+    downloads: row.downloads,
   };
 };
 
@@ -98,6 +102,8 @@ export const updateUserDoc = async (uid, updates) => {
   if (updates.subscription !== undefined) dbUpdates.subscription = updates.subscription;
   if (updates.phone !== undefined) dbUpdates.phone = updates.phone;
   if (updates.city !== undefined) dbUpdates.city = updates.city;
+  if (updates.school !== undefined) dbUpdates.school = updates.school;
+  if (updates.downloads !== undefined) dbUpdates.downloads = updates.downloads;
   dbUpdates.updated_at = new Date().toISOString();
 
   const { error } = await supabase
@@ -455,4 +461,63 @@ export const getProgressDeltas = async (uid, sinceTimestamp) => {
   });
   return result;
 };
+
+/**
+ * Synchronize missing auth users with profiles in Supabase (Admin only).
+ * @returns {Promise<{success: boolean, synchronized_count: number}>}
+ */
+export const syncStudentsWithSupabase = async () => {
+  if (!supabase) return { success: false, synchronized_count: 0 };
+  const { data, error } = await supabase.rpc('sync_auth_users_to_profiles');
+  if (error) {
+    console.error('[Supabase] Failed to synchronize students:', error);
+    throw error;
+  }
+  return data;
+};
+
+/**
+ * Log a document/report download in the user's profile.
+ * @param {string} uid
+ * @param {Object} downloadData - { type: 'exam'|'lesson'|'report', id: string, title: string }
+ */
+export const logUserDownload = async (uid, downloadData) => {
+  if (!supabase) return;
+  try {
+    // 1. Fetch current downloads array
+    const { data, error: fetchErr } = await supabase
+      .from('profiles')
+      .select('downloads')
+      .eq('id', uid)
+      .maybeSingle();
+      
+    if (fetchErr) {
+      console.error('[Supabase] Failed to fetch downloads:', fetchErr);
+      return;
+    }
+    
+    const currentDownloads = Array.isArray(data?.downloads) ? data.downloads : [];
+    
+    // 2. Append new download entry
+    const newEntry = {
+      ...downloadData,
+      downloadedAt: new Date().toISOString()
+    };
+    
+    const updatedDownloads = [newEntry, ...currentDownloads].slice(0, 100);
+    
+    // 3. Save back
+    const { error: updateErr } = await supabase
+      .from('profiles')
+      .update({ downloads: updatedDownloads })
+      .eq('id', uid);
+      
+    if (updateErr) {
+      console.error('[Supabase] Failed to log download:', updateErr);
+    }
+  } catch (err) {
+    console.error('[Supabase] Exception logging download:', err);
+  }
+};
+
 

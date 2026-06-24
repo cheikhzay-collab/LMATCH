@@ -235,7 +235,19 @@ Exigences d'extraction intégrale :
 5. FORMAT STRICT : Retourne uniquement le JSON brut. Pas de balise de code markdown (\`\`\`json ... \`\`\`), pas de texte d'introduction ni de conclusion.
 `;
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function AdminLessonsImport() {
+  const isMobile = useIsMobile();
   const { schools, user, loading: authLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -822,15 +834,15 @@ export default function AdminLessonsImport() {
 
           {/* Section 2: Course Contents */}
           <div className="glass-panel" style={{ padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: isMobile ? 'stretch' : 'center', gap: '1rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>
               <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
                 📝 Sections du Cours / Exercices
               </h2>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={() => handleAddSection('content')} className="btn-outline" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
+              <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '0.5rem' }}>
+                <button onClick={() => handleAddSection('content')} className="btn-outline" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', justifyContent: 'center' }}>
                   <Plus size={14} /> + Section Théorique
                 </button>
-                <button onClick={() => handleAddSection('exercise')} className="btn-outline" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem' }}>
+                <button onClick={() => handleAddSection('exercise')} className="btn-outline" style={{ fontSize: '0.8rem', padding: '0.4rem 0.8rem', justifyContent: 'center' }}>
                   <Plus size={14} /> + Exercice
                 </button>
               </div>
@@ -861,7 +873,7 @@ export default function AdminLessonsImport() {
                   </button>
 
                   {/* Section Title */}
-                  <div style={{ display: 'flex', gap: '1rem', width: '90%', marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', width: '100%', marginBottom: '1.25rem' }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)' }}>Titre du Bloc</label>
                       <input 
@@ -872,7 +884,7 @@ export default function AdminLessonsImport() {
                         style={{ fontWeight: 800, fontSize: '1rem' }}
                       />
                     </div>
-                    <div style={{ width: '150px' }}>
+                    <div style={{ width: isMobile ? '100%' : '150px' }}>
                       <label style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)' }}>Type</label>
                       <select 
                         className="input-control"
@@ -886,7 +898,7 @@ export default function AdminLessonsImport() {
                   </div>
 
                   {/* Section Metadata Grid */}
-                  <div style={{ display: 'grid', gridTemplateColumns: '80px 1.5fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '80px 1.5fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
                     <div>
                       <label style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>N° Section</label>
                       <input 
@@ -933,12 +945,12 @@ export default function AdminLessonsImport() {
                       </div>
 
                       {sec.items?.map((item, itemIdx) => (
-                        <div key={itemIdx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                        <div key={itemIdx} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '0.75rem', alignItems: isMobile ? 'stretch' : 'flex-start', width: '100%' }}>
                           <select
                             className="input-control"
                             value={item.type}
                             onChange={e => handleUpdateContentItem(secIdx, itemIdx, 'type', e.target.value)}
-                            style={{ width: '150px', flexShrink: 0, padding: '0.4rem' }}
+                            style={{ width: isMobile ? '100%' : '150px', flexShrink: 0, padding: '0.4rem' }}
                           >
                             <option value="text">Texte Standard</option>
                             <option value="bullet">Puce (Bullet)</option>
@@ -1095,7 +1107,7 @@ export default function AdminLessonsImport() {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                           {sec.interactive_answers?.map((ans, ansIdx) => (
-                            <div key={ansIdx} style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                            <div key={ansIdx} style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '0.75rem', alignItems: isMobile ? 'stretch' : 'center', width: '100%' }}>
                               <span style={{ fontSize: '0.8rem', fontWeight: 900 }}>Q{ans.question_idx} :</span>
                               <input
                                 type="text"
@@ -1103,7 +1115,7 @@ export default function AdminLessonsImport() {
                                 value={ans.label}
                                 onChange={e => handleUpdateInteractiveAnswer(secIdx, ansIdx, 'label', e.target.value)}
                                 placeholder="Libellé (ex: Entrez la valeur de x)"
-                                style={{ flex: 1, padding: '0.4rem' }}
+                                style={{ flex: 1, width: isMobile ? '100%' : 'auto', padding: '0.4rem' }}
                               />
                               <input
                                 type="text"
@@ -1111,7 +1123,7 @@ export default function AdminLessonsImport() {
                                 value={ans.expected_answer}
                                 onChange={e => handleUpdateInteractiveAnswer(secIdx, ansIdx, 'expected_answer', e.target.value)}
                                 placeholder="Réponse exacte attendue"
-                                style={{ width: '180px', padding: '0.4rem' }}
+                                style={{ width: isMobile ? '100%' : '180px', padding: '0.4rem' }}
                               />
                               <button
                                 onClick={() => handleRemoveInteractiveAnswer(secIdx, ansIdx)}
@@ -1130,11 +1142,11 @@ export default function AdminLessonsImport() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-            <button onClick={() => setPhase(1)} className="btn-outline" style={{ padding: '1rem 2rem' }} disabled={loading}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem', width: '100%' }}>
+            <button onClick={() => setPhase(1)} className="btn-outline" style={{ padding: '1rem 2rem', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }} disabled={loading}>
               Retour à l'import
             </button>
-            <button onClick={handleSaveLesson} className="btn" style={{ padding: '1rem 2rem' }} disabled={loading}>
+            <button onClick={handleSaveLesson} className="btn" style={{ padding: '1rem 2rem', width: isMobile ? '100%' : 'auto', justifyContent: 'center' }} disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="animate-spin" size={18} style={{ marginRight: '0.5rem' }} />

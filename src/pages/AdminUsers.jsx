@@ -3,11 +3,32 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { Users, Crown, Activity, TrendingUp, RefreshCw, Search, User, ChevronRight } from 'lucide-react';
 
+const isUserOnline = (user) => {
+  if (!user || !user.updatedAt) return false;
+  const lastActive = new Date(user.updatedAt);
+  const diffMs = new Date() - lastActive;
+  return diffMs < 5 * 60 * 1000; // 5 minutes threshold
+};
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+  return isMobile;
+}
+
 export default function AdminUsers() {
-  const { users, refreshAdminData } = useAuth();
+  const { users, refreshAdminData, syncStudentsList } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (refreshAdminData) {
@@ -22,6 +43,20 @@ export default function AdminUsers() {
       await refreshAdminData();
     } finally {
       setIsRefreshing(false);
+    }
+  };
+
+  const handleSync = async () => {
+    if (!syncStudentsList) return;
+    setIsSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await syncStudentsList();
+      setSyncResult(res);
+    } catch (e) {
+      alert("Échec de la synchronisation: " + (e.message || e));
+    } finally {
+      setIsSyncing(false);
     }
   };
 
@@ -50,31 +85,85 @@ export default function AdminUsers() {
           </div>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: 0 }}>Cliquez sur un élève pour consulter son profil et suivre sa progression.</p>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={isRefreshing}
-          style={{
-            display: 'flex', alignItems: 'center', gap: '0.5rem',
-            padding: '0.6rem 1.2rem',
-            background: 'var(--bg-glass)',
-            border: '1px solid var(--border)',
-            borderRadius: '10px',
-            color: 'var(--text-muted)',
-            fontWeight: 600, fontSize: '0.875rem',
-            cursor: isRefreshing ? 'wait' : 'pointer',
-            transition: 'all 0.2s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--violet)'; e.currentTarget.style.color = 'var(--violet)'; }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
-        >
-          <RefreshCw size={15} style={{ animation: isRefreshing ? 'spin 0.7s linear infinite' : 'none' }} />
-          {isRefreshing ? 'Chargement...' : 'Actualiser'}
-        </button>
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <button
+            onClick={handleSync}
+            disabled={isSyncing || isRefreshing}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.6rem 1.2rem',
+              background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1))',
+              border: '1px solid rgba(16, 185, 129, 0.3)',
+              borderRadius: '10px',
+              color: 'var(--emerald)',
+              fontWeight: 700, fontSize: '0.875rem',
+              cursor: isSyncing ? 'wait' : 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--emerald)'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(52, 211, 153, 0.18))'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(16, 185, 129, 0.3)'; e.currentTarget.style.background = 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(52, 211, 153, 0.1))'; }}
+          >
+            <RefreshCw size={15} style={{ animation: isSyncing ? 'spin 0.7s linear infinite' : 'none' }} />
+            {isSyncing ? 'Mise à jour...' : 'Synchroniser la Base'}
+          </button>
+
+          <button
+            onClick={handleRefresh}
+            disabled={isRefreshing || isSyncing}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              padding: '0.6rem 1.2rem',
+              background: 'var(--bg-glass)',
+              border: '1px solid var(--border)',
+              borderRadius: '10px',
+              color: 'var(--text-muted)',
+              fontWeight: 600, fontSize: '0.875rem',
+              cursor: isRefreshing ? 'wait' : 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--violet)'; e.currentTarget.style.color = 'var(--violet)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--text-muted)'; }}
+          >
+            <RefreshCw size={15} style={{ animation: isRefreshing ? 'spin 0.7s linear infinite' : 'none' }} />
+            {isRefreshing ? 'Chargement...' : 'Actualiser'}
+          </button>
+        </div>
       </header>
-      <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+      <style>{`
+        @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+        @keyframes pulseGreen {
+          0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+          70% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+          100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+      `}</style>
+
+      {/* ── Sync Result Alert ── */}
+      {syncResult && (
+        <div className="glass-panel animate-fade-in" style={{
+          padding: '1rem 1.5rem',
+          marginBottom: '1.5rem',
+          border: '1px solid rgba(16, 185, 129, 0.25)',
+          background: 'rgba(16, 185, 129, 0.05)',
+          borderRadius: '12px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}>
+          <p style={{ margin: 0, color: 'var(--emerald)', fontWeight: 600, fontSize: '0.92rem' }}>
+            ✨ Synchronisation réussie ! {syncResult.synchronized_count} élève(s) synchronisé(s) depuis la table d'authentification.
+          </p>
+          <button 
+            onClick={() => setSyncResult(null)}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem' }}
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {/* ── Stats Row ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1.5rem', marginBottom: '2.5rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)', gap: isMobile ? '0.75rem' : '1.5rem', marginBottom: '2.5rem' }}>
         {stats.map((stat, idx) => (
           <div key={idx} className="glass-panel" style={{ padding: '1.5rem', display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
             <div style={{ 
@@ -92,8 +181,8 @@ export default function AdminUsers() {
       </div>
 
       {/* ── Table Controls ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <div style={{ position: 'relative', width: '350px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <div style={{ position: 'relative', width: isMobile ? '100%' : '350px' }}>
           <Search size={18} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
           <input 
             type="text" 
@@ -110,7 +199,8 @@ export default function AdminUsers() {
 
       {/* ── Users Table ── */}
       <div className="glass-panel" style={{ overflow: 'hidden', padding: 0 }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+        <div style={{ overflowX: 'auto', width: '100%' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', minWidth: '600px' }}>
           <thead>
             <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid var(--border)' }}>
               <th style={{ padding: '1.25rem 1.5rem', fontWeight: 800, fontSize: '0.85rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Étudiant</th>
@@ -144,12 +234,31 @@ export default function AdminUsers() {
               >
                 <td style={{ padding: '1.25rem 1.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                    <div style={{ 
-                      width: '40px', height: '40px', borderRadius: '50%', 
-                      background: 'linear-gradient(45deg, var(--primary), var(--accent))',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: 'white', fontSize: '0.9rem'
-                    }}>
-                      {u.name?.charAt(0) || '?'}
+                    <div style={{ position: 'relative' }}>
+                      <div style={{ 
+                        width: '40px', height: '40px', borderRadius: '50%', 
+                        background: 'linear-gradient(45deg, var(--primary), var(--accent))',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, color: 'white', fontSize: '0.9rem'
+                      }}>
+                        {u.name?.charAt(0) || '?'}
+                      </div>
+                      {isUserOnline(u) && (
+                        <span 
+                          style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            right: 0,
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '50%',
+                            background: '#10B981',
+                            border: '2px solid var(--bg-card)',
+                            boxShadow: '0 0 8px #10B981',
+                            animation: 'pulseGreen 2s infinite'
+                          }}
+                          title="En ligne"
+                        />
+                      )}
                     </div>
                     <div>
                       <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{u.name}</div>
@@ -192,6 +301,7 @@ export default function AdminUsers() {
             ))}
           </tbody>
         </table>
+        </div>
       </div>
     </div>
   );
