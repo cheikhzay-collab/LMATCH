@@ -552,7 +552,7 @@ export default function RankingPage() {
                       {item.isCurrentUser && <span style={{ fontSize: '0.62rem', padding: '0.15rem 0.45rem', background: 'var(--violet)', color: '#fff', borderRadius: '4px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Vous</span>}
                       {item.streak > 0 && (
                         <span className="show-mobile-flex" style={{ 
-                          display: 'none', 
+                          display: isMobile ? 'flex' : 'none', 
                           alignItems: 'center', gap: '0.1rem', 
                           background: 'var(--warning-soft)', color: 'var(--warning)', 
                           padding: '0.1rem 0.35rem', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800 
@@ -562,7 +562,7 @@ export default function RankingPage() {
                       )}
                     </span>
                     {/* Mobile subtitle for school name */}
-                    <span className="show-mobile-only" style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: 'none', marginTop: '2px' }}>
+                    <span className="show-mobile-only" style={{ fontSize: '0.74rem', color: 'var(--text-muted)', display: isMobile ? 'block' : 'none', marginTop: '2px' }}>
                       {item.school}
                     </span>
                   </div>
