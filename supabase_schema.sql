@@ -393,6 +393,11 @@ CREATE INDEX IF NOT EXISTS idx_progress_user_id ON public.progress(user_id);
 CREATE INDEX IF NOT EXISTS idx_mock_history_user_id ON public.mock_history(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_user_id ON public.activity(user_id);
 
+-- Performance Optimizations (2026 Audit)
+CREATE INDEX IF NOT EXISTS idx_profiles_xp ON public.profiles(xp DESC);
+CREATE INDEX IF NOT EXISTS idx_progress_user_next_review ON public.progress(user_id, next_review_date);
+CREATE INDEX IF NOT EXISTS idx_mock_history_user_date ON public.mock_history(user_id, date DESC);
+
 
 -- ─── 11. Storage Bucket and Policies ──────────────────────────────────────────
 -- Insert public bucket named 'gima-assets' if it doesn't exist
