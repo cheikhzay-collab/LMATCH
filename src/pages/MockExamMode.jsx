@@ -283,13 +283,21 @@ export default function MockExamMode() {
           {/* Context Panel (Left Half if exists) */}
           {currentQuestion.context && (
             <div className="glass-card animate-fade-in desktop-context-panel" style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', borderLeft: '4px solid var(--primary)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', color: 'var(--text-subtle)', fontWeight: 800, textTransform: 'uppercase', fontSize: '0.7rem', letterSpacing: '0.08em', flexShrink: 0 }}>
-                <div style={{ background: 'var(--primary)', color: 'white', padding: '0.3rem', borderRadius: '0.4rem', display: 'flex' }}>
-                  <Zap size={14} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '1rem', color: 'var(--text-subtle)', fontWeight: 600, textTransform: 'uppercase', fontSize: '0.95rem', letterSpacing: '0.08em', flexShrink: 0 }}>
+                <div style={{ background: 'var(--primary)', color: 'white', padding: '0.4rem', borderRadius: '0.45rem', display: 'flex' }}>
+                  <Zap size={16} />
                 </div>
                 Énoncé / Contexte
               </div>
-              <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.92rem', lineHeight: '1.6', color: 'var(--text-main)', paddingRight: '4px' }}>
+              <div style={{ 
+                flex: 1, 
+                overflowY: 'auto', 
+                fontSize: '1.15rem', 
+                lineHeight: '1.65', 
+                color: 'var(--text-main)', 
+                paddingRight: '4px',
+                fontFamily: "'Computer Modern Serif', 'STIX Two Text', Georgia, serif"
+              }}>
                 {renderWithMath(currentQuestion.context)}
               </div>
             </div>
@@ -298,21 +306,21 @@ export default function MockExamMode() {
           {/* Question Card (Middle/Right or Full Width) */}
           <div className="glass-card animate-fade-in question-card-main" key={currentIndex} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
             {/* Topic & Question Header row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem', flexShrink: 0 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', flexShrink: 0 }}>
               <span style={{ 
-                fontSize: '0.76rem', 
+                fontSize: '0.95rem', 
                 color: 'var(--violet)', 
-                fontWeight: 800, 
+                fontWeight: 600, 
                 textTransform: 'uppercase', 
                 letterSpacing: '0.08em',
                 background: 'var(--violet-soft)',
-                padding: '0.25rem 0.6rem',
+                padding: '0.35rem 0.8rem',
                 borderRadius: '6px',
                 border: '1px solid rgba(99, 102, 241, 0.15)'
               }}>
                 Question {currentIndex + 1} sur {questions.length}
               </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 {currentQuestion.context && (
                   <button
                     onClick={() => setShowMobileContext(true)}
@@ -321,9 +329,9 @@ export default function MockExamMode() {
                       border: '1px solid var(--violet)',
                       background: 'var(--violet-soft)',
                       color: 'var(--violet)',
-                      fontSize: '0.68rem',
-                      fontWeight: 700,
-                      padding: '0.25rem 0.5rem',
+                      fontSize: '0.85rem',
+                      fontWeight: 600,
+                      padding: '0.35rem 0.75rem',
                       borderRadius: '6px',
                       cursor: 'pointer',
                     }}
@@ -332,7 +340,7 @@ export default function MockExamMode() {
                   </button>
                 )}
                 {currentQuestion.topic && (
-                  <span className="topic-badge" style={{ margin: 0, padding: '0.25rem 0.6rem', fontSize: '0.7rem', borderRadius: '6px', fontWeight: 700 }}>
+                  <span className="topic-badge" style={{ margin: 0, padding: '0.35rem 0.8rem', fontSize: '0.9rem', borderRadius: '6px', fontWeight: 600 }}>
                     {currentQuestion.topic}
                   </span>
                 )}
@@ -396,12 +404,13 @@ export default function MockExamMode() {
 
                 const statementEl = (
                   <div className="question-box" style={{ 
-                    fontSize: '1.15rem', 
-                    fontWeight: 700, 
-                    lineHeight: '1.6', 
+                    fontSize: '1.35rem', 
+                    fontWeight: 500, 
+                    lineHeight: '1.65', 
                     color: 'var(--text-main)',
                     letterSpacing: '-0.01em',
-                    flex: 1
+                    flex: 1,
+                    fontFamily: "'Computer Modern Serif', 'STIX Two Text', Georgia, serif"
                   }}>
                     {renderWithMath(currentQuestion.question)}
                   </div>
@@ -784,7 +793,7 @@ export default function MockExamMode() {
               onClick={() => setShowMobileContext(false)} 
             />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexShrink: 0 }}>
-              <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: 'var(--text-main)' }}>Énoncé / Contexte</h3>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 600, color: 'var(--text-main)' }}>Énoncé / Contexte</h3>
               <button 
                 className="btn-ghost" 
                 onClick={() => setShowMobileContext(false)}
@@ -793,7 +802,15 @@ export default function MockExamMode() {
                 Fermer
               </button>
             </div>
-            <div style={{ flex: 1, overflowY: 'auto', fontSize: '0.94rem', lineHeight: '1.6', color: 'var(--text-main)', paddingRight: '4px' }}>
+            <div style={{ 
+              flex: 1, 
+              overflowY: 'auto', 
+              fontSize: '1.15rem', 
+              lineHeight: '1.65', 
+              color: 'var(--text-main)', 
+              paddingRight: '4px',
+              fontFamily: "'Computer Modern Serif', 'STIX Two Text', Georgia, serif"
+            }}>
               {renderWithMath(currentQuestion.context)}
             </div>
           </div>

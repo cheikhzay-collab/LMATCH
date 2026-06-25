@@ -20,7 +20,29 @@ const LATEX_COMMAND_RE = /\\(?:lim|frac|dfrac|left|right|cdot|sqrt|sum|int|prod|
 
 function autoWrapLatex(text) {
   if (text.includes('$')) return text;
-  if (/[\\^_{}]/.test(text) || LATEX_COMMAND_RE.test(text)) {
+  
+  // Check if it looks like a sentence (contains spaces and regular alphabetic words)
+  if (text.includes(' ')) {
+    const words = text.split(/\s+/);
+    const mathCommands = new Set(['sin', 'cos', 'tan', 'lim', 'log', 'ln', 'exp', 'max', 'min', 'det', 'dim', 'ker', 'mod']);
+    for (const word of words) {
+      if (/^[a-zA-Z]{3,}$/.test(word) && !mathCommands.has(word.toLowerCase())) {
+        return text; // Do not wrap sentences!
+      }
+    }
+  }
+
+  const mathWords = /\b(?:sqrt|pi|theta|infty|sin|cos|tan|ln|log|exp|lim)\b/i;
+  const hasDivision = /\b\d+\s*\/\s*\d+\b/.test(text) || 
+                      /\b[a-zA-Z0-9_]\s*\/\s*[a-zA-Z0-9(]/.test(text) ||
+                      /\)\s*\/\s*[\d(a-zA-Z]/.test(text) ||
+                      /[\d(a-zA-Z]\s*\/\s*\(/.test(text);
+
+  if (/[\\^_{}]/.test(text) || 
+      LATEX_COMMAND_RE.test(text) || 
+      mathWords.test(text) || 
+      text.includes('*') || 
+      hasDivision) {
     return `$${text}$`;
   }
   return text;
@@ -54,13 +76,62 @@ function tokenizeMath(text) {
   return tokens;
 }
 
+const repairMathExpression = (latex) => {
+  if (!latex) return '';
+  
+  let repaired = latex;
+  
+  // 1. Repair missing backslashes for Greek letters and standard functions
+  repaired = repaired
+    .replace(/(?<![a-zA-Z\\])pi\b/g, '\\pi')
+    .replace(/(?<![a-zA-Z\\])theta\b/g, '\\theta')
+    .replace(/(?<![a-zA-Z\\])infty\b/g, '\\infty')
+    .replace(/(?<![a-zA-Z\\])sin\b/g, '\\sin')
+    .replace(/(?<![a-zA-Z\\])cos\b/g, '\\cos')
+    .replace(/(?<![a-zA-Z\\])tan\b/g, '\\tan')
+    .replace(/(?<![a-zA-Z\\])ln\b/g, '\\ln')
+    .replace(/(?<![a-zA-Z\\])log\b/g, '\\log')
+    .replace(/(?<![a-zA-Z\\])exp\b/g, '\\exp')
+    .replace(/(?<![a-zA-Z\\])lim\b/g, '\\lim');
+
+  // 2. Convert sqrt(xxx) to \sqrt{xxx}
+  repaired = repaired.replace(/sqrt\(([^)]+)\)/g, '\\sqrt{$1}');
+  
+  // Convert parenthesized powers ^(xxx) to ^{xxx}
+  repaired = repaired.replace(/\^\(([^)]+)\)/g, '^{$1}');
+  
+  // 3. Convert multiplication asterisk * to \cdot
+  repaired = repaired.replace(/\*/g, '\\cdot');
+  
+  // 4. Convert division slashes to textbook fractions (\frac)
+  // Case A: number/var / (expr) -> \frac{number/var}{expr}
+  repaired = repaired.replace(/(?<![a-zA-Z0-9\\_])([a-zA-Z0-9\\_]+)\s*\/\s*\(([^)]+)\)/g, '\\frac{$1}{$2}');
+  
+  // Case B: (expr) / (expr) -> \frac{expr}{expr}
+  repaired = repaired.replace(/\(([^)]+)\)\s*\/\s*\(([^)]+)\)/g, '\\frac{$1}{$2}');
+  
+  // Case C: (expr) / number/var -> \frac{expr}{number/var}
+  repaired = repaired.replace(/\(([^)]+)\)\s*\/\s*([a-zA-Z0-9\\_]+)(?![a-zA-Z0-9\\_])/g, '\\frac{$1}{$2}');
+  
+  // Case D: number/var / number/var -> \frac{number/var}{number/var}
+  repaired = repaired.replace(/(?<![a-zA-Z0-9\\_])([a-zA-Z0-9\\_]+)\s*\/\s*([a-zA-Z0-9\\_]+)(?![a-zA-Z0-9\\_])/g, '\\frac{$1}{$2}');
+
+  return repaired;
+};
+
 const renderInlineKatex = (latex) => {
-  try { return katex.renderToString(latex, { ...KATEX_OPTIONS, displayMode: false }); }
+  try {
+    const repaired = repairMathExpression(latex);
+    return katex.renderToString(repaired, { ...KATEX_OPTIONS, displayMode: false });
+  }
   catch { return `<span style="font-style:italic;opacity:0.75">${esc(latex)}</span>`; }
 };
 
 const renderBlockKatex = (latex) => {
-  try { return katex.renderToString(latex, { ...KATEX_OPTIONS, displayMode: true }); }
+  try {
+    const repaired = repairMathExpression(latex);
+    return katex.renderToString(repaired, { ...KATEX_OPTIONS, displayMode: true });
+  }
   catch { return `<span style="font-style:italic;opacity:0.75;display:block">${esc(latex)}</span>`; }
 };
 

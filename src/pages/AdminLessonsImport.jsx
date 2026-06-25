@@ -267,6 +267,7 @@ export default function AdminLessonsImport() {
   const [error, setError] = useState('');
   const [progress, setProgress] = useState('');
   const [progressPercent, setProgressPercent] = useState(0);
+  const [detectedModels, setDetectedModels] = useState([]);
 
   // Form State for editing the parsed result
   const [phase, setPhase] = useState(1); // 1 = Upload & Parse, 2 = Review & Edit
@@ -308,6 +309,7 @@ export default function AdminLessonsImport() {
 
     setLoading(true);
     setError('');
+    setDetectedModels([]);
     setProgress('Préparation du fichier...');
     setProgressPercent(5);
 
@@ -459,7 +461,24 @@ export default function AdminLessonsImport() {
       setProgressPercent(0);
       setLoading(false);
       console.error(e);
-      setError(`Erreur lors de l'extraction : ${e.message}`);
+      let diagMsg = `Erreur lors de l'extraction : ${e.message}`;
+      let modelsList = [];
+      if (geminiKey) {
+        try {
+          const diagRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
+          if (diagRes.ok) {
+            const diagData = await diagRes.json();
+            modelsList = (diagData.models || []).map(m => m.name.replace('models/', ''));
+          } else {
+            const diagErr = await diagRes.json().catch(() => ({}));
+            diagMsg += ` (Diagnostic: ${diagErr?.error?.message || diagRes.statusText})`;
+          }
+        } catch (diagErr) {
+          console.error('[Diagnostic] Failed to list models:', diagErr);
+        }
+      }
+      setDetectedModels(modelsList);
+      setError(diagMsg);
     }
   };
 
@@ -628,9 +647,56 @@ export default function AdminLessonsImport() {
       </header>
 
       {error && (
-        <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid var(--danger)', borderRadius: '12px', padding: '1rem', color: 'var(--danger)', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-          <AlertCircle size={20} />
-          <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem' }}>{error}</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.25rem', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', marginBottom: '1.5rem', color: 'var(--danger)', fontSize: '0.85rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <AlertCircle size={16} style={{ flexShrink: 0 }} />
+            <span style={{ fontWeight: 600 }}>{error}</span>
+          </div>
+          
+          {detectedModels.length > 0 && (
+            <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(239,68,68,0.15)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <span>💡</span> Modèles disponibles (Cliquez pour sélectionner) :
+              </div>
+              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                {detectedModels.map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => {
+                      setGeminiModel(m);
+                      localStorage.setItem('geminiModel', m);
+                    }}
+                    style={{
+                      padding: '0.25rem 0.6rem',
+                      borderRadius: '6px',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      border: geminiModel === m ? '1px solid var(--violet)' : '1px solid rgba(255,255,255,0.1)',
+                      background: geminiModel === m ? 'var(--violet-soft)' : 'rgba(255,255,255,0.03)',
+                      color: geminiModel === m ? 'var(--violet)' : 'var(--text-muted)',
+                      transition: 'all 0.15s ease'
+                    }}
+                    onMouseEnter={e => {
+                      if (geminiModel !== m) {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                        e.currentTarget.style.color = 'var(--text-main)';
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      if (geminiModel !== m) {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                        e.currentTarget.style.color = 'var(--text-muted)';
+                      }
+                    }}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -642,13 +708,15 @@ export default function AdminLessonsImport() {
             <select 
               className="input-control" 
               value={geminiModel} 
-              onChange={e => setGeminiModel(e.target.value)}
+              onChange={e => { setGeminiModel(e.target.value); localStorage.setItem('geminiModel', e.target.value); }}
               style={{ maxWidth: '280px' }}
             >
               <option value="gemini-3.5-flash">Gemini 3.5 Flash (Recommandé)</option>
-              <option value="gemini-1.5-flash">Gemini 1.5 Flash (Rapide)</option>
-              <option value="gemini-1.5-pro">Gemini 1.5 Pro (Haute précision)</option>
-              <option value="gemini-2.0-flash-exp">Gemini 2.0 Flash (Expérimental)</option>
+              <option value="gemini-3.1-pro">Gemini 3.1 Pro (Haute précision)</option>
+              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+              <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+              <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
+              <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
             </select>
           </div>
 

@@ -712,13 +712,13 @@ body {
   align-items: center;
   gap: 0.75rem;
   width: 100%;
-  padding: 0.6rem 1rem;
-  min-height: 44px;
+  padding: 0.8rem 1.25rem;
+  min-height: 52px;
   background: var(--bg-glass);
   border: 1.5px solid var(--border);
   border-radius: var(--radius-md);
   color: var(--text-main);
-  font-size: 0.95rem;
+  font-size: 1.15rem;
   font-weight: 500;
   font-family: 'Computer Modern Serif', 'STIX Two Text', Georgia, serif;
   cursor: pointer;
@@ -769,16 +769,16 @@ body {
 }
 
 .option-letter {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   background: var(--bg-hover);
   border: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 800;
-  font-size: 0.8rem;
+  font-size: 0.95rem;
   flex-shrink: 0;
   margin-right: 0.5rem;
   transition: all 0.2s;

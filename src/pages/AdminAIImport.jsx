@@ -334,6 +334,7 @@ export default function AdminAIImport() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState('');
+  const [detectedModels, setDetectedModels] = useState([]);
 
   // Review state — restored from draft
   const [questions, setQuestions] = useState(draft?.questions || []);
@@ -388,7 +389,7 @@ export default function AdminAIImport() {
     setCorrectionPageFrom(1);
     setCorrectionPageTo(1);
     setProvider('gemini');
-    setGeminiModel('gemini-1.5-flash');
+    setGeminiModel('gemini-3.5-flash');
     setError('');
     setProgress('');
   };
@@ -686,6 +687,7 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
   };
 
   const handleAnalyze = async () => {
+    setDetectedModels([]);
     if (provider === 'claude') {
       if (!proxyUrl) {
         if (!apiKey) { setError('Clé API Claude manquante. Configurez-la dans Paramètres.'); return; }
@@ -760,7 +762,24 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
       setPhase(2);
     } catch (e) {
       clearInterval(timerRef.current);
-      setError(e.message);
+      let diagMsg = e.message;
+      let modelsList = [];
+      if (provider === 'gemini' && geminiKey) {
+        try {
+          const diagRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
+          if (diagRes.ok) {
+            const diagData = await diagRes.json();
+            modelsList = (diagData.models || []).map(m => m.name.replace('models/', ''));
+          } else {
+            const diagErr = await diagRes.json().catch(() => ({}));
+            diagMsg += ` (Diagnostic: ${diagErr?.error?.message || diagRes.statusText})`;
+          }
+        } catch (diagErr) {
+          console.error('[Diagnostic] Failed to list models:', diagErr);
+        }
+      }
+      setDetectedModels(modelsList);
+      setError(diagMsg);
     } finally {
       setLoading(false);
     }
@@ -1144,7 +1163,7 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
             <div className="input-group" style={{ marginBottom: '1.5rem' }}>
               <label>Modèle Gemini <span style={{fontWeight:400, color:'var(--text-muted)'}}>— ID exact de l'API</span></label>
               <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
-                {['gemini-1.5-flash', 'gemini-3.5-flash', 'gemini-1.5-pro', 'gemini-3.5-pro'].map(m => (
+                {['gemini-3.5-flash', 'gemini-3.1-pro', 'gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-1.5-flash', 'gemini-1.5-pro'].map(m => (
                   <button key={m} type="button"
                     onClick={() => { setGeminiModel(m); localStorage.setItem('geminiModel', m); }}
                     style={{ padding: '0.3rem 0.65rem', borderRadius: 8, border: '1px solid', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
@@ -1159,13 +1178,13 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
                 className="input-control"
                 value={geminiModel}
                 onChange={e => { setGeminiModel(e.target.value); localStorage.setItem('geminiModel', e.target.value); }}
-                placeholder="ex: gemini-1.5-flash"
+                placeholder="ex: gemini-3.5-flash"
                 style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
               />
               <p style={{ marginTop: '0.4rem', fontSize: '0.73rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
                 💡 Vérifiez les IDs disponibles sur{' '}
                 <a href="https://aistudio.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#4285F4', fontWeight: 600 }}>aistudio.google.com</a>.
-                Le modèle <strong>gemini-1.5-flash</strong> ou <strong>gemini-3.5-flash</strong> est recommandé pour sa rapidité et son respect strict du schéma de sortie.
+                Le modèle <strong>gemini-3.5-flash</strong> ou <strong>gemini-3.1-pro</strong> est recommandé pour sa rapidité et son respect strict du schéma de sortie.
               </p>
             </div>
           )}
@@ -1176,8 +1195,56 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
           </div>
 
           {error && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.9rem 1.1rem', borderRadius: 10, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', marginBottom: '1.5rem', color: 'var(--danger)', fontSize: '0.85rem' }}>
-              <AlertCircle size={16} /> {error}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', padding: '1.25rem', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', marginBottom: '1.5rem', color: 'var(--danger)', fontSize: '0.85rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <span style={{ fontWeight: 600 }}>{error}</span>
+              </div>
+              
+              {detectedModels.length > 0 && (
+                <div style={{ marginTop: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid rgba(239,68,68,0.15)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ fontWeight: 800, color: 'var(--text-main)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                    <span>💡</span> Modèles disponibles (Cliquez pour sélectionner) :
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.2rem' }}>
+                    {detectedModels.map(m => (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => {
+                          setGeminiModel(m);
+                          localStorage.setItem('geminiModel', m);
+                        }}
+                        style={{
+                          padding: '0.25rem 0.6rem',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                          border: geminiModel === m ? '1px solid var(--violet)' : '1px solid rgba(255,255,255,0.1)',
+                          background: geminiModel === m ? 'var(--violet-soft)' : 'rgba(255,255,255,0.03)',
+                          color: geminiModel === m ? 'var(--violet)' : 'var(--text-muted)',
+                          transition: 'all 0.15s ease'
+                        }}
+                        onMouseEnter={e => {
+                          if (geminiModel !== m) {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+                            e.currentTarget.style.color = 'var(--text-main)';
+                          }
+                        }}
+                        onMouseLeave={e => {
+                          if (geminiModel !== m) {
+                            e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                            e.currentTarget.style.color = 'var(--text-muted)';
+                          }
+                        }}
+                      >
+                        {m}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

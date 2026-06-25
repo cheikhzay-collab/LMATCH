@@ -471,6 +471,7 @@ export function AuthProvider({ children }) {
               subscription: profile.subscription || null,
               phone:        profile.phone || supabaseUser.user_metadata?.phone || '',
               city:         profile.city  || supabaseUser.user_metadata?.city  || '',
+              school:       profile.school || supabaseUser.user_metadata?.school || '',
             };
             setUser(enriched);
 
@@ -532,6 +533,7 @@ export function AuthProvider({ children }) {
               subscription: profile.subscription || null,
               phone:        profile.phone || supabaseUser.user_metadata?.phone || '',
               city:         profile.city  || supabaseUser.user_metadata?.city  || '',
+              school:       profile.school || supabaseUser.user_metadata?.school || '',
             };
             setUser(enriched);
           }
