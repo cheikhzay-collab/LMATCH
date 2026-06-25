@@ -115,7 +115,7 @@ function ResultRow({ row }) {
 
 /* ── Main modal ──────────────────────────────────────────────────── */
 export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
-  const { user, mockExamHistory, updateCardProgress, schoolBranding, exams, loadExamQuestions } = useAuth();
+  const { user, mockExamHistory, updateCardProgress, saveMockExamResult, schoolBranding, exams, loadExamQuestions } = useAuth();
   const navigate = useNavigate();
   
   const [activeExam, setActiveExam] = useState(exam);
@@ -211,6 +211,7 @@ export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
   };
 
   const handleConfirmVerify = () => {
+    if (!activeExam) return;
     let pts = 0, neg = 0;
     const rows = questions.map((q, idx) => {
       const sc = scanned[idx];
@@ -229,13 +230,37 @@ export default function ScanUploadModal({ exam, onClose, onSRSLaunch }) {
     setCorrected(rows);
     // Max possible score is Q * rules.correct
     const maxPossible = Q * rules.correct;
-    setScore({ pts, neg, max: Q, pct: Math.max(0, (pts / maxPossible) * 100) });
+    const pct = maxPossible > 0 ? Math.max(0, Math.round((pts / maxPossible) * 100)) : 0;
+    setScore({ pts, neg, max: Q, pct });
     setResultsTab('list');
 
     // Push to SRS
     rows.forEach((row, idx) => {
       const id = questions[idx]?.id || idx;
       updateCardProgress(id, row.result === 'correct' ? 4 : 0);
+    });
+
+    // Save OMR exam results to student's mock history
+    let correctCount = 0;
+    let wrongCount = 0;
+    let emptyCount = 0;
+    rows.forEach(row => {
+      if (row.result === 'correct') correctCount++;
+      else if (row.result === 'wrong') wrongCount++;
+      else emptyCount++;
+    });
+
+    saveMockExamResult({
+      examId: activeExam.id,
+      examName: activeExam.name,
+      school: activeExam.school,
+      score: pts,
+      maxScore: Q,
+      correctCount,
+      wrongCount,
+      emptyCount,
+      pct,
+      mode: 'omr'
     });
 
     setPhase('results');
