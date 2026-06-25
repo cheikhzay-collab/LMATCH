@@ -26,11 +26,11 @@ requestAnimationFrame(() => {
 // In production (npm run build), the SW is fully generated and active.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   import('virtual:pwa-register').then(({ registerSW }) => {
-    registerSW({
+    const updateServiceWorker = registerSW({
       onNeedRefresh() {
         console.log('[PWA] Nouvelle version disponible — demande de rechargement...');
         if (confirm("Une mise à jour importante de L'CONQ est disponible. Voulez-vous recharger la page pour l'appliquer ?")) {
-          window.location.reload();
+          updateServiceWorker(true);
         }
       },
       onOfflineReady() {
