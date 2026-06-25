@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Timer, ArrowLeft, CheckCircle2, Zap, ChevronLeft, ChevronRight, LayoutGrid } from 'lucide-react';
 
@@ -16,6 +16,8 @@ export default function MockExamMode() {
   const [searchParams] = useSearchParams();
   const examId = searchParams.get('exam');
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromPath = location.state?.from || (user ? '/dashboard' : '/schools');
 
   const [loadingQuestions, setLoadingQuestions] = useState(false);
 
@@ -114,15 +116,15 @@ export default function MockExamMode() {
   const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
 
   const onReturn = useCallback(() => {
-    if (Object.keys(answers).length > 0) {
+    if (Object.keys(answers).length > 0 && !isFinished) {
       const saveAndQuit = window.confirm("Voulez-vous terminer cet examen et enregistrer vos résultats ?\n\n- [OK] pour enregistrer et voir vos résultats.\n- [Annuler] pour quitter sans enregistrer.");
       if (saveAndQuit) {
         setIsFinished(true);
         return;
       }
     }
-    navigate(user ? '/dashboard' : '/schools');
-  }, [navigate, user, answers]);
+    navigate(fromPath);
+  }, [navigate, fromPath, answers, isFinished]);
 
   if (loading || loadingQuestions || (currentExam && !questions.length)) {
     return (

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   ArrowLeft, BrainCircuit, Play, Zap, Lock,
@@ -56,6 +56,7 @@ export default function SchoolExamsPage() {
   const school = decodeURIComponent(schoolName);
   const { exams, user, schoolBranding, schools, isExamLocked, loadExamQuestions, trackDownload } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [scanExam, setScanExam] = useState(null);
   const isMobile = useIsMobile();
 
@@ -301,7 +302,7 @@ export default function SchoolExamsPage() {
                       if (locked) {
                         navigate(user ? '/subscription' : '/login');
                       } else {
-                        navigate(`/study?exam=${exam.id}`);
+                        navigate(`/study?exam=${exam.id}`, { state: { from: location.pathname } });
                       }
                     }}
                     title="Mode révision SRS"
@@ -323,7 +324,7 @@ export default function SchoolExamsPage() {
                       if (locked) {
                         navigate(user ? '/subscription' : '/login');
                       } else {
-                        navigate(`/exam?exam=${exam.id}`);
+                        navigate(`/exam?exam=${exam.id}`, { state: { from: location.pathname } });
                       }
                     }}
                     title="Concours blanc chronométré"
@@ -505,7 +506,7 @@ export default function SchoolExamsPage() {
         <ScanUploadModal
           exam={scanExam}
           onClose={() => setScanExam(null)}
-          onSRSLaunch={() => navigate(`/study?exam=${scanExam.id}`)}
+          onSRSLaunch={() => navigate(`/study?exam=${scanExam.id}`, { state: { from: location.pathname } })}
         />
       )}
     </div>

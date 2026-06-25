@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import Flashcard from '../components/Flashcard';
 import MobileFlashcard from '../components/MobileFlashcard';
 import SessionSummary from '../components/SessionSummary';
@@ -46,6 +46,8 @@ export default function StudyMode() {
   const examId = searchParams.get('exam');
   const topicId = searchParams.get('topic');
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromPath = location.state?.from || (user ? '/dashboard' : '/schools');
 
   // State hooks declared at the very top to avoid accessed-before-declaration ReferenceErrors
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 768);
@@ -341,7 +343,7 @@ export default function StudyMode() {
     if (sessionHistory.length > 0) {
       setShowExitModal(true);
     } else {
-      navigate(user ? '/dashboard' : '/schools');
+      navigate(fromPath);
     }
   };
 
@@ -349,7 +351,7 @@ export default function StudyMode() {
   useEffect(() => {
     if (isParcours) {
       if (activeExamsList.length === 0) {
-        navigate(user ? '/dashboard' : '/schools');
+        navigate(fromPath);
       }
       return;
     }
@@ -357,7 +359,7 @@ export default function StudyMode() {
       if (!currentExam && activeExamsList.length > 0) {
         navigate(`/study?exam=${activeExamsList[0].id}`, { replace: true });
       } else if (activeExamsList.length === 0) {
-        navigate(user ? '/dashboard' : '/schools');
+        navigate(fromPath);
       }
     }
   }, [currentExam, activeExamsList, navigate, isParcours, topicId, user]);
@@ -618,8 +620,8 @@ export default function StudyMode() {
           <button onClick={() => navigate(user ? '/subscription' : '/login')} className="btn" style={{ background: 'linear-gradient(135deg, var(--violet), #818cf8)' }}>
             ✦ {user ? "Voir les offres d'abonnement" : "Se connecter pour débloquer"}
           </button>
-          <button onClick={() => navigate(user ? '/dashboard' : '/schools')} className="btn-outline">
-            {user ? 'Retour au Dashboard' : 'Retour aux écoles'}
+          <button onClick={() => navigate(fromPath)} className="btn-outline">
+            Retour
           </button>
         </div>
       </div>
@@ -650,8 +652,8 @@ export default function StudyMode() {
           <p style={{ color: 'var(--text-muted)', marginBottom: '2.5rem' }}>
             Ce module ne contient aucune question. Contactez l'administration.
           </p>
-          <button className="btn" onClick={() => navigate(user ? '/dashboard' : '/schools')}>
-            {user ? 'Retour au tableau de bord' : 'Retour aux écoles'}
+          <button className="btn" onClick={() => navigate(fromPath)}>
+            Retour
           </button>
         </div>
       </div>
@@ -681,8 +683,8 @@ export default function StudyMode() {
                 Forcer une révision (10 cartes)
               </button>
             )}
-            <button className="btn" onClick={() => navigate(user ? '/dashboard' : '/schools')} style={{ width: '100%' }}>
-              {user ? 'Retour au tableau de bord' : 'Retour aux écoles'}
+            <button className="btn" onClick={() => navigate(fromPath)} style={{ width: '100%' }}>
+              Retour
             </button>
           </div>
         </div>
@@ -697,7 +699,7 @@ export default function StudyMode() {
         sessionHistory={sessionHistory}
         examName={isParcours ? "Session de révision du jour" : topicId ? `Chapitre : ${topicId}` : currentExam.name}
         onForceReview={isParcours || topicId ? null : handleForceReview}
-        onBackToDashboard={() => navigate(user ? '/dashboard' : '/schools')}
+        onBackToDashboard={() => navigate(fromPath)}
         user={user}
       />
     );
@@ -880,7 +882,7 @@ export default function StudyMode() {
               
               <button 
                 className="btn-outline" 
-                onClick={() => navigate('/dashboard', { state: { partialSave: true, count: sessionHistory.length } })}
+                onClick={() => navigate(fromPath, { state: { partialSave: true, count: sessionHistory.length } })}
                 style={{ width: '100%', padding: '0.85rem', fontWeight: 800, borderColor: 'var(--border)', color: 'var(--text-main)' }}
               >
                 Quitter directement
