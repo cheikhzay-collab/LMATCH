@@ -692,6 +692,63 @@ body {
   margin-bottom: 1.5rem;
 }
 
+.exam-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.2rem;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.exam-q-badge {
+  font-size: 0.85rem;
+  color: var(--violet);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  background: var(--violet-soft);
+  padding: 0.35rem 0.85rem;
+  border-radius: 99px;
+  border: 1px solid rgba(99, 102, 241, 0.15);
+  white-space: nowrap;
+}
+
+.exam-context-btn {
+  border: 1px solid var(--violet);
+  background: var(--violet-soft);
+  color: var(--violet);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.35rem 0.85rem;
+  border-radius: 99px;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.2s ease;
+}
+.exam-context-btn:hover {
+  background: rgba(99, 102, 241, 0.15);
+  transform: translateY(-1px);
+}
+
+.exam-topic-badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--emerald-soft);
+  color: var(--emerald);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  padding: 0.35rem 0.85rem;
+  border-radius: 99px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
 .question-box {
   font-size: 1.3rem;
   line-height: 1.6;
@@ -1400,6 +1457,24 @@ body.light-theme .astuce-tabs {
   /* Cards — tighter on mobile */
   .glass-card  { padding: 1rem 1rem; border-radius: var(--radius-xl); }
   .glass-panel { padding: 1rem 1rem; border-radius: var(--radius-xl); }
+
+  /* Exam question card badges header */
+  .exam-header-row {
+    justify-content: flex-start !important;
+    gap: 0.5rem !important;
+    margin-bottom: 0.8rem !important;
+  }
+  .exam-q-badge {
+    display: none !important;
+  }
+  .exam-context-btn {
+    font-size: 0.7rem !important;
+    padding: 0.25rem 0.6rem !important;
+  }
+  .exam-topic-badge {
+    font-size: 0.7rem !important;
+    padding: 0.25rem 0.6rem !important;
+  }
 
   /* Headings */
   h1 { font-size: 1.4rem !important; }

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Timer, ArrowLeft, CheckCircle2, Zap, ChevronLeft, ChevronRight, LayoutGrid } from 'lucide-react';
+import { Timer, ArrowLeft, CheckCircle2, Zap, ChevronLeft, ChevronRight, LayoutGrid, AlertTriangle } from 'lucide-react';
 
 import { renderWithMath } from '../utils/mathRenderer';
 import CircularTimer from '../components/CircularTimer';
@@ -44,6 +44,7 @@ export default function MockExamMode() {
   const [selectedImageZoom, setSelectedImageZoom] = useState(null);
   const [isNavDrawerOpen, setIsNavDrawerOpen] = useState(false);
   const [showMobileContext, setShowMobileContext] = useState(false);
+  const [showExitModal, setShowExitModal] = useState(false);
 
   const hasSavedResult = useRef(false);
 
@@ -117,13 +118,10 @@ export default function MockExamMode() {
 
   const onReturn = useCallback(() => {
     if (Object.keys(answers).length > 0 && !isFinished) {
-      const saveAndQuit = window.confirm("Voulez-vous terminer cet examen et enregistrer vos résultats ?\n\n- [OK] pour enregistrer et voir vos résultats.\n- [Annuler] pour quitter sans enregistrer.");
-      if (saveAndQuit) {
-        setIsFinished(true);
-        return;
-      }
+      setShowExitModal(true);
+    } else {
+      navigate(fromPath);
     }
-    navigate(fromPath);
   }, [navigate, fromPath, answers, isFinished]);
 
   if (loading || loadingQuestions || (currentExam && !questions.length)) {
@@ -317,41 +315,21 @@ export default function MockExamMode() {
           {/* Question Card (Middle/Right or Full Width) */}
           <div className="glass-card animate-fade-in question-card-main" key={currentIndex} style={{ padding: '1.25rem', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
             {/* Topic & Question Header row */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.2rem', flexShrink: 0 }}>
-              <span style={{ 
-                fontSize: '0.95rem', 
-                color: 'var(--violet)', 
-                fontWeight: 600, 
-                textTransform: 'uppercase', 
-                letterSpacing: '0.08em',
-                background: 'var(--violet-soft)',
-                padding: '0.35rem 0.8rem',
-                borderRadius: '6px',
-                border: '1px solid rgba(99, 102, 241, 0.15)'
-              }}>
+            <div className="exam-header-row">
+              <span className="exam-q-badge">
                 Question {currentIndex + 1} sur {questions.length}
               </span>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                 {currentQuestion.context && (
                   <button
                     onClick={() => setShowMobileContext(true)}
-                    className="mobile-only-toggle"
-                    style={{
-                      border: '1px solid var(--violet)',
-                      background: 'var(--violet-soft)',
-                      color: 'var(--violet)',
-                      fontSize: '0.85rem',
-                      fontWeight: 600,
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '6px',
-                      cursor: 'pointer',
-                    }}
+                    className="mobile-only-toggle exam-context-btn"
                   >
                     Voir l'énoncé
                   </button>
                 )}
                 {currentQuestion.topic && (
-                  <span className="topic-badge" style={{ margin: 0, padding: '0.35rem 0.8rem', fontSize: '0.9rem', borderRadius: '6px', fontWeight: 600 }}>
+                  <span className="exam-topic-badge">
                     {currentQuestion.topic}
                   </span>
                 )}
@@ -882,6 +860,106 @@ export default function MockExamMode() {
             <p style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', fontSize: '0.8rem', marginTop: '1rem', fontWeight: 600 }}>
               Cliquez n'importe où pour fermer
             </p>
+          </div>
+        </div>
+      )}
+
+      {/* ── Exit Confirmation Modal ── */}
+      {showExitModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(2, 6, 23, 0.8)',
+          backdropFilter: 'blur(12px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '1rem'
+        }}>
+          <div className="animate-fade-in" style={{
+            maxWidth: '460px',
+            width: '100%',
+            padding: '2.5rem',
+            borderRadius: 'var(--radius-xl)',
+            border: '1px solid var(--border)',
+            background: 'var(--bg-card)',
+            boxShadow: 'var(--shadow-card)',
+            textAlign: 'center',
+            position: 'relative'
+          }}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              background: 'rgba(245, 158, 11, 0.1)',
+              borderRadius: '18px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.25rem',
+              border: '1px solid rgba(245, 158, 11, 0.15)',
+              color: 'var(--warning)'
+            }}>
+              <AlertTriangle size={28} />
+            </div>
+            
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-main)' }}>
+              Quitter l'examen en cours ?
+            </h3>
+            
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.55, marginBottom: '2rem' }}>
+              Vous n'avez pas terminé votre concours blanc. Vous avez répondu à <strong>{answeredCount}</strong> question{answeredCount !== 1 ? 's' : ''} sur <strong>{questions.length}</strong>. Que souhaitez-vous faire ?
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              <button 
+                className="btn" 
+                onClick={() => {
+                  setShowExitModal(false);
+                  setIsFinished(true);
+                }}
+                style={{ 
+                  width: '100%', 
+                  padding: '0.85rem', 
+                  fontWeight: 800,
+                  background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
+                  border: 'none',
+                  boxShadow: '0 8px 20px rgba(99, 102, 241, 0.2)'
+                }}
+              >
+                Terminer et enregistrer
+              </button>
+              
+              <button 
+                className="btn-outline" 
+                onClick={() => {
+                  setShowExitModal(false);
+                  navigate(fromPath);
+                }}
+                style={{ width: '100%', padding: '0.85rem', fontWeight: 800, borderColor: 'var(--border)', color: 'var(--text-main)' }}
+              >
+                Quitter sans enregistrer
+              </button>
+              
+              <button 
+                onClick={() => setShowExitModal(false)}
+                style={{ 
+                  background: 'none', 
+                  border: 'none', 
+                  color: 'var(--text-subtle)', 
+                  fontSize: '0.85rem', 
+                  fontWeight: 600, 
+                  cursor: 'pointer', 
+                  marginTop: '0.5rem',
+                  textDecoration: 'underline'
+                }}
+              >
+                Continuer l'examen
+              </button>
+            </div>
           </div>
         </div>
       )}
