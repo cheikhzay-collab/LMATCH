@@ -113,7 +113,16 @@ export default function MockExamMode() {
   const isCritical = useMemo(() => timeLeft <= 300, [timeLeft]);
   const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
 
-  const onReturn = useCallback(() => navigate(user ? '/dashboard' : '/schools'), [navigate, user]);
+  const onReturn = useCallback(() => {
+    if (Object.keys(answers).length > 0) {
+      const saveAndQuit = window.confirm("Voulez-vous terminer cet examen et enregistrer vos résultats ?\n\n- [OK] pour enregistrer et voir vos résultats.\n- [Annuler] pour quitter sans enregistrer.");
+      if (saveAndQuit) {
+        setIsFinished(true);
+        return;
+      }
+    }
+    navigate(user ? '/dashboard' : '/schools');
+  }, [navigate, user, answers]);
 
   if (loading || loadingQuestions || (currentExam && !questions.length)) {
     return (
@@ -746,6 +755,27 @@ export default function MockExamMode() {
               })}
             </div>
           </div>
+          
+          <button 
+            className="btn-emerald" 
+            onClick={() => {
+              setIsFinished(true);
+              setIsNavDrawerOpen(false);
+            }} 
+            style={{ 
+              marginTop: '0.5rem',
+              marginBottom: '1rem',
+              width: '100%', 
+              padding: '0.75rem', 
+              fontSize: '0.9rem',
+              fontWeight: 800,
+              borderRadius: '10px',
+              cursor: 'pointer',
+              border: 'none'
+            }}
+          >
+            Terminer l'examen
+          </button>
         </div>
       </div>
 
