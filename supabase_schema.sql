@@ -210,7 +210,7 @@ CREATE TABLE IF NOT EXISTS public.mock_history (
   exam_id text NOT NULL,
   exam_name text,
   school text,
-  score integer,
+  score double precision,
   max_score integer,
   pct double precision,
   correct_count integer,
