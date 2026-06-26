@@ -3,15 +3,15 @@ import { Trophy, CheckCircle2, XCircle, Lightbulb, ArrowLeft, TrendingUp, Zap } 
 import { renderWithMath } from '../utils/mathRenderer';
 import DiagnosticReport from './DiagnosticReport';
 
-const renderOptionText = (text) => {
-  return renderWithMath(text);
-};
+const renderOptionText = (text) => renderWithMath(text);
 
 const MockExamResults = React.memo(({ questions, answers, exam, onReturn, schoolBranding }) => {
   const [tab, setTab] = useState('correction');
 
-  // Get school scoring rules
-  const brand = useMemo(() => schoolBranding[exam.school] || { scoring: { correct: 1, wrong: -0.25, empty: 0 } }, [schoolBranding, exam.school]);
+  const brand = useMemo(
+    () => schoolBranding[exam.school] || { scoring: { correct: 1, wrong: -0.25, empty: 0 } },
+    [schoolBranding, exam.school]
+  );
   const rules = useMemo(() => brand.scoring || { correct: 1, wrong: -0.25, empty: 0 }, [brand]);
 
   const { score, pct, corrected } = useMemo(() => {
@@ -39,78 +39,95 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
   }, [questions, answers, rules]);
 
   return (
-    <div className="animate-fade-in" style={{ maxWidth: 900, margin: '0 auto', padding: 'clamp(1rem, 4vw, 2rem) clamp(0.875rem, 4vw, 1.5rem) 4rem' }}>
-      {/* Trophy card */}
-      <div className="glass-panel text-center" style={{ padding: 'clamp(1.5rem, 5vw, 2.5rem) clamp(1rem, 5vw, 2rem)', marginBottom: '1.5rem' }}>
-        <div style={{
-          width: 72, height: 72, borderRadius: '50%', margin: '0 auto 1.25rem',
-          background: pct >= 50 ? 'var(--emerald-soft)' : 'var(--danger-soft)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: `2px solid ${pct >= 50 ? 'var(--emerald)' : 'var(--danger)'}`,
-        }}>
-          <Trophy size={32} color={pct >= 50 ? 'var(--emerald)' : 'var(--danger)'} />
+    <div className="mock-results-root animate-fade-in">
+
+      {/* ── Trophy / Score card ───────────────────────────────────── */}
+      <div className="mock-results-header glass-panel">
+        {/* Trophy icon */}
+        <div
+          className="mock-results-trophy"
+          style={{
+            background: pct >= 50 ? 'var(--emerald-soft)' : 'var(--danger-soft)',
+            border: `2px solid ${pct >= 50 ? 'var(--emerald)' : 'var(--danger)'}`,
+          }}
+        >
+          <Trophy size={30} color={pct >= 50 ? 'var(--emerald)' : 'var(--danger)'} />
         </div>
-        <h1 className="text-gradient" style={{ fontSize: 'clamp(1.4rem, 5vw, 1.75rem)', marginBottom: '0.5rem' }}>
-          Rapport de Performance
-        </h1>
-        <div style={{ fontSize: 'clamp(2.5rem, 8vw, 3.5rem)', fontWeight: 900, margin: '0.5rem 0', lineHeight: 1 }}>
-          {score}<span style={{ fontSize: 'clamp(1.25rem, 4vw, 1.75rem)', color: 'var(--text-muted)', fontWeight: 400 }}>/{questions.length}</span>
+
+        <h1 className="mock-results-title text-gradient">Rapport de Performance</h1>
+
+        {/* Score */}
+        <div className="mock-results-score">
+          {score}
+          <span className="mock-results-score-denom">/{questions.length}</span>
         </div>
-        <div style={{
-          display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-          background: pct >= 50 ? 'var(--emerald-soft)' : 'var(--danger-soft)',
-          color: pct >= 50 ? 'var(--emerald)' : 'var(--danger)',
-          padding: '0.35rem 1.1rem', borderRadius: '99px', fontWeight: 700,
-          border: `1px solid ${pct >= 50 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
-          marginBottom: '1.25rem'
-        }}>
-          <Zap size={14} /> {pct}% de réussite
+
+        {/* % badge */}
+        <div
+          className="mock-results-pct-badge"
+          style={{
+            background: pct >= 50 ? 'var(--emerald-soft)' : 'var(--danger-soft)',
+            color:      pct >= 50 ? 'var(--emerald)'      : 'var(--danger)',
+            border:     `1px solid ${pct >= 50 ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)'}`,
+          }}
+        >
+          <Zap size={13} /> {pct}% de réussite
         </div>
-        <button className="btn" style={{ marginTop: '0.75rem', margin: '0.75rem auto 0', display: 'flex', alignItems: 'center', gap: 6 }} onClick={onReturn}>
-          <ArrowLeft size={16} /> Retour au Dashboard
+
+        {/* Return button */}
+        <button className="btn mock-results-return-btn" onClick={onReturn}>
+          <ArrowLeft size={15} /> Retour au Dashboard
         </button>
       </div>
 
-      {/* Tab switcher */}
-      <div className="mock-results-tab-switcher" style={{ display:'flex', gap:'0.5rem', marginBottom:'1.5rem', background:'var(--bg-glass)', padding:'0.35rem', borderRadius:'var(--radius-md)', border:'1px solid var(--border)', maxWidth:'100%', flexWrap:'nowrap' }}>
-        {[{id:'correction', label:'Correction', icon:<CheckCircle2 size={15}/>},{id:'diagnostic', label:'Diagnostic', icon:<TrendingUp size={15}/>}].map(t => (
-          <button key={t.id} onClick={()=>setTab(t.id)}
-            className="mock-results-tab-button"
-            style={{ display:'flex', alignItems:'center', gap:'0.4rem', padding:'0.5rem 1rem', borderRadius:'calc(var(--radius-md) - 3px)', border:'none', cursor:'pointer', fontWeight:700, fontSize:'0.85rem', fontFamily:'inherit', transition:'all 0.2s', flex: '1', justifyContent: 'center',
-              background: tab===t.id ? 'var(--violet)' : 'transparent',
-              color:      tab===t.id ? '#fff'           : 'var(--text-muted)',
-              boxShadow:  tab===t.id ? '0 2px 8px var(--violet-glow)' : 'none',
-            }}>
+      {/* ── Tab switcher ──────────────────────────────────────────── */}
+      <div className="mock-results-tabs">
+        {[
+          { id: 'correction', label: 'Correction',  icon: <CheckCircle2 size={14} /> },
+          { id: 'diagnostic', label: 'Diagnostic',  icon: <TrendingUp   size={14} /> },
+        ].map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={`mock-results-tab-btn${tab === t.id ? ' active' : ''}`}
+          >
             {t.icon} {t.label}
           </button>
         ))}
       </div>
 
-      {/* Tab content */}
+      {/* ── Correction tab ────────────────────────────────────────── */}
       {tab === 'correction' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div className="mock-results-list">
           {questions.map((q, idx) => {
-            const userAns = answers[q.id];
+            const userAns  = answers[q.id];
             const isCorrect = userAns === q.correct_answer;
             return (
-              <div key={q.id} className="glass-panel" style={{
-                borderLeft: `4px solid ${isCorrect ? 'var(--emerald)' : 'var(--danger)'}`,
-                padding: 'clamp(1rem, 4vw, 1.5rem)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', fontWeight: 600 }}>
-                    Question {idx + 1} {q.topic && `· ${q.topic}`}
+              <div
+                key={q.id}
+                className="mock-results-card glass-panel"
+                style={{ borderLeftColor: isCorrect ? 'var(--emerald)' : 'var(--danger)' }}
+              >
+                {/* Question meta row */}
+                <div className="mock-results-card-meta">
+                  <span className="mock-results-card-label">
+                    Question {idx + 1}{q.topic && ` · ${q.topic}`}
                   </span>
                   {isCorrect
-                    ? <CheckCircle2 size={20} color="var(--emerald)" />
-                    : <XCircle size={20} color="var(--danger)" />}
+                    ? <CheckCircle2 size={18} color="var(--emerald)" />
+                    : <XCircle      size={18} color="var(--danger)"  />
+                  }
                 </div>
-                <div style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: 500 }}>
+
+                {/* Question text */}
+                <div className="mock-results-card-question">
                   {renderWithMath(q.question)}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
-                  <div style={{ background: 'var(--bg-glass)', padding: '0.875rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', marginBottom: '0.4rem', fontWeight: 600 }}>VOTRE RÉPONSE</p>
+
+                {/* Answer columns — stack on mobile */}
+                <div className="mock-results-answers">
+                  <div className="mock-results-answer-box mock-results-answer-user">
+                    <p className="mock-results-answer-label">VOTRE RÉPONSE</p>
                     {userAns
                       ? <span style={{ color: isCorrect ? 'var(--emerald)' : 'var(--danger)', fontWeight: 600 }}>
                           {userAns}) {renderOptionText(q.options.find(o => o.id === userAns)?.text)}
@@ -118,17 +135,24 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
                       : <span className="text-muted">Aucune réponse</span>
                     }
                   </div>
-                  <div style={{ background: 'var(--emerald-soft)', padding: '0.875rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(16,185,129,0.25)' }}>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--emerald)', marginBottom: '0.4rem', fontWeight: 600 }}>BONNE RÉPONSE</p>
+
+                  <div className="mock-results-answer-box mock-results-answer-correct">
+                    <p className="mock-results-answer-label" style={{ color: 'var(--emerald)' }}>BONNE RÉPONSE</p>
                     <span style={{ color: 'var(--emerald)', fontWeight: 600 }}>
                       {q.correct_answer}) {renderOptionText(q.options.find(o => o.id === q.correct_answer)?.text)}
                     </span>
                   </div>
                 </div>
+
+                {/* Astuce */}
                 {!isCorrect && q.astuce && (
-                  <div className="astuce-box" style={{ padding: 'clamp(1rem, 4vw, 1.5rem)' }}>
-                    <div className="astuce-header" style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: '0.9rem', color: 'var(--violet)' }}><Lightbulb size={16} /> Astuce</div>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: '0.5rem 0 0' }}>{renderWithMath(q.astuce)}</p>
+                  <div className="astuce-box" style={{ marginTop: '0.75rem' }}>
+                    <div className="astuce-header">
+                      <Lightbulb size={15} /> Astuce
+                    </div>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.4rem 0 0' }}>
+                      {renderWithMath(q.astuce)}
+                    </p>
                   </div>
                 )}
               </div>
@@ -137,6 +161,7 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
         </div>
       )}
 
+      {/* ── Diagnostic tab ────────────────────────────────────────── */}
       {tab === 'diagnostic' && (
         <DiagnosticReport corrected={corrected} exam={exam} onClose={onReturn} />
       )}
@@ -145,5 +170,4 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
 });
 
 MockExamResults.displayName = 'MockExamResults';
-
 export default MockExamResults;
