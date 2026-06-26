@@ -18,7 +18,38 @@ const safeSetItem = (key, value) => {
   try {
     localStorage.setItem(key, value);
   } catch (e) {
-    console.warn(`[Storage] Failed to save '${key}' to localStorage:`, e.message || e);
+    // FIX: Handle QuotaExceededError — auto-evict old data and retry
+    if (e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014)) {
+      console.warn('[Storage] localStorage quota exceeded — evicting old data and retrying...');
+      try {
+        // Evict the heaviest non-critical items first
+        localStorage.removeItem('mockExamHistory');
+        localStorage.removeItem('reviewDates');
+        localStorage.removeItem('dailyActivity');
+        // Trim progress to last 300 cards if it's the cause
+        if (key !== 'progress') {
+          const rawProgress = localStorage.getItem('progress');
+          if (rawProgress) {
+            try {
+              const parsed = JSON.parse(rawProgress);
+              const trimmed = Object.fromEntries(
+                Object.entries(parsed)
+                  .sort(([, a], [, b]) => new Date(b.nextReviewDate) - new Date(a.nextReviewDate))
+                  .slice(0, 300)
+              );
+              localStorage.setItem('progress', JSON.stringify(trimmed));
+            } catch {}
+          }
+        }
+        // Retry the original write
+        localStorage.setItem(key, value);
+        console.warn(`[Storage] Successfully saved '${key}' after eviction.`);
+      } catch (retryErr) {
+        console.error(`[Storage] Still can't save '${key}' after eviction:`, retryErr.message || retryErr);
+      }
+    } else {
+      console.warn(`[Storage] Failed to save '${key}' to localStorage:`, e.message || e);
+    }
   }
 };
 
@@ -427,9 +458,13 @@ export function AuthProvider({ children }) {
           return;
         }
 
-        // 1. Fetch initial session using the official method
-        const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
-        if (sessionErr) throw sessionErr;
+        // 1. Verify session with the server using getUser() — more reliable than
+        //    getSession() which only reads from storage without server validation.
+        //    This prevents using expired/corrupted tokens from cache.
+        const { data: { user: serverUser }, error: sessionErr } = await supabase.auth.getUser();
+        // Wrap into session-like shape for compatibility with the code below
+        const session = serverUser ? { user: serverUser } : null;
+        if (sessionErr && sessionErr.message !== 'Auth session missing!') throw sessionErr;
 
         if (session?.user && active) {
           const supabaseUser = session.user;
@@ -710,7 +745,18 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      safeSetItem('progress', JSON.stringify(progress));
+      // FIX: Limit localStorage progress to 800 most-recently-due cards.
+      // Prevents the progress object from growing unbounded and filling
+      // the mobile localStorage quota (iOS Safari cap ~2.5MB).
+      const entries = Object.entries(progress);
+      const toSave = entries.length > 800
+        ? Object.fromEntries(
+            entries
+              .sort(([, a], [, b]) => new Date(a.nextReviewDate) - new Date(b.nextReviewDate))
+              .slice(0, 800)
+          )
+        : progress;
+      safeSetItem('progress', JSON.stringify(toSave));
     }, 1000);
     return () => clearTimeout(timer);
   }, [progress]);

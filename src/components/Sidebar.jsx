@@ -1,12 +1,13 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   LayoutDashboard, BookOpen, UploadCloud,
-  LogOut, Trophy, Library, Users, Settings, Zap, Sun, Moon, GraduationCap, Sparkles, BookMarked, Camera, Crown
+  LogOut, Trophy, Library, Users, Settings, Zap, Sun, Moon, GraduationCap,
+  Sparkles, BookMarked, Camera, Crown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import LconqLogo from './LconqLogo';
 
-export default function Sidebar() {
+export default function Sidebar({ collapsed = false, onToggle }) {
   const { user, logout, theme, toggleTheme } = useAuth();
   const navigate = useNavigate();
 
@@ -15,195 +16,160 @@ export default function Sidebar() {
   const isStudent = user?.role === 'student';
   const isAdmin   = user?.role === 'admin';
 
-  return (
-    <aside className="sidebar">
-      {/* Logo */}
-      <LconqLogo size={36} textSize="1.25rem" style={{ marginBottom: '2.5rem', padding: '0 0.25rem', cursor: 'pointer' }} onClick={() => navigate('/')} />
+  // Helper: nav item with tooltip support when collapsed
+  const NavItem = ({ to, icon: Icon, label }) => (
+    <NavLink
+      to={to}
+      className={({ isActive }) => `nav-item${isActive ? ' active' : ''}${collapsed ? ' nav-item--collapsed' : ''}`}
+      title={collapsed ? label : undefined}
+    >
+      <span className="nav-item__icon"><Icon size={18} /></span>
+      {!collapsed && <span className="nav-item__label">{label}</span>}
+    </NavLink>
+  );
 
-      {/* Navigation */}
-      <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
+  const SectionLabel = ({ children }) =>
+    collapsed ? null : (
+      <p className="sidebar-section-label">{children}</p>
+    );
+
+  return (
+    <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
+
+      {/* ── Logo ── */}
+      <div
+        className={`sidebar-logo-wrap${collapsed ? ' sidebar-logo-wrap--collapsed' : ''}`}
+        onClick={() => navigate('/')}
+        style={{ cursor: 'pointer' }}
+      >
+        {collapsed ? (
+          /* Mini icon when collapsed */
+          <div className="sidebar-logo-mini" title="L'CONQ • GIMA">
+            <svg width="28" height="28" viewBox="0 0 36 36" fill="none">
+              <rect width="36" height="36" rx="10" fill="url(#logoGrad)" />
+              <text x="18" y="24" textAnchor="middle" fontSize="16" fontWeight="900" fill="#fff" fontFamily="'Plus Jakarta Sans',sans-serif">G</text>
+              <defs>
+                <linearGradient id="logoGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#716DF2" />
+                  <stop offset="100%" stopColor="#10B981" />
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+        ) : (
+          <LconqLogo size={36} textSize="1.25rem" style={{ padding: '0 0.25rem' }} />
+        )}
+      </div>
+
+      {/* ── Navigation ── */}
+      <nav className="sidebar-nav">
+
         {!user && (
           <>
-            <p style={{
-              color: 'var(--text-subtle)', fontSize: '0.7rem', fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.1em',
-              padding: '0 0.875rem', marginBottom: '0.5rem', marginTop: '0.25rem'
-            }}>
-              Visiteur
-            </p>
-            <NavLink to="/schools" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <GraduationCap size={18} /> Grandes Écoles
-            </NavLink>
+            <SectionLabel>Visiteur</SectionLabel>
+            <NavItem to="/schools" icon={GraduationCap} label="Grandes Écoles" />
           </>
         )}
 
         {isStudent && (
           <>
-            <p style={{
-              color: 'var(--text-subtle)', fontSize: '0.7rem', fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.1em',
-              padding: '0 0.875rem', marginBottom: '0.5rem', marginTop: '0.25rem'
-            }}>
-              Espace Élève
-            </p>
-            <NavLink to="/dashboard" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <LayoutDashboard size={18} /> Tableau de bord
-            </NavLink>
-            <NavLink to="/schools" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <GraduationCap size={18} /> Grandes Écoles
-            </NavLink>
-            <NavLink to="/scanner" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Camera size={18} /> Scanner QCM
-            </NavLink>
-            <NavLink to="/study" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <BookOpen size={18} /> Révision SRS
-            </NavLink>
-            <NavLink to="/ranking" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Trophy size={18} /> Classement
-            </NavLink>
-            <NavLink to="/subscription" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Crown size={18} /> Mon Abonnement
-            </NavLink>
+            <SectionLabel>Espace Élève</SectionLabel>
+            <NavItem to="/dashboard"    icon={LayoutDashboard} label="Tableau de bord" />
+            <NavItem to="/schools"      icon={GraduationCap}   label="Grandes Écoles" />
+            <NavItem to="/scanner"      icon={Camera}          label="Scanner QCM" />
+            <NavItem to="/study"        icon={BookOpen}        label="Révision SRS" />
+            <NavItem to="/ranking"      icon={Trophy}          label="Classement" />
+            <NavItem to="/subscription" icon={Crown}           label="Mon Abonnement" />
           </>
         )}
 
         {isAdmin && (
           <>
-            <p style={{
-              color: 'var(--text-subtle)', fontSize: '0.7rem', fontWeight: 700,
-              textTransform: 'uppercase', letterSpacing: '0.1em',
-              padding: '0 0.875rem', marginBottom: '0.5rem', marginTop: '0.25rem'
-            }}>
-              Centre de Contrôle
-            </p>
-            <NavLink to="/admin/dashboard" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <LayoutDashboard size={18} /> Vue d'ensemble
-            </NavLink>
-            <NavLink to="/schools" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <GraduationCap size={18} /> Grandes Écoles
-            </NavLink>
-            <NavLink to="/scanner" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Camera size={18} /> Scanner QCM
-            </NavLink>
-            <NavLink to="/admin/exams" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Library size={18} /> Bibliothèque QCM
-            </NavLink>
-            <NavLink to="/admin/users" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Users size={18} /> Élèves
-            </NavLink>
-            <NavLink to="/admin/upload" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <UploadCloud size={18} /> Upload QCM
-            </NavLink>
-            <NavLink to="/admin/ai-import" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Sparkles size={18} /> Import IA (QCM)
-            </NavLink>
-            <NavLink to="/admin/lessons" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <BookOpen size={18} /> Fiches de Cours
-            </NavLink>
-            <NavLink to="/admin/ai-lessons" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Sparkles size={18} /> Import IA (Cours)
-            </NavLink>
-            <NavLink to="/admin/ebooks" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <BookMarked size={18} /> E-Books
-            </NavLink>
-            <NavLink to="/admin/settings" className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
-              <Settings size={18} /> Paramètres
-            </NavLink>
+            <SectionLabel>Centre de Contrôle</SectionLabel>
+            <NavItem to="/admin/dashboard" icon={LayoutDashboard} label="Vue d'ensemble" />
+            <NavItem to="/schools"         icon={GraduationCap}   label="Grandes Écoles" />
+            <NavItem to="/scanner"         icon={Camera}          label="Scanner QCM" />
+            <NavItem to="/admin/exams"     icon={Library}         label="Bibliothèque QCM" />
+            <NavItem to="/admin/users"     icon={Users}           label="Élèves" />
+            <NavItem to="/admin/upload"    icon={UploadCloud}     label="Upload QCM" />
+            <NavItem to="/admin/ai-import" icon={Sparkles}        label="Import IA (QCM)" />
+            <NavItem to="/admin/lessons"   icon={BookOpen}        label="Fiches de Cours" />
+            <NavItem to="/admin/ai-lessons"icon={Sparkles}        label="Import IA (Cours)" />
+            <NavItem to="/admin/ebooks"    icon={BookMarked}      label="E-Books" />
+            <NavItem to="/admin/settings"  icon={Settings}        label="Paramètres" />
           </>
         )}
       </nav>
 
-      {/* User card */}
-      {!user ? (
-        <button 
-          onClick={() => navigate('/login')}
-          className="btn animate-fade-in"
-          style={{
-            width: '100%',
-            background: 'linear-gradient(135deg, var(--violet), #818cf8)',
-            fontWeight: 800,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            padding: '0.75rem 1rem',
-            borderRadius: 'var(--radius-lg)',
-            color: '#fff',
-            border: 'none',
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(99, 102, 241, 0.2)'
-          }}
-        >
-          <Zap size={15} /> Connexion / Inscription
-        </button>
-      ) : (
-        <div style={{
-          background: 'var(--bg-glass)', border: '1px solid var(--border)',
-          borderRadius: 'var(--radius-lg)', padding: '0.875rem',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.5rem'
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', overflow: 'hidden' }}>
+      {/* ── User card ── */}
+      <div className="sidebar-footer">
+        {!user ? (
+          <button
+            onClick={() => navigate('/login')}
+            className={`sidebar-login-btn${collapsed ? ' sidebar-login-btn--collapsed' : ''}`}
+            title={collapsed ? 'Connexion / Inscription' : undefined}
+          >
+            <Zap size={15} />
+            {!collapsed && <span>Connexion / Inscription</span>}
+          </button>
+        ) : (
+          <div className={`sidebar-user-card${collapsed ? ' sidebar-user-card--collapsed' : ''}`}>
             {/* Avatar */}
-            <div style={{
-              width: 36, height: 36, borderRadius: '10px', flexShrink: 0,
-              background: isAdmin
-                ? 'linear-gradient(135deg, var(--violet), #818cf8)'
-                : 'linear-gradient(135deg, var(--emerald), #34d399)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 800, fontSize: '0.9rem', color: '#fff'
-            }}>
+            <div
+              className="sidebar-avatar"
+              style={{
+                background: isAdmin
+                  ? 'linear-gradient(135deg, var(--violet), #818cf8)'
+                  : 'linear-gradient(135deg, var(--emerald), #34d399)',
+              }}
+              title={collapsed ? user?.name : undefined}
+            >
               {user?.name?.[0]?.toUpperCase() || '?'}
             </div>
-            <div style={{ overflow: 'hidden' }}>
-              <p style={{ fontWeight: 700, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {user?.name}
-              </p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                {isStudent && (
-                  <span 
-                    className={`badge ${user?.tier === 'premium' ? 'badge-pro' : 'badge-free'}`}
-                    onClick={() => navigate('/subscription')}
-                    style={{ cursor: 'pointer' }}
-                    title="Gérer mon abonnement"
-                  >
-                    {user?.tier === 'premium' ? <><Zap size={10} />Pro</> : 'Free'}
-                  </span>
-                )}
-                {isAdmin && <span className="badge badge-emerald">Admin</span>}
+
+            {/* Name + badge — hidden in collapsed mode */}
+            {!collapsed && (
+              <div className="sidebar-user-info">
+                <p className="sidebar-user-name">{user?.name}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                  {isStudent && (
+                    <span
+                      className={`badge ${user?.tier === 'premium' ? 'badge-pro' : 'badge-free'}`}
+                      onClick={() => navigate('/subscription')}
+                      style={{ cursor: 'pointer' }}
+                      title="Gérer mon abonnement"
+                    >
+                      {user?.tier === 'premium' ? <><Zap size={10} />Pro</> : 'Free'}
+                    </span>
+                  )}
+                  {isAdmin && <span className="badge badge-emerald">Admin</span>}
+                </div>
               </div>
+            )}
+
+            {/* Actions */}
+            <div className={`sidebar-user-actions${collapsed ? ' sidebar-user-actions--stacked' : ''}`}>
+              <button
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
+                aria-label={theme === 'dark' ? 'Passer au mode clair' : 'Passer au mode sombre'}
+                className="sidebar-icon-btn"
+                style={{ color: theme === 'dark' ? 'var(--warning)' : 'var(--violet)' }}
+              >
+                {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
+              </button>
+              <button
+                onClick={handleLogout}
+                className="sidebar-icon-btn sidebar-icon-btn--logout"
+                title="Déconnexion"
+                aria-label="Déconnexion"
+              >
+                <LogOut size={17} />
+              </button>
             </div>
           </div>
-
-          <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
-            {/* Theme toggle */}
-            <button
-              onClick={toggleTheme}
-              title={theme === 'dark' ? 'Mode clair' : 'Mode sombre'}
-              aria-label={theme === 'dark' ? 'Passer au mode clair' : 'Passer au mode sombre'}
-              style={{
-                background: 'transparent', border: 'none',
-                color: theme === 'dark' ? 'var(--warning)' : 'var(--violet)',
-                cursor: 'pointer', padding: '4px', borderRadius: '6px',
-                transition: 'all 0.2s', display: 'flex', alignItems: 'center'
-              }}
-            >
-              {theme === 'dark' ? <Sun size={17} /> : <Moon size={17} />}
-            </button>
-
-            {/* Logout */}
-            <button
-              onClick={handleLogout}
-              style={{ background: 'transparent', border: 'none', color: 'var(--text-subtle)', cursor: 'pointer', padding: '4px', borderRadius: '6px', transition: 'color 0.2s', display: 'flex', alignItems: 'center' }}
-              title="Déconnexion"
-              aria-label="Déconnexion"
-              onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
-              onMouseLeave={e => e.currentTarget.style.color = 'var(--text-subtle)'}
-            >
-              <LogOut size={17} />
-            </button>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </aside>
   );
 }

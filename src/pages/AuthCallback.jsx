@@ -29,7 +29,9 @@ export default function AuthCallback() {
             setStatus('Connexion réussie ! Redirection…');
             // Small delay to let AuthContext update its state
             setTimeout(() => {
-              navigate('/dashboard', { replace: true });
+              const redirectTo = sessionStorage.getItem('redirect_after_auth') || '/dashboard';
+              sessionStorage.removeItem('redirect_after_auth');
+              navigate(redirectTo, { replace: true });
             }, 800);
           }
         } else {
@@ -40,7 +42,9 @@ export default function AuthCallback() {
               if (isMounted) {
                 setStatus('Connexion réussie ! Redirection…');
                 setTimeout(() => {
-                  navigate('/dashboard', { replace: true });
+                  const redirectTo = sessionStorage.getItem('redirect_after_auth') || '/dashboard';
+                  sessionStorage.removeItem('redirect_after_auth');
+                  navigate(redirectTo, { replace: true });
                 }, 800);
               }
             }

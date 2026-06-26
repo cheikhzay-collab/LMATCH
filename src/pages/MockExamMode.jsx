@@ -6,6 +6,8 @@ import { Timer, ArrowLeft, CheckCircle2, Zap, ChevronLeft, ChevronRight, LayoutG
 import { renderWithMath } from '../utils/mathRenderer';
 import CircularTimer from '../components/CircularTimer';
 import MockExamResults from '../components/MockExamResults';
+import GuestResultGate from '../components/GuestResultGate';
+import { getExamById } from '../services/examService';
 
 function renderOptionText(text) {
   return renderWithMath(text);
@@ -14,15 +16,34 @@ function renderOptionText(text) {
 export default function MockExamMode() {
   const { exams, saveMockExamResult, schoolBranding, isExamLocked, updateCardProgress, user, loading, loadExamQuestions } = useAuth();
   const [searchParams] = useSearchParams();
-  const examId = searchParams.get('exam');
+  const examId  = searchParams.get('exam');
+  const isGuest = searchParams.get('guest') === 'true';
   const navigate = useNavigate();
   const location = useLocation();
   const fromPath = location.state?.from || (user ? '/dashboard' : '/schools');
 
+  // Restore answers saved before Google OAuth redirect (guest flow)
+  const [guestAnswersRestored, setGuestAnswersRestored] = useState(false);
+
+  // Guest mode: fetch exam directly (bypasses AuthContext which requires user)
+  const [guestExam, setGuestExam] = useState(null);
+  const [guestExamLoading, setGuestExamLoading] = useState(false);
+
+  useEffect(() => {
+    if (isGuest && examId && !user) {
+      setGuestExamLoading(true);
+      getExamById(examId)
+        .then(exam => setGuestExam(exam))
+        .catch(err => console.error('[GuestMode] Failed to fetch exam:', err))
+        .finally(() => setGuestExamLoading(false));
+    }
+  }, [isGuest, examId, user]);
+
   const [loadingQuestions, setLoadingQuestions] = useState(false);
 
   useEffect(() => {
-    if (examId) {
+    // For non-guest users: load questions via AuthContext
+    if (!isGuest && examId) {
       const exam = exams.find(e => e.id === examId);
       if (exam && (!exam.questions || exam.questions.length === 0)) {
         setLoadingQuestions(true);
@@ -31,9 +52,13 @@ export default function MockExamMode() {
           .finally(() => setLoadingQuestions(false));
       }
     }
-  }, [examId, exams, loadExamQuestions]);
+  }, [isGuest, examId, exams, loadExamQuestions]);
 
-  const currentExam = useMemo(() => examId ? exams.find(e => e.id === examId) : exams[0], [exams, examId]);
+  // currentExam: for guests use guestExam; for logged-in users use AuthContext exams
+  const currentExam = useMemo(() => {
+    if (isGuest && !user) return guestExam;
+    return examId ? exams.find(e => e.id === examId) : exams[0];
+  }, [isGuest, user, guestExam, exams, examId]);
   const questions = useMemo(() => currentExam?.questions ?? [], [currentExam]);
   const TOTAL_TIME = 120 * 60;
 
@@ -56,9 +81,36 @@ export default function MockExamMode() {
     return () => clearInterval(t);
   }, [isFinished, questions]);
 
+  // Save guest answers to sessionStorage as soon as exam finishes (before any redirect)
+  useEffect(() => {
+    if (isGuest && isFinished && !user) {
+      sessionStorage.setItem('guest_exam_answers', JSON.stringify(answers));
+      sessionStorage.setItem('guest_exam_id', examId);
+      sessionStorage.setItem('redirect_after_auth', `/exam?exam=${examId}&guest=true`);
+    }
+  }, [isGuest, isFinished, user, answers, examId]);
+
+  // Restore answers after OAuth redirect (guest logged in)
+  useEffect(() => {
+    if (isGuest && user && !guestAnswersRestored) {
+      const saved = sessionStorage.getItem('guest_exam_answers');
+      const savedId = sessionStorage.getItem('guest_exam_id');
+      if (saved && savedId === examId) {
+        setAnswers(JSON.parse(saved));
+        setIsFinished(true);
+        sessionStorage.removeItem('guest_exam_answers');
+        sessionStorage.removeItem('guest_exam_id');
+      }
+      setGuestAnswersRestored(true);
+    }
+  }, [isGuest, user, guestAnswersRestored, examId]);
+
   useEffect(() => {
     if (isFinished && !hasSavedResult.current && currentExam) {
       hasSavedResult.current = true;
+
+      // Skip DB save and card progress update for guest users
+      if (isGuest && !user) return;
 
       const brand = schoolBranding[currentExam.school] || { scoring: { correct: 1, wrong: -0.25, empty: 0 } };
       const rules = brand.scoring || { correct: 1, wrong: -0.25, empty: 0 };
@@ -81,7 +133,7 @@ export default function MockExamMode() {
           pts += rules.wrong;
           wrongCount++;
         }
-        
+
         updateCardProgress(q.id, isCorrect ? 4 : 0);
       });
 
@@ -101,7 +153,7 @@ export default function MockExamMode() {
         mode: 'online'
       });
     }
-  }, [isFinished, answers, currentExam, questions, saveMockExamResult, schoolBranding, updateCardProgress]);
+  }, [isFinished, answers, currentExam, questions, saveMockExamResult, schoolBranding, updateCardProgress, isGuest, user]);
 
   const handleSelect = useCallback((optId) => {
     setAnswers(prev => ({ ...prev, [questions[currentIndex].id]: optId }));
@@ -124,7 +176,7 @@ export default function MockExamMode() {
     }
   }, [navigate, fromPath, answers, isFinished]);
 
-  if (loading || loadingQuestions || (currentExam && !questions.length)) {
+  if ((isGuest && !user) ? guestExamLoading : (loading || loadingQuestions || (currentExam && !questions.length))) {
     return (
       <div className="focus-layout" style={{
         height: '100vh',
@@ -171,7 +223,8 @@ export default function MockExamMode() {
     );
   }
 
-  if (currentExam && isExamLocked(currentExam)) {
+  // For guests, always allow exam access — gate happens AFTER at results screen
+  if (currentExam && !isGuest && isExamLocked(currentExam)) {
     return (
       <div className="focus-layout" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '2rem', textAlign: 'center' }}>
         <div className="glass-panel" style={{ maxWidth: '520px', padding: '3rem' }}>
@@ -196,6 +249,25 @@ export default function MockExamMode() {
   }
 
   if (isFinished) {
+    // Guest who hasn't logged in yet → show registration gate
+    if (isGuest && !user) {
+      const isPremiumExam = currentExam?.tier !== 'freemium';
+      return (
+        <GuestResultGate
+          answeredCount={Object.keys(answers).length}
+          totalCount={questions.length}
+          examId={examId}
+          answers={answers}
+          isPremiumExam={isPremiumExam}
+          onAuthSuccess={() => {
+            // For email/password: user state updates via AuthContext
+            // The guestAnswersRestored useEffect will detect user + sessionStorage and restore answers
+          }}
+        />
+      );
+    }
+
+    // Logged-in user (normal or post-guest-registration) → show full results
     return (
       <div className="focus-layout">
         <MockExamResults

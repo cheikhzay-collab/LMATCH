@@ -41,7 +41,7 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
   return (
     <div className="animate-fade-in" style={{ maxWidth: 900, margin: '0 auto', padding: 'clamp(1rem, 4vw, 2rem) clamp(0.875rem, 4vw, 1.5rem) 4rem' }}>
       {/* Trophy card */}
-      <div className="glass-panel text-center" style={{ padding: '2.5rem 2rem', marginBottom: '1.5rem' }}>
+      <div className="glass-panel text-center" style={{ padding: 'clamp(1.5rem, 5vw, 2.5rem) clamp(1rem, 5vw, 2rem)', marginBottom: '1.5rem' }}>
         <div style={{
           width: 72, height: 72, borderRadius: '50%', margin: '0 auto 1.25rem',
           background: pct >= 50 ? 'var(--emerald-soft)' : 'var(--danger-soft)',
@@ -50,11 +50,11 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
         }}>
           <Trophy size={32} color={pct >= 50 ? 'var(--emerald)' : 'var(--danger)'} />
         </div>
-        <h1 className="text-gradient" style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>
+        <h1 className="text-gradient" style={{ fontSize: 'clamp(1.4rem, 5vw, 1.75rem)', marginBottom: '0.5rem' }}>
           Rapport de Performance
         </h1>
-        <div style={{ fontSize: '3.5rem', fontWeight: 900, margin: '0.5rem 0', lineHeight: 1 }}>
-          {score}<span style={{ fontSize: '1.75rem', color: 'var(--text-muted)', fontWeight: 400 }}>/{questions.length}</span>
+        <div style={{ fontSize: 'clamp(2.5rem, 8vw, 3.5rem)', fontWeight: 900, margin: '0.5rem 0', lineHeight: 1 }}>
+          {score}<span style={{ fontSize: 'clamp(1.25rem, 4vw, 1.75rem)', color: 'var(--text-muted)', fontWeight: 400 }}>/{questions.length}</span>
         </div>
         <div style={{
           display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
@@ -72,10 +72,11 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
       </div>
 
       {/* Tab switcher */}
-      <div style={{ display:'flex', gap:'0.5rem', marginBottom:'1.5rem', background:'var(--bg-glass)', padding:'0.35rem', borderRadius:'var(--radius-md)', border:'1px solid var(--border)', width:'fit-content', maxWidth:'100%', flexWrap:'wrap' }}>
+      <div className="mock-results-tab-switcher" style={{ display:'flex', gap:'0.5rem', marginBottom:'1.5rem', background:'var(--bg-glass)', padding:'0.35rem', borderRadius:'var(--radius-md)', border:'1px solid var(--border)', maxWidth:'100%', flexWrap:'nowrap' }}>
         {[{id:'correction', label:'Correction', icon:<CheckCircle2 size={15}/>},{id:'diagnostic', label:'Diagnostic', icon:<TrendingUp size={15}/>}].map(t => (
           <button key={t.id} onClick={()=>setTab(t.id)}
-            style={{ display:'flex', alignItems:'center', gap:'0.4rem', padding:'0.5rem 1rem', borderRadius:'calc(var(--radius-md) - 3px)', border:'none', cursor:'pointer', fontWeight:700, fontSize:'0.85rem', fontFamily:'inherit', transition:'all 0.2s',
+            className="mock-results-tab-button"
+            style={{ display:'flex', alignItems:'center', gap:'0.4rem', padding:'0.5rem 1rem', borderRadius:'calc(var(--radius-md) - 3px)', border:'none', cursor:'pointer', fontWeight:700, fontSize:'0.85rem', fontFamily:'inherit', transition:'all 0.2s', flex: '1', justifyContent: 'center',
               background: tab===t.id ? 'var(--violet)' : 'transparent',
               color:      tab===t.id ? '#fff'           : 'var(--text-muted)',
               boxShadow:  tab===t.id ? '0 2px 8px var(--violet-glow)' : 'none',
@@ -94,7 +95,7 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
             return (
               <div key={q.id} className="glass-panel" style={{
                 borderLeft: `4px solid ${isCorrect ? 'var(--emerald)' : 'var(--danger)'}`,
-                padding: '1.5rem'
+                padding: 'clamp(1rem, 4vw, 1.5rem)'
               }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                   <span style={{ fontSize: '0.8rem', color: 'var(--text-subtle)', fontWeight: 600 }}>
@@ -107,7 +108,7 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
                 <div style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: 500 }}>
                   {renderWithMath(q.question)}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 180px), 1fr))', gap: '0.75rem', marginBottom: '1rem' }}>
                   <div style={{ background: 'var(--bg-glass)', padding: '0.875rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
                     <p style={{ fontSize: '0.75rem', color: 'var(--text-subtle)', marginBottom: '0.4rem', fontWeight: 600 }}>VOTRE RÉPONSE</p>
                     {userAns
@@ -125,7 +126,7 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
                   </div>
                 </div>
                 {!isCorrect && q.astuce && (
-                  <div className="astuce-box">
+                  <div className="astuce-box" style={{ padding: 'clamp(1rem, 4vw, 1.5rem)' }}>
                     <div className="astuce-header" style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: '0.9rem', color: 'var(--violet)' }}><Lightbulb size={16} /> Astuce</div>
                     <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', margin: '0.5rem 0 0' }}>{renderWithMath(q.astuce)}</p>
                   </div>

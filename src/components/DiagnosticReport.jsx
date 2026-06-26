@@ -70,7 +70,7 @@ function TopicCard({ topic, data, onStudy }) {
       background: 'var(--bg-card)',
       border: `1px solid ${data.wrong > 0 ? level.color + '44' : 'var(--border)'}`,
       borderRadius: 'var(--radius-xl)',
-      padding: '1.25rem 1.5rem',
+      padding: 'clamp(1rem, 4vw, 1.25rem) clamp(1.25rem, 4vw, 1.5rem)',
       display: 'flex', flexDirection: 'column', gap: '0.875rem',
       boxShadow: data.wrong > 0 ? `0 4px 24px ${level.color}18` : 'var(--shadow-card)',
       transition: 'all 0.25s',
@@ -133,6 +133,7 @@ function TopicCard({ topic, data, onStudy }) {
       {data.wrong > 0 && (
         <button
           onClick={() => onStudy(topic)}
+          className="topic-card-cta"
           style={{
             background: 'transparent', border: `1px solid ${level.color}66`,
             color: level.color, borderRadius: 'var(--radius-md)',
@@ -184,17 +185,17 @@ export default function DiagnosticReport({ corrected, exam, onClose }) {
         {/* Gradient band */}
         <div style={{
           background: `linear-gradient(135deg, ${globalPct >= 70 ? '#065F46,#022C22' : globalPct >= 50 ? '#7C2D12,#451A03' : '#7F1D1D,#3B0000'})`,
-          padding: '1.75rem 2rem',
+          padding: 'clamp(1.25rem, 5vw, 1.75rem) clamp(1rem, 5vw, 2rem)',
           position: 'relative', overflow: 'hidden',
         }}>
           <div style={{ position: 'absolute', top: -40, right: -40, width: 180, height: 180, borderRadius: '50%', background: 'rgba(255,255,255,0.06)' }} />
-          <div style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '1.5rem', flexWrap: 'wrap' }}>
+          <div className="diagnostic-hero-header" style={{ position: 'relative', zIndex: 1, display: 'flex', alignItems: 'center', gap: '1.25rem', flexWrap: 'wrap' }}>
             <RadialRing pct={globalPct} size={80} stroke={6} />
             <div>
               <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '0.3rem' }}>
                 Rapport Diagnostique — {exam?.name}
               </p>
-              <h2 style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 900, marginBottom: '0.35rem', letterSpacing: '-0.02em' }}>
+              <h2 style={{ color: '#fff', fontSize: 'clamp(1.2rem, 5vw, 1.5rem)', fontWeight: 900, marginBottom: '0.35rem', letterSpacing: '-0.02em' }}>
                 {totalOk} / {totalQ} questions correctes
               </h2>
               <p style={{ color: 'rgba(255,255,255,0.6)', fontSize: '0.85rem' }}>
@@ -209,14 +210,14 @@ export default function DiagnosticReport({ corrected, exam, onClose }) {
         </div>
 
         {/* Quick stat pills */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', background: 'var(--bg-card)', borderTop: '1px solid var(--border)' }}>
+        <div className="diagnostic-hero-stats">
           {[
             { icon: <CheckCircle2 size={14} />, label: 'Maîtrisés (≥80%)',   value: strongTopics.length,  color: 'var(--emerald)' },
             { icon: <AlertTriangle size={14}/>, label: 'À retravailler',      value: weakTopics.length,    color: 'var(--danger)'  },
             { icon: <BookOpen size={14} />,     label: 'Thèmes couverts',     value: topics.length,        color: 'var(--violet)'  },
             { icon: <Target size={14} />,       label: 'Score global',        value: `${globalPct}%`,      color: globalLevel.color},
           ].map(s => (
-            <div key={s.label} style={{ flex: '1 0 110px', padding: '0.875rem 1rem', textAlign: 'center', borderRight: '1px solid var(--border)' }}>
+            <div key={s.label} className="diagnostic-stat-pill">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.35rem', color: s.color, marginBottom: '0.2rem' }}>
                 {s.icon} <span style={{ fontWeight: 900, fontSize: '1.15rem' }}>{s.value}</span>
               </div>
@@ -256,7 +257,7 @@ export default function DiagnosticReport({ corrected, exam, onClose }) {
         Performance par thème <span style={{ color: 'var(--text-subtle)', fontWeight: 400, fontSize: '0.85rem' }}>(du plus faible au plus fort)</span>
       </h3>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 300px), 1fr))', gap: '1rem' }}>
         {topics.map(([topic, data]) => (
           <TopicCard
             key={topic}

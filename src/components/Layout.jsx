@@ -1,10 +1,10 @@
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
 import { useAuth } from '../context/AuthContext';
 import WhatsAppButton from './WhatsAppButton';
-import { Crown, CheckCircle2 } from 'lucide-react';
+import { Crown, CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
@@ -54,6 +54,25 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try { return localStorage.getItem('sidebar-collapsed') === 'true'; }
+    catch { return false; }
+  });
+
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem('sidebar-collapsed', String(next)); } catch {}
+      return next;
+    });
+  }, []);
+
+  // Sync CSS variable so main-content margin animates smoothly
+  useEffect(() => {
+    const width = sidebarCollapsed ? '72px' : '260px';
+    document.documentElement.style.setProperty('--sidebar-current-width', width);
+  }, [sidebarCollapsed]);
 
   if (loading) {
     return (
@@ -153,7 +172,7 @@ export default function Layout() {
 
   if (isFocusMode) {
     return (
-      <div className="focus-layout" style={{ minHeight: '100vh', width: '100vw', background: 'var(--bg-base)', color: 'var(--text-main)', transition: 'background 0.3s, color 0.3s', paddingTop: '1rem' }}>
+      <div className="focus-layout" style={{ minHeight: '100vh', width: '100%', maxWidth: '100vw', background: 'var(--bg-base)', color: 'var(--text-main)', transition: 'background 0.3s, color 0.3s', paddingTop: '1rem' }}>
         <Suspense fallback={<LayoutLoadingFallback />}>
           <Outlet />
         </Suspense>
@@ -162,12 +181,30 @@ export default function Layout() {
   }
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout${sidebarCollapsed ? ' sidebar-collapsed' : ''}`}>
       {/* Desktop sidebar — hidden on mobile via CSS */}
-      <Sidebar />
+      <Sidebar collapsed={sidebarCollapsed} onToggle={toggleSidebar} />
+
+      {/* Floating sidebar toggle — 2026 style, fixed at sidebar edge */}
+      {!isMobile && (
+        <button
+          className="sidebar-float-toggle"
+          onClick={toggleSidebar}
+          title={sidebarCollapsed ? 'Ouvrir le menu' : 'Réduire le menu'}
+          aria-label={sidebarCollapsed ? 'Ouvrir le menu' : 'Réduire le menu'}
+          style={{
+            left: sidebarCollapsed ? '58px' : '246px',
+          }}
+        >
+          {sidebarCollapsed
+            ? <ChevronRight size={13} strokeWidth={2.5} />
+            : <ChevronLeft  size={13} strokeWidth={2.5} />
+          }
+        </button>
+      )}
 
       {/* Main content area */}
-      <main className="main-content">
+      <main className="main-content" style={{ marginLeft: isMobile ? undefined : (sidebarCollapsed ? '72px' : '260px') }}>
         <Suspense fallback={<LayoutLoadingFallback />}>
           <Outlet />
         </Suspense>
