@@ -2239,7 +2239,7 @@ body.light-theme .astuce-tabs {
     grid-template-columns: 1fr !important;
   }
 
-  body:has(.focus-layout) {
+  body:has(.focus-layout):not(:has(.mock-results-root)):not(:has(.results-layout)) {
     overflow: hidden !important;
     position: fixed;
     width: 100%;
@@ -2247,7 +2247,7 @@ body.light-theme .astuce-tabs {
     height: -webkit-fill-available;
   }
 
-  .focus-layout {
+  .focus-layout:not(:has(.mock-results-root)):not(:has(.results-layout)) {
     height: 100dvh !important;
     display: flex !important;
     flex-direction: column !important;
