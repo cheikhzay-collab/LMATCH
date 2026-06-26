@@ -269,7 +269,7 @@ export default function MockExamMode() {
 
     // Logged-in user (normal or post-guest-registration) → show full results
     return (
-      <div className="focus-layout">
+      <div className="focus-layout results-layout">
         <MockExamResults
           questions={questions}
           answers={answers}

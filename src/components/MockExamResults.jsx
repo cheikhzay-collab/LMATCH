@@ -150,9 +150,9 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
                     <div className="astuce-header">
                       <Lightbulb size={15} /> Astuce
                     </div>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.4rem 0 0' }}>
+                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.4rem 0 0' }}>
                       {renderWithMath(q.astuce)}
-                    </p>
+                    </div>
                   </div>
                 )}
               </div>

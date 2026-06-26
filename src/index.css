@@ -4307,3 +4307,18 @@ button:active:not(:disabled),
 /* ── Light mode ───────────────────────────────────────────────────── */
 body.light-theme .mock-results-tab-btn      { color: var(--text-muted); }
 body.light-theme .mock-results-answer-user  { background: rgba(255,255,255,0.7); border-color: var(--border); }
+
+/* Allow scrolling on mobile when results page is open */
+body:has(.results-layout) {
+  overflow: auto !important;
+  position: static !important;
+  height: auto !important;
+}
+
+.focus-layout.results-layout {
+  height: auto !important;
+  min-height: 100vh !important;
+  min-height: 100dvh !important;
+  overflow: visible !important;
+}
+
