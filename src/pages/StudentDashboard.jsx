@@ -161,8 +161,9 @@ export default function StudentDashboard() {
   }, [stats.weakTopics, exams, profName, profPhone, profSite, user, navigate, loadExamQuestions]);
 
   const handleDownloadReport = useCallback(async (item) => {
-    // Open print preview window synchronously to bypass pop-up blockers
-    const win = window.open('/print', '_blank');
+    // Open print preview window synchronously to bypass pop-up blockers on desktop
+    const isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.innerWidth < 768;
+    const win = !isMobile ? window.open('', '_blank') : null;
     if (win) {
       win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre bulletin PDF en cours...</p></div></body></html>');
     }
