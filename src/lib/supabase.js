@@ -15,11 +15,12 @@ let supabase = null;
 if (supabaseUrl && supabaseAnonKey) {
   supabase = createClient(supabaseUrl, supabaseAnonKey, {
     auth: {
-      // ── FIX: use sessionStorage so auth tokens are NEVER mixed
-      //    with the heavy app data stored in localStorage.
-      //    sessionStorage is cleared on tab close → no stale tokens.
-      //    This prevents the quota-exceeded → token-lost → 401 loop.
-      storage:             window.sessionStorage,
+      // ── FIX (mobile cache bug): Use the default localStorage (NOT sessionStorage).
+      //    On mobile PWA (iOS Safari / Android Chrome), sessionStorage is NOT reliably
+      //    cleared between app backgrounding/foregrounding. This causes Supabase to
+      //    find expired JWT tokens in storage → every API request returns 401 →
+      //    the client freezes for 15s per request until timeout.
+      //    localStorage tokens are refreshed automatically via autoRefreshToken.
       persistSession:      true,
       autoRefreshToken:    true,   // silently renews tokens before expiry
       detectSessionInUrl:  true,   // handles OAuth /auth/callback redirects

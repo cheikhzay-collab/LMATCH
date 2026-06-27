@@ -773,6 +773,15 @@ export function AuthProvider({ children }) {
 
   const [leaderboard, setLeaderboard] = useState([]);
 
+  // FIX #2: Use a ref for plans inside Realtime effect to avoid recreating
+  // the websocket channel on every plans state change.
+  const plansRef = React.useRef(plans);
+  useEffect(() => { plansRef.current = plans; }, [plans]);
+
+  // FIX #4: Track last incrementDailyActivity call per-session to avoid
+  // sending a Supabase request on every single card answer.
+  const lastActivityCallRef = React.useRef(0);
+
   const refreshLeaderboard = useCallback(async () => {
     if (!SUPABASE_ENABLED) return;
     try {
@@ -1550,9 +1559,15 @@ export function AuthProvider({ children }) {
     safeSetItem('dailyActivity', JSON.stringify(dailyActivity));
 
     if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
-      incrementDailyActivity(user.uid || user.id).catch(e =>
-        console.error('[Supabase] Failed to increment daily activity:', e)
-      );
+      // FIX #4: Debounce — only call incrementDailyActivity once per minute max.
+      // Previously called on every single card answer, flooding the network on mobile.
+      const now = Date.now();
+      if (now - lastActivityCallRef.current > 60_000) {
+        lastActivityCallRef.current = now;
+        incrementDailyActivity(user.uid || user.id).catch(e =>
+          console.error('[Supabase] Failed to increment daily activity:', e)
+        );
+      }
     }
 
     // Reward XP for good answers
@@ -1807,7 +1822,11 @@ export function AuthProvider({ children }) {
     };
 
     loadStudentData();
-  }, [user]);
+  // FIX #3: Depend only on the user ID, NOT the whole user object.
+  // Previously, any XP/streak update to `user` triggered a full re-sync
+  // (4 Supabase queries at once), causing request floods on mobile.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, user?.id]);
 
   // Real-time listener for profile upgrades (e.g. manager activating premium)
   useEffect(() => {
@@ -1815,7 +1834,12 @@ export function AuthProvider({ children }) {
     const userId = user.uid || user.id;
     if (!userId || userId === 'mock_student' || userId === 'mock_google_student' || userId === 'admin') return;
 
-    // Create channel
+    // FIX #2: Removed `plans` from the dependency array.
+    // Previously, any change to `plans` (which happens on every config sync) would
+    // teardown and recreate the websocket channel. On mobile, this caused dozens of
+    // orphaned websocket connections to accumulate, exhausting Supabase connection
+    // limits and blocking all subsequent API requests.
+    // We now read plans via plansRef.current inside the callback instead.
     const channel = supabase
       .channel(`profile-realtime-${userId}`)
       .on(
@@ -1833,8 +1857,10 @@ export function AuthProvider({ children }) {
             setUser(prevUser => {
               if (prevUser && prevUser.tier !== 'premium' && newProfile.tier === 'premium') {
                 // Find the new plan details to display in the celebration modal
+                // Use plansRef.current to avoid stale closure without adding plans as dependency
+                const currentPlans = plansRef.current;
                 const planId = newProfile.subscription?.planId || 'plan_lconq';
-                const plan = plans.find(p => p.id === planId) || plans[0] || {
+                const plan = currentPlans.find(p => p.id === planId) || currentPlans[0] || {
                   name: "Premium L'Conq",
                   durationDays: 30
                 };
@@ -1863,7 +1889,9 @@ export function AuthProvider({ children }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user?.uid, user?.id, plans]);
+  // FIX #2: Only re-subscribe when the user ID changes, NOT on every plans update.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, user?.id]);
 
   const refreshAdminData = useCallback(async () => {
     if (!SUPABASE_ENABLED || user?.role !== 'admin') return;
@@ -1946,7 +1974,9 @@ export function AuthProvider({ children }) {
     };
     
     sendHeartbeat();
-    const interval = setInterval(sendHeartbeat, 120000); // 2 minutes
+    // FIX #4: Increased from 2 min to 5 min to reduce network pressure on mobile.
+    // The heartbeat only updates `updated_at` for online status; 5 min precision is sufficient.
+    const interval = setInterval(sendHeartbeat, 5 * 60 * 1000); // 5 minutes
     
     return () => clearInterval(interval);
   }, [user?.uid, user?.id]);

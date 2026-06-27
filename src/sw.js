@@ -86,13 +86,16 @@ registerRoute(
 );
 
 // ── App JS/CSS assets — Stale While Revalidate (3 days) ──────────────────
-// Reduced from 7 days so mobile users pick up updates faster.
+// FIX #5: Added CacheableResponsePlugin to prevent caching opaque/error responses.
+// Without it, failed network requests (opaque responses) were stored in cache on iOS,
+// gradually filling the ~50MB mobile storage quota and causing fetch failures.
 registerRoute(
   ({ request }) =>
     request.destination === 'script' || request.destination === 'style',
   new StaleWhileRevalidate({
     cacheName: 'lconq-assets',
     plugins: [
+      new CacheableResponsePlugin({ statuses: [0, 200] }), // ← only cache valid responses
       new ExpirationPlugin({ maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 3 }),
     ],
   })
