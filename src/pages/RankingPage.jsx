@@ -55,7 +55,7 @@ export default function RankingPage() {
 
   // Add real users from database
   (dbLeaderboard || []).forEach((u, idx) => {
-    if (!u.name || u.role === 'admin') return;
+    if (!u.name || u.role === 'admin' || u.name.toLowerCase() === 'directeur') return;
     const school = u.school || 'Non spécifié';
     mergedUsersMap.set(u.name.toLowerCase(), {
       name: u.name,
@@ -68,7 +68,7 @@ export default function RankingPage() {
   });
 
   // Integrate current logged in user to make sure they are in the dataset with real stats
-  if (user && user.name && user.role !== 'admin') {
+  if (user && user.name && user.role !== 'admin' && user.name.toLowerCase() !== 'directeur') {
     const userSchool = user.school || (user.tier === 'premium' ? 'Médecine / Pharmacie' : 'Général (Prépa)');
     mergedUsersMap.set(user.name.toLowerCase(), {
       name: user.name,

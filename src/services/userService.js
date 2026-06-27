@@ -375,7 +375,9 @@ export const getLeaderboard = async () => {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('name, xp, streak, tier')
+    .select('name, xp, streak, tier, role')
+    .neq('role', 'admin')
+    .not('name', 'ilike', 'Directeur')
     .order('xp', { ascending: false })
     .limit(100);
 

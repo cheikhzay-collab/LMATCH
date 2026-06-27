@@ -300,6 +300,7 @@ BEGIN
   RETURN QUERY
   SELECT profiles.name, profiles.xp, profiles.streak, profiles.tier
   FROM public.profiles
+  WHERE (profiles.role IS DISTINCT FROM 'admin') AND (LOWER(profiles.name) != 'directeur')
   ORDER BY profiles.xp DESC
   LIMIT 100;
 END;
