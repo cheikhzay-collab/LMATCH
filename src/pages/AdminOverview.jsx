@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   LayoutDashboard, Users, BookOpen, CircleDollarSign, TrendingUp, Camera, 
   Sparkles, AlertTriangle, CheckCircle, RefreshCw, Phone, Coins, Landmark, 
@@ -55,7 +55,7 @@ function useIsMobile() {
 }
 
 export default function AdminOverview() {
-  const { users, exams, refreshAdminData, activationCodes } = useAuth();
+  const { users, exams, refreshAdminData, activationCodes, plans = [] } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -67,7 +67,14 @@ export default function AdminOverview() {
 
   // Real Database calculations
   const totalPremium = users.filter(u => u.tier === 'premium').length;
-  const totalRevenue = totalPremium * 99; // 99 DH per premium user
+  const totalRevenue = useMemo(() => {
+    return users.reduce((sum, u) => {
+      if (u.tier !== 'premium') return sum;
+      const planId = u.subscription?.planId;
+      const plan = plans.find(p => p.id === planId);
+      return sum + (plan ? Number(plan.price || 0) : 99);
+    }, 0);
+  }, [users, plans]);
   const totalQuestions = exams.reduce((acc, exam) => acc + (exam.questions?.length || 0), 0);
   
   // Calculated stats for Moroccan EdTech metrics
@@ -79,9 +86,21 @@ export default function AdminOverview() {
   const [realOmrScansCount, setRealOmrScansCount] = useState(0);
   const [actionItems, setActionItems] = useState([]);
 
+  // Compute average plan price from actual active subscriptions for realistic projections
+  const averagePremiumPrice = useMemo(() => {
+    if (totalPremium === 0) return 99;
+    return Math.round(totalRevenue / totalPremium);
+  }, [totalRevenue, totalPremium]);
+
   // Interactive Growth Goals Simulator state
   const [targetPremium, setTargetPremium] = useState(totalPremium + 80);
-  const targetRevenue = targetPremium * 99;
+  
+  // Reset target premium when data loads to keep it in sync
+  useEffect(() => {
+    setTargetPremium(totalPremium + 80);
+  }, [totalPremium]);
+
+  const targetRevenueVal = targetPremium * averagePremiumPrice;
   const growthMultiplier = totalPremium > 0 ? ((targetPremium - totalPremium) / totalPremium * 100).toFixed(0) : '100';
 
   // AI-OMR Engine simulation
@@ -561,7 +580,7 @@ export default function AdminOverview() {
                 </div>
                 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-main)' }}>{targetRevenue} DH</span>
+                  <span style={{ fontSize: '1.35rem', fontWeight: 900, color: 'var(--text-main)' }}>{targetRevenueVal} DH</span>
                   <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>{targetPremium} Abonnés Premium</span>
                 </div>
 
