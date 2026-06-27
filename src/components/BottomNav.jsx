@@ -203,168 +203,172 @@ export default function BottomNav() {
                   </button>
                 </div>
               </div>
-            ) : user?.role === 'admin' ? (
-              <>
-                {/* ── Admin Info Header ── */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '0.875rem',
-                  padding: '1.25rem 1.5rem 1.125rem',
-                  borderBottom: '1px solid var(--border)',
-                }}>
-                  <div style={{
-                    width: 46, height: 46, borderRadius: '12px', flexShrink: 0,
-                    background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1.3rem', fontWeight: 900, color: '#fff',
-                    boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
-                  }}>
-                    {initial}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{
-                      fontWeight: 800, fontSize: '0.98rem', margin: 0,
-                      color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
-                    }}>
-                      {user?.name || 'Directeur'}
-                    </p>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {user?.email}
-                    </p>
-                  </div>
-                  <span style={{
-                    padding: '0.25rem 0.65rem', borderRadius: 99,
-                    fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em',
-                    background: 'rgba(16, 185, 129, 0.12)', color: 'var(--emerald)',
-                    border: '1px solid rgba(16, 185, 129, 0.22)', flexShrink: 0
-                  }}>
-                    Directeur
-                  </span>
-                </div>
-
-                {/* ── Admin Tools Grid ── */}
-                <div style={{
-                  padding: '1.25rem 1.5rem 0.75rem',
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(3, 1fr)',
-                  gap: '0.875rem',
-                }}>
-                  {[
-                    { label: 'Élèves', icon: Users, to: '/admin/users', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)' },
-                    { label: 'Upload PDF', icon: UploadCloud, to: '/admin/upload', color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)' },
-                    { label: 'Import IA', icon: Zap, to: '/admin/ai-import', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)' },
-                    { label: 'Leçons', icon: BookOpen, to: '/admin/lessons', color: '#7C3AED', bg: 'rgba(124, 58, 237, 0.1)' },
-                    { label: 'E-books', icon: Library, to: '/admin/ebooks', color: '#EC4899', bg: 'rgba(236, 72, 153, 0.1)' },
-                    { label: 'Settings', icon: Settings, to: '/admin/settings', color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)' },
-                  ].map((tool, idx) => {
-                    const ToolIcon = tool.icon;
-                    return (
-                      <button
-                        key={idx}
-                        onClick={() => { navigate(tool.to); setShowSheet(false); }}
-                        style={{
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'center',
-                          gap: '0.5rem',
-                          padding: '0.85rem 0.25rem',
-                          background: 'var(--bg-glass)',
-                          border: '1px solid var(--border)',
-                          borderRadius: '16px',
-                          cursor: 'pointer',
-                          transition: 'all 0.15s ease',
-                          width: '100%',
-                          fontFamily: 'inherit',
-                        }}
-                      >
-                        <div style={{
-                          width: '40px',
-                          height: '40px',
-                          borderRadius: '12px',
-                          background: tool.bg,
-                          color: tool.color,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                        }}>
-                          <ToolIcon size={20} strokeWidth={2} />
-                        </div>
-                        <span style={{
-                          fontSize: '0.75rem',
-                          fontWeight: 800,
-                          color: 'var(--text-main)',
-                          textAlign: 'center',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          width: '100%',
-                        }}>
-                          {tool.label}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
             ) : (
               <>
-                {/* ── User card ── */}
-                <div style={{
-                  display: 'flex', alignItems: 'center', gap: '0.875rem',
-                  padding: '1.25rem 1.5rem 1.125rem',
-                  borderBottom: '1px solid var(--border)',
-                }}>
-                  {/* Avatar */}
-                  <div style={{
-                    width: 52, height: 52, borderRadius: '15px', flexShrink: 0,
-                    background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: '1.5rem', fontWeight: 900, color: '#fff',
-                    boxShadow: '0 4px 16px rgba(99,102,241,0.35)',
-                  }}>
-                    {initial}
-                  </div>
-
-                  {/* Name + email */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{
-                      fontWeight: 800, fontSize: '1rem', margin: 0,
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                      color: 'var(--text-main)',
+                {user?.role === 'admin' ? (
+                  <>
+                    {/* ── Admin Info Header ── */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '0.875rem',
+                      padding: '1.25rem 1.5rem 1.125rem',
+                      borderBottom: '1px solid var(--border)',
                     }}>
-                      {user?.name || 'Utilisateur'}
-                    </p>
-                    <p style={{
-                      color: 'var(--text-muted)', fontSize: '0.78rem', margin: '3px 0 0',
-                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                      <div style={{
+                        width: 46, height: 46, borderRadius: '12px', flexShrink: 0,
+                        background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '1.3rem', fontWeight: 900, color: '#fff',
+                        boxShadow: '0 4px 12px rgba(99,102,241,0.3)',
+                      }}>
+                        {initial}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{
+                          fontWeight: 800, fontSize: '0.98rem', margin: 0,
+                          color: 'var(--text-main)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                        }}>
+                          {user?.name || 'Directeur'}
+                        </p>
+                        <p style={{ color: 'var(--text-muted)', fontSize: '0.75rem', margin: '2px 0 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {user?.email}
+                        </p>
+                      </div>
+                      <span style={{
+                        padding: '0.25rem 0.65rem', borderRadius: 99,
+                        fontSize: '0.62rem', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.04em',
+                        background: 'rgba(16, 185, 129, 0.12)', color: 'var(--emerald)',
+                        border: '1px solid rgba(16, 185, 129, 0.22)', flexShrink: 0
+                      }}>
+                        Directeur
+                      </span>
+                    </div>
+
+                    {/* ── Admin Tools Grid ── */}
+                    <div style={{
+                      padding: '1.25rem 1.5rem 0.75rem',
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, 1fr)',
+                      gap: '0.875rem',
                     }}>
-                      {user?.email}
-                    </p>
-                  </div>
+                      {[
+                        { label: 'Élèves', icon: Users, to: '/admin/users', color: '#3B82F6', bg: 'rgba(59, 130, 246, 0.1)' },
+                        { label: 'Upload PDF', icon: UploadCloud, to: '/admin/upload', color: '#10B981', bg: 'rgba(16, 185, 129, 0.1)' },
+                        { label: 'Import IA', icon: Zap, to: '/admin/ai-import', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.1)' },
+                        { label: 'Leçons', icon: BookOpen, to: '/admin/lessons', color: '#7C3AED', bg: 'rgba(124, 58, 237, 0.1)' },
+                        { label: 'E-books', icon: Library, to: '/admin/ebooks', color: '#EC4899', bg: 'rgba(236, 72, 153, 0.1)' },
+                        { label: 'Settings', icon: Settings, to: '/admin/settings', color: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.1)' },
+                      ].map((tool, idx) => {
+                        const ToolIcon = tool.icon;
+                        return (
+                          <button
+                            key={idx}
+                            onClick={() => { navigate(tool.to); setShowSheet(false); }}
+                            style={{
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                              padding: '0.85rem 0.25rem',
+                              background: 'var(--bg-glass)',
+                              border: '1px solid var(--border)',
+                              borderRadius: '16px',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease',
+                              width: '100%',
+                              fontFamily: 'inherit',
+                            }}
+                          >
+                            <div style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '12px',
+                              background: tool.bg,
+                              color: tool.color,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                            }}>
+                              <ToolIcon size={20} strokeWidth={2} />
+                            </div>
+                            <span style={{
+                              fontSize: '0.75rem',
+                              fontWeight: 800,
+                              color: 'var(--text-main)',
+                              textAlign: 'center',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              width: '100%',
+                            }}>
+                              {tool.label}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    {/* ── Student User card ── */}
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '0.875rem',
+                      padding: '1.25rem 1.5rem 1.125rem',
+                      borderBottom: '1px solid var(--border)',
+                    }}>
+                      {/* Avatar */}
+                      <div style={{
+                        width: 52, height: 52, borderRadius: '15px', flexShrink: 0,
+                        background: 'linear-gradient(135deg, var(--violet), var(--emerald))',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '1.5rem', fontWeight: 900, color: '#fff',
+                        boxShadow: '0 4px 16px rgba(99,102,241,0.35)',
+                      }}>
+                        {initial}
+                      </div>
 
-                  {/* Tier badge */}
-                  <span 
-                    onClick={() => {
-                      if (isStudent) {
-                        navigate('/subscription');
-                        setShowSheet(false);
-                      }
-                    }}
-                    style={{
-                      padding: '0.28rem 0.7rem', borderRadius: 99,
-                      fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em',
-                      background: user?.tier === 'premium' ? 'var(--violet-soft)' : 'var(--bg-glass)',
-                      color:      user?.tier === 'premium' ? 'var(--violet)'      : 'var(--text-muted)',
-                      border: `1px solid ${user?.tier === 'premium' ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
-                      flexShrink: 0,
-                      cursor: isStudent ? 'pointer' : 'default'
-                    }}
-                    title={isStudent ? "Gérer mon abonnement" : undefined}
-                  >
-                    {user?.tier === 'premium' ? '⚡ Pro' : 'Free'}
-                  </span>
-                </div>
+                      {/* Name + email */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{
+                          fontWeight: 800, fontSize: '1rem', margin: 0,
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                          color: 'var(--text-main)',
+                        }}>
+                          {user?.name || 'Utilisateur'}
+                        </p>
+                        <p style={{
+                          color: 'var(--text-muted)', fontSize: '0.78rem', margin: '3px 0 0',
+                          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                        }}>
+                          {user?.email}
+                        </p>
+                      </div>
 
-                {/* ── Actions ── */}
+                      {/* Tier badge */}
+                      <span 
+                        onClick={() => {
+                          if (isStudent) {
+                            navigate('/subscription');
+                            setShowSheet(false);
+                          }
+                        }}
+                        style={{
+                          padding: '0.28rem 0.7rem', borderRadius: 99,
+                          fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.06em',
+                          background: user?.tier === 'premium' ? 'var(--violet-soft)' : 'var(--bg-glass)',
+                          color:      user?.tier === 'premium' ? 'var(--violet)'      : 'var(--text-muted)',
+                          border: `1px solid ${user?.tier === 'premium' ? 'rgba(99,102,241,0.3)' : 'var(--border)'}`,
+                          flexShrink: 0,
+                          cursor: isStudent ? 'pointer' : 'default'
+                        }}
+                        title={isStudent ? "Gérer mon abonnement" : undefined}
+                      >
+                        {user?.tier === 'premium' ? '⚡ Pro' : 'Free'}
+                      </span>
+                    </div>
+                  </>
+                )}
+
+                {/* ── Actions (Common to both student and admin) ── */}
                 <div style={{ padding: '0.875rem 1.25rem 0', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                   {isStudent && (
                     <button
