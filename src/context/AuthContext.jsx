@@ -481,9 +481,43 @@ export function AuthProvider({ children }) {
         //    getSession() which only reads from storage without server validation.
         //    This prevents using expired/corrupted tokens from cache.
         const { data: { user: serverUser }, error: sessionErr } = await supabase.auth.getUser();
+        
+        if (sessionErr) {
+          // If the session is missing, it's a normal logged-out state.
+          if (sessionErr.message === 'Auth session missing!') {
+            if (active) {
+              setUser(null);
+              localStorage.removeItem('user');
+            }
+            return;
+          }
+          
+          // Check if it is a real authentication error (e.g. expired or invalid token)
+          // or a server rejection (status 400, 401, 403, 422).
+          // If so, the user is authenticated but their session is invalid. Log them out.
+          const isAuthError = sessionErr.status === 400 || 
+                              sessionErr.status === 401 || 
+                              sessionErr.status === 403 || 
+                              sessionErr.status === 422 || 
+                              sessionErr.message?.includes('JWT') || 
+                              sessionErr.message?.includes('token') || 
+                              sessionErr.message?.includes('session');
+          
+          if (isAuthError) {
+            console.warn('[Auth] Expired or invalid session detected on startup. Clearing stale user cache:', sessionErr.message);
+            if (active) {
+              setUser(null);
+              localStorage.removeItem('user');
+            }
+            return;
+          }
+          
+          // Otherwise, it's likely a network error / offline. Throw to fall back to cached user.
+          throw sessionErr;
+        }
+        
         // Wrap into session-like shape for compatibility with the code below
         const session = serverUser ? { user: serverUser } : null;
-        if (sessionErr && sessionErr.message !== 'Auth session missing!') throw sessionErr;
 
         if (session?.user && active) {
           const supabaseUser = session.user;
@@ -624,6 +658,43 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     safeSetItem('user', JSON.stringify(user));
   }, [user]);
+
+  // Handle global 401 Unauthorized events from Supabase client fetch wrapper
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      console.warn('[Auth] Received unauthorized event from Supabase client. Logging out...');
+      logout();
+    };
+    window.addEventListener('supabase-auth-unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('supabase-auth-unauthorized', handleUnauthorized);
+  }, [logout]);
+
+  // Active session check when app returns from background to foreground
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !user) return;
+    
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        try {
+          const { supabase } = await import('../lib/supabase');
+          if (supabase) {
+            const { data: { user: serverUser }, error } = await supabase.auth.getUser();
+            if (error || !serverUser) {
+              console.warn('[Auth] Session invalid on foreground wake-up. Logging out...', error?.message);
+              logout();
+            } else {
+              console.log('[Auth] Session is still valid.');
+            }
+          }
+        } catch (err) {
+          console.warn('[Auth] Network issue checking session on wake-up. Keeping cached session.');
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.uid, user?.id, logout]);
 
   useEffect(() => {
     // Save a light version of exams to localStorage to avoid exceeding the 5MB quota 
@@ -959,7 +1030,7 @@ export function AuthProvider({ children }) {
     return newUser;
   };
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
       try { await logoutUser(); } catch { /* ignore */ }
     }
@@ -973,7 +1044,7 @@ export function AuthProvider({ children }) {
     setProgress({});
     setMockExamHistory([]);
     setUser(null);
-  };
+  }, [user?.uid, user?.id]);
 
   const addExam = async (name, school, year, tier, questions, pdfUrl = null) => {
     const cleanQuestions = sanitizeExams([{ questions }])[0].questions;

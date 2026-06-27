@@ -54,6 +54,14 @@ if (supabaseUrl && supabaseAnonKey) {
           };
   
           return fetch(url, newOptions)
+            .then(response => {
+              // Intercept 401 responses (except refresh token requests) to signal invalid auth session
+              if (response.status === 401 && !url.includes('/auth/v1/token')) {
+                console.warn('[Supabase API] 401 Unauthorized response detected. Dispatching unauthorized event.');
+                window.dispatchEvent(new CustomEvent('supabase-auth-unauthorized'));
+              }
+              return response;
+            })
             .finally(() => clearTimeout(id));
         },
     },
