@@ -119,6 +119,7 @@ function EditModal({ school, brand, onSave, onClose }) {
   const [tag,      setTag]      = useState(brand.tag);
   const [logoUrl,  setLogoUrl]  = useState(brand.logoUrl || null);
   const [scoring,  setScoring]  = useState(brand.scoring || { correct: 1, wrong: -0.25, empty: 0 });
+  const [isActive, setIsActive] = useState(brand.isActive !== false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -181,6 +182,42 @@ function EditModal({ school, brand, onSave, onClose }) {
               </label>
               <input className="input-control" value={tag} onChange={e => setTag(e.target.value)} placeholder="Ex: Ingénierie..." />
             </div>
+          </div>
+
+          {/* Statut d'activation */}
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '1rem 1.25rem', background: 'rgba(255,255,255,0.02)',
+            border: '1px solid var(--border)', borderRadius: '1.25rem', marginBottom: '2rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+              <div style={{ width: 32, height: 32, borderRadius: '8px', background: isActive ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: isActive ? 'var(--emerald)' : 'var(--danger)' }}>
+                <GraduationCap size={16} />
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <p style={{ fontWeight: 800, fontSize: '0.88rem', margin: 0 }}>Statut de l'établissement</p>
+                <p style={{ fontSize: '0.73rem', color: 'var(--text-subtle)', margin: 0 }}>
+                  {isActive ? "Visible par les étudiants et accessible pour révision" : "Masqué pour les étudiants (Désactivé)"}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsActive(!isActive)}
+              style={{
+                width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+                background: isActive ? 'var(--emerald)' : 'var(--danger)',
+                position: 'relative', transition: 'background 0.2s',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              }}
+            >
+              <div style={{
+                width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                position: 'absolute', top: 3, transition: 'left 0.2s',
+                left: isActive ? 25 : 3,
+                boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+              }} />
+            </button>
           </div>
 
           {/* Preview Card */}
@@ -315,7 +352,7 @@ function EditModal({ school, brand, onSave, onClose }) {
           {/* Footer Actions */}
           <div style={{ display:'flex', gap:'1rem', marginTop:'3rem' }}>
             <button className="btn-outline" onClick={onClose} style={{ flex:1, padding:'0.9rem' }}>Annuler</button>
-            <button className="btn-emerald" onClick={() => onSave({ name, iconKey, gradient, tag, logoUrl, scoring })}
+            <button className="btn-emerald" onClick={() => onSave({ name, iconKey, gradient, tag, logoUrl, scoring, isActive })}
               style={{ flex:2, padding:'0.9rem', fontSize:'1rem', fontWeight:900, boxShadow:'0 10px 25px var(--emerald-glow)' }}>
               <Check size={18} style={{ marginRight:'0.5rem' }} /> Enregistrer les modifications
             </button>
@@ -458,18 +495,34 @@ function SchoolCard({ school, examCount, brand, isAdmin, onEdit, onDelete, onCli
               </div>
 
               {/* Tag Badge */}
-              <span style={{
-                background: brand.accentSoft,
-                color: brand.accent,
-                border: `1px solid ${brand.accent}25`,
-                padding: '0.25rem 0.75rem',
-                borderRadius: '99px',
-                fontSize: '0.72rem',
-                fontWeight: 700,
-                letterSpacing: '0.02em'
-              }}>
-                {brand.tag}
-              </span>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <span style={{
+                  background: brand.accentSoft,
+                  color: brand.accent,
+                  border: `1px solid ${brand.accent}25`,
+                  padding: '0.25rem 0.75rem',
+                  borderRadius: '99px',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  letterSpacing: '0.02em'
+                }}>
+                  {brand.tag}
+                </span>
+                {brand.isActive === false && (
+                  <span style={{
+                    background: 'rgba(239, 68, 68, 0.1)',
+                    color: 'var(--danger)',
+                    border: '1px solid rgba(239, 68, 68, 0.25)',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '99px',
+                    fontSize: '0.72rem',
+                    fontWeight: 800,
+                    letterSpacing: '0.02em'
+                  }}>
+                    INACTIF
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* Title & Description */}
@@ -570,9 +623,11 @@ export default function SchoolsPage() {
   const uniqueTags = ['Tous', ...Array.from(new Set(allSchoolNames.map(name => getBrand(name, schoolBranding).tag).filter(Boolean)))];
 
   const filtered = allSchoolNames.filter(name => {
+    const brand = getBrand(name, schoolBranding);
+    if (!isAdmin && brand.isActive === false) return false;
+
     const matchesSearch = name.toLowerCase().includes(search.toLowerCase());
     if (selectedTag === 'Tous') return matchesSearch;
-    const brand = getBrand(name, schoolBranding);
     return matchesSearch && brand.tag === selectedTag;
   });
 
@@ -581,9 +636,9 @@ export default function SchoolsPage() {
   const handleEdit = (school) => setEditTarget(school);
   const handleDelete = (school) => setDeleteTarget(school);
 
-  const handleSaveEdit = ({ name, iconKey, gradient, tag, logoUrl, scoring }) => {
+  const handleSaveEdit = ({ name, iconKey, gradient, tag, logoUrl, scoring, isActive }) => {
     const old = editTarget;
-    updateSchoolBranding(name, { iconKey, gradient, tag, logoUrl, scoring, desc: getBrand(old, schoolBranding).desc });
+    updateSchoolBranding(name, { iconKey, gradient, tag, logoUrl, scoring, isActive, desc: getBrand(old, schoolBranding).desc });
     if (name !== old) renameSchool(old, name);
     setEditTarget(null);
   };

@@ -61,6 +61,13 @@ export default function SchoolExamsPage() {
   const isMobile = useIsMobile();
 
   const brand = getBrand(school, schoolBranding);
+  const isAdmin = user?.role === 'admin';
+
+  useEffect(() => {
+    if (brand && brand.isActive === false && !isAdmin) {
+      navigate('/schools', { replace: true });
+    }
+  }, [brand, isAdmin, navigate]);
   const schoolExams = exams
     .filter(e => e.school === school && e.isActive !== false && e.isArchived !== true)
     .sort((a, b) => (parseInt(b.year) || 0) - (parseInt(a.year) || 0));
