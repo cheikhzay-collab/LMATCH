@@ -218,7 +218,7 @@ export default function StudentDashboard() {
       const indices = Array.from({ length: totalQuestions }, (_, i) => i);
       
       // Seeded pseudo-random shuffle of indices
-      const seedStr = item.id || item.examId || 'fallback_seed';
+      const seedStr = String(item.id || item.examId || 'fallback_seed');
       const seed = seedStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
       let currentSeed = seed;
       const random = () => {
