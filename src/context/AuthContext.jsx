@@ -506,8 +506,7 @@ export function AuthProvider({ children }) {
           if (isAuthError) {
             console.warn('[Auth] Expired or invalid session detected on startup. Clearing stale user cache:', sessionErr.message);
             if (active) {
-              setUser(null);
-              localStorage.removeItem('user');
+              clearLocalSessionData();
             }
             return;
           }
@@ -626,7 +625,7 @@ export function AuthProvider({ children }) {
             setUser(enriched);
           }
         } else if (event === 'SIGNED_OUT' && active) {
-          setUser(null);
+          clearLocalSessionData();
         }
       } catch (e) {
         console.warn('[Auth] Error handling subsequent auth change:', e.message);
@@ -868,10 +867,7 @@ export function AuthProvider({ children }) {
   };
 
 
-  const logout = useCallback(async () => {
-    if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
-      try { await logoutUser(); } catch { /* ignore */ }
-    }
+  const clearLocalSessionData = useCallback(() => {
     // Clean up local review cache and sync info for privacy/security
     localStorage.removeItem('progress');
     localStorage.removeItem('progress_last_synced_at');
@@ -879,10 +875,18 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('dailyActivity');
     localStorage.removeItem('reviewDates');
     localStorage.removeItem('mockExamHistory');
+    localStorage.removeItem('user');
     setProgress({});
     setMockExamHistory([]);
     setUser(null);
-  }, [user?.uid, user?.id]);
+  }, []);
+
+  const logout = useCallback(async () => {
+    if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
+      try { await logoutUser(); } catch { /* ignore */ }
+    }
+    clearLocalSessionData();
+  }, [user?.uid, user?.id, clearLocalSessionData]);
 
   // Handle global 401 Unauthorized events from Supabase client fetch wrapper
   useEffect(() => {
@@ -906,7 +910,8 @@ export function AuthProvider({ children }) {
             const { data: { user: serverUser }, error } = await supabase.auth.getUser();
             if (error || !serverUser) {
               console.warn('[Auth] Session invalid on foreground wake-up. Logging out...', error?.message);
-              logout();
+              await logout();
+              window.location.href = '/login?expired=1';
             } else {
               console.log('[Auth] Session is still valid.');
             }
@@ -920,6 +925,40 @@ export function AuthProvider({ children }) {
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user?.uid, user?.id, logout]);
+
+  // ── User Inactivity Auto-Logout ──────────────────────────────────────────
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !user) return;
+
+    // 30 minutes inactivity timeout
+    const INACTIVITY_TIMEOUT = 30 * 60 * 1000; 
+    let timeoutId;
+
+    const resetTimer = () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      timeoutId = setTimeout(handleInactivity, INACTIVITY_TIMEOUT);
+    };
+
+    const handleInactivity = async () => {
+      console.warn('[Auth] User inactive for 30 minutes. Logging out...');
+      await logout();
+      window.location.href = '/login?inactive=1';
+    };
+
+    // Events to monitor for user activity
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+    
+    // Set initial timer
+    resetTimer();
+
+    // Add listeners
+    events.forEach(evt => window.addEventListener(evt, resetTimer));
+
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+      events.forEach(evt => window.removeEventListener(evt, resetTimer));
+    };
+  }, [user, logout]);
 
 
   const [users, setUsers] = useState(() => {

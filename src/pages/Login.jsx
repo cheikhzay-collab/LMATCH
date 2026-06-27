@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
-import { Eye, EyeOff, Zap, AlertCircle, Check } from 'lucide-react';
+import { Eye, EyeOff, Zap, AlertCircle, Check, Clock } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import LconqLogo from '../components/LconqLogo';
 
 
 export default function Login() {
-  const { pathname }                      = useLocation();
-  const isRegistering                     = pathname === '/register';
+  const location                          = useLocation();
+  const isRegistering                     = location.pathname === '/register';
+  const queryParams                       = new URLSearchParams(location.search);
+  const isExpired                         = queryParams.get('expired') === '1';
+  const isInactive                        = queryParams.get('inactive') === '1';
   const [name, setName]                   = useState('');
   const [email, setEmail]                 = useState('');
   const [password, setPassword]           = useState('');
@@ -175,6 +178,36 @@ export default function Login() {
               Inscription
             </button>
           </div>
+
+          {/* Session Expiry or Inactivity Alert */}
+          {(isExpired || isInactive) && !errorMsg && !successMsg && (
+            <div style={{
+              background: 'rgba(245, 158, 11, 0.08)',
+              border: '1px solid rgba(245, 158, 11, 0.25)',
+              padding: '0.875rem 1rem',
+              borderRadius: '12px',
+              color: '#d97706',
+              fontSize: '0.88rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.625rem',
+              marginBottom: '1.25rem',
+              animation: 'fadeInAlert 0.3s ease-out'
+            }}>
+              <style dangerouslySetInnerHTML={{__html: `
+                @keyframes fadeInAlert {
+                  from { opacity: 0; transform: translateY(-8px); }
+                  to { opacity: 1; transform: translateY(0); }
+                }
+              `}} />
+              <Clock size={18} style={{ flexShrink: 0 }} />
+              <span style={{ fontWeight: 600 }}>
+                {isExpired 
+                  ? "Votre session a expiré. Veuillez vous reconnecter."
+                  : "Déconnexion automatique après 30 minutes d'inactivité."}
+              </span>
+            </div>
+          )}
 
           {/* Error Alert Display */}
           {errorMsg && (
