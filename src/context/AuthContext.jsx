@@ -659,42 +659,7 @@ export function AuthProvider({ children }) {
     safeSetItem('user', JSON.stringify(user));
   }, [user]);
 
-  // Handle global 401 Unauthorized events from Supabase client fetch wrapper
-  useEffect(() => {
-    const handleUnauthorized = () => {
-      console.warn('[Auth] Received unauthorized event from Supabase client. Logging out...');
-      logout();
-    };
-    window.addEventListener('supabase-auth-unauthorized', handleUnauthorized);
-    return () => window.removeEventListener('supabase-auth-unauthorized', handleUnauthorized);
-  }, [logout]);
 
-  // Active session check when app returns from background to foreground
-  useEffect(() => {
-    if (!SUPABASE_ENABLED || !user) return;
-    
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        try {
-          const { supabase } = await import('../lib/supabase');
-          if (supabase) {
-            const { data: { user: serverUser }, error } = await supabase.auth.getUser();
-            if (error || !serverUser) {
-              console.warn('[Auth] Session invalid on foreground wake-up. Logging out...', error?.message);
-              logout();
-            } else {
-              console.log('[Auth] Session is still valid.');
-            }
-          }
-        } catch (err) {
-          console.warn('[Auth] Network issue checking session on wake-up. Keeping cached session.');
-        }
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [user?.uid, user?.id, logout]);
 
   useEffect(() => {
     // Save a light version of exams to localStorage to avoid exceeding the 5MB quota 
@@ -903,6 +868,60 @@ export function AuthProvider({ children }) {
   };
 
 
+  const logout = useCallback(async () => {
+    if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
+      try { await logoutUser(); } catch { /* ignore */ }
+    }
+    // Clean up local review cache and sync info for privacy/security
+    localStorage.removeItem('progress');
+    localStorage.removeItem('progress_last_synced_at');
+    localStorage.removeItem('last_synced_user_id');
+    localStorage.removeItem('dailyActivity');
+    localStorage.removeItem('reviewDates');
+    localStorage.removeItem('mockExamHistory');
+    setProgress({});
+    setMockExamHistory([]);
+    setUser(null);
+  }, [user?.uid, user?.id]);
+
+  // Handle global 401 Unauthorized events from Supabase client fetch wrapper
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      console.warn('[Auth] Received unauthorized event from Supabase client. Logging out...');
+      logout();
+    };
+    window.addEventListener('supabase-auth-unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('supabase-auth-unauthorized', handleUnauthorized);
+  }, [logout]);
+
+  // Active session check when app returns from background to foreground
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !user) return;
+    
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        try {
+          const { supabase } = await import('../lib/supabase');
+          if (supabase) {
+            const { data: { user: serverUser }, error } = await supabase.auth.getUser();
+            if (error || !serverUser) {
+              console.warn('[Auth] Session invalid on foreground wake-up. Logging out...', error?.message);
+              logout();
+            } else {
+              console.log('[Auth] Session is still valid.');
+            }
+          }
+        } catch (err) {
+          console.warn('[Auth] Network issue checking session on wake-up. Keeping cached session.');
+        }
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user?.uid, user?.id, logout]);
+
+
   const [users, setUsers] = useState(() => {
     if (SUPABASE_ENABLED) return [];
     return [
@@ -1030,21 +1049,7 @@ export function AuthProvider({ children }) {
     return newUser;
   };
 
-  const logout = useCallback(async () => {
-    if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
-      try { await logoutUser(); } catch { /* ignore */ }
-    }
-    // Clean up local review cache and sync info for privacy/security
-    localStorage.removeItem('progress');
-    localStorage.removeItem('progress_last_synced_at');
-    localStorage.removeItem('last_synced_user_id');
-    localStorage.removeItem('dailyActivity');
-    localStorage.removeItem('reviewDates');
-    localStorage.removeItem('mockExamHistory');
-    setProgress({});
-    setMockExamHistory([]);
-    setUser(null);
-  }, [user?.uid, user?.id]);
+
 
   const addExam = async (name, school, year, tier, questions, pdfUrl = null) => {
     const cleanQuestions = sanitizeExams([{ questions }])[0].questions;
