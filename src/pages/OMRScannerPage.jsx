@@ -1123,20 +1123,13 @@ export default function OMRScannerPage() {
 
               <VerifyGrid scanned={scanned} questions={questions} onChange={handleVerifyChange} isMobile={isMobile} />
 
-              <div className="actions-row" style={isMobile ? {
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: 'var(--bg-card)',
-                borderTop: '1px solid var(--border)',
-                padding: '0.75rem 1rem calc(0.75rem + env(safe-area-inset-bottom))',
-                zIndex: 400,
+              <div className="actions-row" style={{
                 display: 'flex',
                 gap: '0.75rem',
-                margin: 0,
-                boxShadow: '0 -4px 16px rgba(0,0,0,0.1)'
-              } : {}}>
+                marginTop: '1.5rem',
+                justifyContent: isMobile ? 'stretch' : 'flex-end',
+                width: '100%'
+              }}>
                 <button className="btn-outline" onClick={reset} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderRadius: '0.875rem', flex: isMobile ? 1 : 'none' }}>
                   <RotateCcw size={15} /> Rescanner
                 </button>
@@ -1462,9 +1455,9 @@ export default function OMRScannerPage() {
                     width: '100%'
                   }}>
                     {[
-                      { id: 'list', label: 'Feuille de Correction', icon: <CheckCircle2 size={15}/> },
-                      { id: 'overlay', label: 'Copie Numérisée (AR)', icon: <Camera size={15}/> },
-                      { id: 'diagnostic', label: 'Analyse Thématique', icon: <TrendingUp size={15}/> }
+                      { id: 'list', label: isMobile ? 'Correction' : 'Feuille de Correction', icon: <CheckCircle2 size={15}/> },
+                      { id: 'overlay', label: isMobile ? 'Copie AR' : 'Copie Numérisée (AR)', icon: <Camera size={15}/> },
+                      { id: 'diagnostic', label: isMobile ? 'Analyse' : 'Analyse Thématique', icon: <TrendingUp size={15}/> }
                     ].map(t => (
                       <button 
                         key={t.id} 
@@ -1475,13 +1468,13 @@ export default function OMRScannerPage() {
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          gap: '0.5rem',
-                          padding: '0.75rem 1rem',
+                          gap: isMobile ? '0.3rem' : '0.5rem',
+                          padding: isMobile ? '0.6rem 0.4rem' : '0.75rem 1rem',
                           borderRadius: '1rem',
                           border: 'none',
                           cursor: 'pointer',
                           fontWeight: 800,
-                          fontSize: '0.85rem',
+                          fontSize: isMobile ? '0.75rem' : '0.85rem',
                           fontFamily: 'inherit',
                           transition: 'all 0.25s',
                           background: resultsTab === t.id ? 'var(--violet)' : 'transparent',
@@ -1516,24 +1509,12 @@ export default function OMRScannerPage() {
               </div>
 
               {/* Action Buttons Row */}
-              <div className="results-actions-row-modern" style={isMobile ? {
-                position: 'fixed',
-                bottom: 0,
-                left: 0,
-                right: 0,
-                background: 'var(--bg-card)',
-                borderTop: '1px solid var(--border)',
-                padding: '0.75rem 1.1rem calc(0.75rem + env(safe-area-inset-bottom))',
-                zIndex: 400,
+              <div className="results-actions-row-modern" style={{
                 display: 'flex',
                 gap: '0.75rem',
-                margin: 0,
-                boxShadow: '0 -4px 16px rgba(0,0,0,0.1)'
-              } : {
-                display: 'flex',
-                justifyContent: 'flex-end',
-                gap: '1rem',
-                marginTop: '0.5rem'
+                marginTop: '1.5rem',
+                justifyContent: isMobile ? 'stretch' : 'flex-end',
+                width: '100%'
               }}>
                 <button 
                   className="btn-outline" 
