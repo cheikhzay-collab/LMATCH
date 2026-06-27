@@ -27,23 +27,22 @@ if (supabaseUrl && supabaseAnonKey) {
     },
     global: {
       // Reasonable timeout — avoids hanging requests on flaky mobile networks
-      fetch: (url, options = {}) => {
+       fetch: (url, options = {}) => {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), 15_000); // 15s max
         
-        // Force network-only by completely disabling browser HTTP caching
-        // for all Rest / Auth queries. This prevents mobile Safari/Chrome
-        // from caching stale database responses or auth tokens.
+        // Safely merge headers regardless of whether options.headers is a Headers object or a plain object.
+        // Spreading a Headers object via ...options.headers strips out apikey and Authorization tokens.
+        const mergedHeaders = new Headers(options.headers || {});
+        mergedHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        mergedHeaders.set('Pragma', 'no-cache');
+        mergedHeaders.set('Expires', '0');
+
         const newOptions = {
           ...options,
           signal: controller.signal,
           cache: 'no-store', // Bypasses HTTP cache completely
-          headers: {
-            ...options.headers,
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-          }
+          headers: mergedHeaders
         };
 
         return fetch(url, newOptions)
