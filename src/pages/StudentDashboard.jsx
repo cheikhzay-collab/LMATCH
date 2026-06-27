@@ -307,6 +307,7 @@ export default function StudentDashboard() {
       }
     } catch (err) {
       console.error('Failed to generate student report:', err);
+      alert('Erreur de génération : ' + (err.stack || err.message || err));
       if (win) {
         try { win.close(); } catch {}
       }
