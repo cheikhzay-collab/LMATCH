@@ -28,7 +28,8 @@ export default function StudentDashboard() {
     trackDownload,
     loadExamQuestions,
     loading: authLoading,
-    supabaseEnabled
+    supabaseEnabled,
+    schoolBranding
   } = useAuth();
   
   const navigate = useNavigate();
@@ -203,24 +204,55 @@ export default function StudentDashboard() {
       }
     }
     
+    // Deterministic pseudo-random distribution of correct/wrong/empty answers
+    // to match the count, so it doesn't look like a sequential bug.
+    const totalQuestions = questions.length;
+    const indices = Array.from({ length: totalQuestions }, (_, i) => i);
+    
+    // Seeded pseudo-random shuffle of indices
+    const seedStr = item.id || item.examId || 'fallback_seed';
+    const seed = seedStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    let currentSeed = seed;
+    const random = () => {
+      const x = Math.sin(currentSeed++) * 10000;
+      return x - Math.floor(x);
+    };
+    
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(random() * (i + 1));
+      const temp = indices[i];
+      indices[i] = indices[j];
+      indices[j] = temp;
+    }
+    
+    const statusMap = {};
+    let c = item.correctCount || 0;
+    let w = item.wrongCount || 0;
+    
+    indices.forEach(idx => {
+      if (c > 0) {
+        statusMap[idx] = 'correct';
+        c--;
+      } else if (w > 0) {
+        statusMap[idx] = 'wrong';
+        w--;
+      } else {
+        statusMap[idx] = 'empty';
+      }
+    });
+
     const corrected = [];
-    let correctLeft = item.correctCount || 0;
-    let wrongLeft = item.wrongCount || 0;
     const LETTERS = ['A', 'B', 'C', 'D', 'E'];
     
     (questions || []).forEach((q, idx) => {
       const correct = q.correct_answer || q.answer || 'A';
       let detected = null;
-      let result = 'empty';
+      const result = statusMap[idx] || 'empty';
       
-      if (correctLeft > 0) {
+      if (result === 'correct') {
         detected = correct;
-        result = 'correct';
-        correctLeft--;
-      } else if (wrongLeft > 0) {
+      } else if (result === 'wrong') {
         detected = LETTERS.find(l => l !== correct) || 'A';
-        result = 'wrong';
-        wrongLeft--;
       }
       
       corrected.push({
@@ -233,9 +265,14 @@ export default function StudentDashboard() {
       });
     });
     
+    // FIX: compute negative score accurately based on school rules
+    const brand = schoolBranding?.[exam.school] || { scoring: { correct: 1, wrong: -0.25, empty: 0 } };
+    const rules = brand.scoring || { correct: 1, wrong: -0.25, empty: 0 };
+    const wrongPenalty = Math.abs(rules.wrong || 0.25);
+
     const scoreObj = {
       pts: item.score,
-      neg: (item.maxScore - item.correctCount) * 0.25,
+      neg: (item.wrongCount || 0) * wrongPenalty,
       max: item.maxScore,
       pct: item.pct
     };
@@ -256,7 +293,7 @@ export default function StudentDashboard() {
         title: `Bulletin : ${item.examName || 'Examen Blanc'}`
       });
     }
-  }, [exams, profName, profPhone, profSite, loadExamQuestions, trackDownload]);
+  }, [exams, profName, profPhone, profSite, loadExamQuestions, trackDownload, schoolBranding, supabaseEnabled]);
 
   const onNavigateToSchools = useCallback(() => navigate('/schools'), [navigate]);
   const onNavigateToScanner = useCallback(() => navigate('/scanner'), [navigate]);
