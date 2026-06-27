@@ -161,137 +161,154 @@ export default function StudentDashboard() {
   }, [stats.weakTopics, exams, profName, profPhone, profSite, user, navigate, loadExamQuestions]);
 
   const handleDownloadReport = useCallback(async (item) => {
-    let exam = exams.find(e => e.id === item.examId);
-    
-    // Try to load exam from database if not in active in-memory list
-    if (!exam && supabaseEnabled && item.examId) {
-      try {
-        exam = await getExamById(item.examId);
-      } catch (err) {
-        console.warn('[StudentDashboard] Failed to fetch exam from database:', err);
-      }
+    // Open print preview window synchronously to bypass pop-up blockers
+    const win = window.open('/print', '_blank');
+    if (win) {
+      win.document.write('<html><head><title>Génération du PDF...</title></head><body style="background:#09090b;color:#fff;display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;margin:0;padding:20px;text-align:center;"><div><h3 style="margin:0 0 10px 0;">L\'CONQ</h3><p style="margin:0;color:#a1a1aa;font-size:0.9rem;">Génération de votre bulletin PDF en cours...</p></div></body></html>');
     }
 
-    // Fallback to a mock exam object if deleted or inaccessible, allowing report generation
-    if (!exam) {
-      exam = {
-        id: item.examId || 'fallback',
-        name: item.examName || "Examen Blanc",
-        school: item.school || "—",
-        year: item.date ? new Date(item.date).getFullYear().toString() : "—",
-        questions: Array.from({ length: item.maxScore || 20 }, (_, i) => ({
-          id: `q-${i + 1}`,
-          question: `Question ${i + 1}`,
-          correct_answer: '—',
-          topic: 'Général'
-        }))
+    try {
+      let exam = exams.find(e => e.id === item.examId);
+      
+      // Try to load exam from database if not in active in-memory list
+      if (!exam && supabaseEnabled && item.examId) {
+        try {
+          exam = await getExamById(item.examId);
+        } catch (err) {
+          console.warn('[StudentDashboard] Failed to fetch exam from database:', err);
+        }
+      }
+
+      // Fallback to a mock exam object if deleted or inaccessible, allowing report generation
+      if (!exam) {
+        exam = {
+          id: item.examId || 'fallback',
+          name: item.examName || "Examen Blanc",
+          school: item.school || "—",
+          year: item.date ? new Date(item.date).getFullYear().toString() : "—",
+          questions: Array.from({ length: item.maxScore || 20 }, (_, i) => ({
+            id: `q-${i + 1}`,
+            question: `Question ${i + 1}`,
+            correct_answer: '—',
+            topic: 'Général'
+          }))
+        };
+      }
+      
+      let questions = exam.questions;
+      if (!questions || questions.length === 0) {
+        try {
+          questions = await loadExamQuestions(exam.id);
+        } catch (err) {
+          console.error('Failed to load questions for student report:', err);
+          // Fallback questions array so it doesn't block printing
+          questions = Array.from({ length: item.maxScore || 20 }, (_, i) => ({
+            id: `q-${i + 1}`,
+            question: `Question ${i + 1}`,
+            correct_answer: '—',
+            topic: 'Général'
+          }));
+        }
+      }
+      
+      // Deterministic pseudo-random distribution of correct/wrong/empty answers
+      // to match the count, so it doesn't look like a sequential bug.
+      const totalQuestions = questions.length;
+      const indices = Array.from({ length: totalQuestions }, (_, i) => i);
+      
+      // Seeded pseudo-random shuffle of indices
+      const seedStr = item.id || item.examId || 'fallback_seed';
+      const seed = seedStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+      let currentSeed = seed;
+      const random = () => {
+        const x = Math.sin(currentSeed++) * 10000;
+        return x - Math.floor(x);
       };
-    }
-    
-    let questions = exam.questions;
-    if (!questions || questions.length === 0) {
-      try {
-        questions = await loadExamQuestions(exam.id);
-      } catch (err) {
-        console.error('Failed to load questions for student report:', err);
-        // Fallback questions array so it doesn't block printing
-        questions = Array.from({ length: item.maxScore || 20 }, (_, i) => ({
-          id: `q-${i + 1}`,
-          question: `Question ${i + 1}`,
-          correct_answer: '—',
-          topic: 'Général'
-        }));
-      }
-    }
-    
-    // Deterministic pseudo-random distribution of correct/wrong/empty answers
-    // to match the count, so it doesn't look like a sequential bug.
-    const totalQuestions = questions.length;
-    const indices = Array.from({ length: totalQuestions }, (_, i) => i);
-    
-    // Seeded pseudo-random shuffle of indices
-    const seedStr = item.id || item.examId || 'fallback_seed';
-    const seed = seedStr.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    let currentSeed = seed;
-    const random = () => {
-      const x = Math.sin(currentSeed++) * 10000;
-      return x - Math.floor(x);
-    };
-    
-    for (let i = indices.length - 1; i > 0; i--) {
-      const j = Math.floor(random() * (i + 1));
-      const temp = indices[i];
-      indices[i] = indices[j];
-      indices[j] = temp;
-    }
-    
-    const statusMap = {};
-    let c = item.correctCount || 0;
-    let w = item.wrongCount || 0;
-    
-    indices.forEach(idx => {
-      if (c > 0) {
-        statusMap[idx] = 'correct';
-        c--;
-      } else if (w > 0) {
-        statusMap[idx] = 'wrong';
-        w--;
-      } else {
-        statusMap[idx] = 'empty';
-      }
-    });
-
-    const corrected = [];
-    const LETTERS = ['A', 'B', 'C', 'D', 'E'];
-    
-    (questions || []).forEach((q, idx) => {
-      const correct = q.correct_answer || q.answer || 'A';
-      let detected = null;
-      const result = statusMap[idx] || 'empty';
       
-      if (result === 'correct') {
-        detected = correct;
-      } else if (result === 'wrong') {
-        detected = LETTERS.find(l => l !== correct) || 'A';
+      for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(random() * (i + 1));
+        const temp = indices[i];
+        indices[i] = indices[j];
+        indices[j] = temp;
       }
       
-      corrected.push({
-        q: idx + 1,
-        question: q.question,
-        correct,
-        detected,
-        result,
-        topic: q.topic || 'Général'
+      const statusMap = {};
+      let c = item.correctCount || 0;
+      let w = item.wrongCount || 0;
+      
+      indices.forEach(idx => {
+        if (c > 0) {
+          statusMap[idx] = 'correct';
+          c--;
+        } else if (w > 0) {
+          statusMap[idx] = 'wrong';
+          w--;
+        } else {
+          statusMap[idx] = 'empty';
+        }
       });
-    });
-    
-    // FIX: compute negative score accurately based on school rules
-    const brand = schoolBranding?.[exam.school] || { scoring: { correct: 1, wrong: -0.25, empty: 0 } };
-    const rules = brand.scoring || { correct: 1, wrong: -0.25, empty: 0 };
-    const wrongPenalty = Math.abs(rules.wrong || 0.25);
-
-    const scoreObj = {
-      pts: item.score,
-      neg: (item.wrongCount || 0) * wrongPenalty,
-      max: item.maxScore,
-      pct: item.pct
-    };
-    
-    const settings = {
-      profName: profName || '',
-      profPhone: profPhone || '',
-      profSite: profSite || 'www.lconq.ma'
-    };
-    
-    const html = generateStudentReportHTML({ ...exam, questions }, scoreObj, corrected, settings);
-    openPrintWindow(html);
-
-    if (trackDownload) {
-      trackDownload({
-        type: 'report',
-        id: item.examId || 'unknown',
-        title: `Bulletin : ${item.examName || 'Examen Blanc'}`
+  
+      const corrected = [];
+      const LETTERS = ['A', 'B', 'C', 'D', 'E'];
+      
+      (questions || []).forEach((q, idx) => {
+        const correct = q.correct_answer || q.answer || 'A';
+        let detected = null;
+        const result = statusMap[idx] || 'empty';
+        
+        if (result === 'correct') {
+          detected = correct;
+        } else if (result === 'wrong') {
+          detected = LETTERS.find(l => l !== correct) || 'A';
+        }
+        
+        corrected.push({
+          q: idx + 1,
+          question: q.question,
+          correct,
+          detected,
+          result,
+          topic: q.topic || 'Général'
+        });
       });
+      
+      // FIX: compute negative score accurately based on school rules
+      const brand = schoolBranding?.[exam.school] || { scoring: { correct: 1, wrong: -0.25, empty: 0 } };
+      const rules = brand.scoring || { correct: 1, wrong: -0.25, empty: 0 };
+      const wrongPenalty = Math.abs(rules.wrong || 0.25);
+  
+      const scoreObj = {
+        pts: item.score,
+        neg: (item.wrongCount || 0) * wrongPenalty,
+        max: item.maxScore,
+        pct: item.pct
+      };
+      
+      const settings = {
+        profName: profName || '',
+        profPhone: profPhone || '',
+        profSite: profSite || 'www.lconq.ma'
+      };
+      
+      const html = generateStudentReportHTML({ ...exam, questions }, scoreObj, corrected, settings);
+      
+      // Also write report to localStorage for backup PWA storage-sync
+      localStorage.setItem('print_html', html);
+  
+      openPrintWindow(html, `bulletin-${exam.name.toLowerCase().replace(/\s+/g, '-')}`, win);
+  
+      if (trackDownload) {
+        trackDownload({
+          type: 'report',
+          id: item.examId || 'unknown',
+          title: `Bulletin : ${item.examName || 'Examen Blanc'}`
+        });
+      }
+    } catch (err) {
+      console.error('Failed to generate student report:', err);
+      if (win) {
+        try { win.close(); } catch {}
+      }
     }
   }, [exams, profName, profPhone, profSite, loadExamQuestions, trackDownload, schoolBranding, supabaseEnabled]);
 
