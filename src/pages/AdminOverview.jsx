@@ -398,7 +398,7 @@ export default function AdminOverview() {
               <div style={{ fontSize: '0.8rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Revenus (CA)</div>
               <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-main)', marginTop: '0.2rem' }}>{totalRevenue} <span style={{ fontSize: '1rem', fontWeight: 650 }}>DH</span></div>
               <div style={{ fontSize: '0.75rem', color: 'var(--violet)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '0.25rem' }}>
-                <ArrowUpRight size={12} /> Objectif mensuel : {targetRevenue} DH
+                <ArrowUpRight size={12} /> Objectif mensuel : {targetRevenueVal} DH
               </div>
             </div>
           </div>
