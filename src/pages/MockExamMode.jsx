@@ -24,6 +24,7 @@ export default function MockExamMode() {
 
   // Restore answers saved before Google OAuth redirect (guest flow)
   const [guestAnswersRestored, setGuestAnswersRestored] = useState(false);
+  const [guestResults, setGuestResults] = useState(null);
 
   // Guest mode: fetch exam directly (bypasses AuthContext which requires user)
   const [guestExam, setGuestExam] = useState(null);
@@ -123,9 +124,6 @@ export default function MockExamMode() {
     if (isFinished && !hasSavedResult.current && currentExam) {
       hasSavedResult.current = true;
 
-      // Skip DB save and card progress update for guest users
-      if (isGuest && !user) return;
-
       const brand = schoolBranding[currentExam.school] || { scoring: { correct: 1, wrong: -0.25, empty: 0 } };
       const rules = brand.scoring || { correct: 1, wrong: -0.25, empty: 0 };
 
@@ -148,24 +146,37 @@ export default function MockExamMode() {
           wrongCount++;
         }
 
-        updateCardProgress(q.id, isCorrect ? 4 : 0);
+        // Save progress only for logged in users
+        if (!isGuest || user) {
+          updateCardProgress(q.id, isCorrect ? 4 : 0);
+        }
       });
 
       const maxPossible = questions.length * rules.correct;
       const pct = maxPossible > 0 ? Math.max(0, Math.round((pts / maxPossible) * 100)) : 0;
 
-      saveMockExamResult({
-        examId: currentExam.id,
-        examName: currentExam.name,
-        school: currentExam.school,
-        score: pts,
-        maxScore: questions.length,
-        correctCount,
-        wrongCount,
-        emptyCount,
-        pct,
-        mode: 'online'
-      });
+      if (isGuest && !user) {
+        setGuestResults({
+          score: pts,
+          correctCount,
+          wrongCount,
+          emptyCount,
+          pct
+        });
+      } else {
+        saveMockExamResult({
+          examId: currentExam.id,
+          examName: currentExam.name,
+          school: currentExam.school,
+          score: pts,
+          maxScore: questions.length,
+          correctCount,
+          wrongCount,
+          emptyCount,
+          pct,
+          mode: 'online'
+        });
+      }
     }
   }, [isFinished, answers, currentExam, questions, saveMockExamResult, schoolBranding, updateCardProgress, isGuest, user]);
 
@@ -273,6 +284,11 @@ export default function MockExamMode() {
           examId={examId}
           answers={answers}
           isPremiumExam={isPremiumExam}
+          score={guestResults?.score ?? 0}
+          correctCount={guestResults?.correctCount ?? 0}
+          wrongCount={guestResults?.wrongCount ?? 0}
+          emptyCount={guestResults?.emptyCount ?? 0}
+          pct={guestResults?.pct ?? 0}
           onAuthSuccess={() => {
             // For email/password: user state updates via AuthContext
             // The guestAnswersRestored useEffect will detect user + sessionStorage and restore answers

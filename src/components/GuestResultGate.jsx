@@ -14,7 +14,19 @@ import { Eye, EyeOff, AlertCircle, Check, Lock, Trophy, Zap, Users, TrendingUp, 
  *   isPremiumExam   {boolean} — whether the exam requires a premium subscription
  *   onAuthSuccess   {function}— called when user logs in / registers successfully (email flow)
  */
-export default function GuestResultGate({ answeredCount, totalCount, examId, answers, isPremiumExam = false, onAuthSuccess }) {
+export default function GuestResultGate({ 
+  answeredCount, 
+  totalCount, 
+  examId, 
+  answers, 
+  isPremiumExam = false, 
+  onAuthSuccess,
+  score = 0,
+  correctCount = 0,
+  wrongCount = 0,
+  emptyCount = 0,
+  pct = 0
+}) {
   const { login, register, loginWithGoogle } = useAuth();
 
   // For premium exams: after auth, redirect to subscription page
@@ -39,7 +51,6 @@ export default function GuestResultGate({ answeredCount, totalCount, examId, ans
   const [errorMsg, setErrorMsg]     = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
-  const pctGuess = totalCount > 0 ? Math.round((answeredCount / totalCount) * 100) : 0;
   const circumference = 2 * Math.PI * 42;
 
   const handleSubmit = async (e) => {
@@ -111,7 +122,7 @@ export default function GuestResultGate({ answeredCount, totalCount, examId, ans
                   stroke="url(#gGrad)" strokeWidth="7"
                   strokeLinecap="round"
                   strokeDasharray={circumference}
-                  strokeDashoffset={circumference * (1 - pctGuess / 100)}
+                  strokeDashoffset={circumference * (1 - pct / 100)}
                   style={{ transition: 'stroke-dashoffset 1.2s ease', filter: 'blur(3px)' }}
                 />
                 <defs>
@@ -122,7 +133,7 @@ export default function GuestResultGate({ answeredCount, totalCount, examId, ans
                 </defs>
               </svg>
               <div className="guest-gate-score-inner">
-                <span className="guest-gate-score-val">??</span>
+                <span className="guest-gate-score-val">{score}</span>
                 <span className="guest-gate-score-sub">/{totalCount}</span>
               </div>
             </div>
@@ -156,20 +167,20 @@ export default function GuestResultGate({ answeredCount, totalCount, examId, ans
           </div>
 
           {/* Quick stats */}
-          <div className="guest-gate-stats-row">
+          <div className="guest-gate-stats-row" style={{ flexWrap: 'wrap', justifyContent: 'center', gap: '0.8rem 1.2rem' }}>
             <div className="guest-gate-stat">
               <Check size={14} color="var(--emerald)" />
-              <span>{answeredCount} réponse{answeredCount !== 1 ? 's' : ''} données</span>
+              <span style={{ color: 'var(--emerald)', fontWeight: 700 }}>{correctCount} Correctes</span>
+            </div>
+            <div className="guest-gate-stat-dot" />
+            <div className="guest-gate-stat">
+              <AlertCircle size={14} color="var(--danger)" />
+              <span style={{ color: 'var(--danger)', fontWeight: 700 }}>{wrongCount} Incorrectes</span>
             </div>
             <div className="guest-gate-stat-dot" />
             <div className="guest-gate-stat">
               <Trophy size={14} color="var(--warning, #f59e0b)" />
-              <span>{totalCount} questions</span>
-            </div>
-            <div className="guest-gate-stat-dot" />
-            <div className="guest-gate-stat">
-              <TrendingUp size={14} color="var(--violet)" />
-              <span>Diagnostic IA</span>
+              <span style={{ color: 'var(--warning)', fontWeight: 700 }}>Score: {score}/{totalCount}</span>
             </div>
           </div>
 
