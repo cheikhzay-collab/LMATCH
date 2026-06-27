@@ -10,6 +10,9 @@ export default function AdminSettings() {
     profName: initialProfName,
     profPhone: initialProfPhone,
     profSite: initialProfSite,
+    bankName: initialBankName,
+    bankRIB: initialBankRIB,
+    bankBeneficiary: initialBankBeneficiary,
     updateBrandingConfig,
     updateFlashcardSettingsConfig,
     updatePdfSettingsConfig,
@@ -87,6 +90,9 @@ export default function AdminSettings() {
   const [profName, setProfName] = useState(initialProfName || '');
   const [profPhone, setProfPhone] = useState(initialProfPhone || '');
   const [profSite, setProfSite] = useState(initialProfSite || 'www.lconq.ma');
+  const [bankName, setBankName] = useState(initialBankName || 'CIH Bank (Maroc)');
+  const [bankRIB, setBankRIB] = useState(initialBankRIB || '230 780 4567890123 0001 89');
+  const [bankBeneficiary, setBankBeneficiary] = useState(initialBankBeneficiary || "L'CONQ SARL");
   const [brandSaved, setBrandSaved] = useState(false);
 
   // OMR Scanner Settings
@@ -128,14 +134,20 @@ export default function AdminSettings() {
       if (initialProfName !== undefined) setProfName(initialProfName);
       if (initialProfPhone !== undefined) setProfPhone(initialProfPhone);
       if (initialProfSite !== undefined) setProfSite(initialProfSite);
+      if (initialBankName !== undefined) setBankName(initialBankName);
+      if (initialBankRIB !== undefined) setBankRIB(initialBankRIB);
+      if (initialBankBeneficiary !== undefined) setBankBeneficiary(initialBankBeneficiary);
     });
-  }, [initialProfName, initialProfPhone, initialProfSite]);
+  }, [initialProfName, initialProfPhone, initialProfSite, initialBankName, initialBankRIB, initialBankBeneficiary]);
 
   const saveBranding = async () => {
     await updateBrandingConfig({
       profName: profName.trim(),
       profPhone: profPhone.trim(),
-      profSite: profSite.trim() || 'www.lconq.ma'
+      profSite: profSite.trim() || 'www.lconq.ma',
+      bankName: bankName.trim(),
+      bankRIB: bankRIB.trim(),
+      bankBeneficiary: bankBeneficiary.trim()
     });
     setBrandSaved(true);
     setTimeout(() => setBrandSaved(false), 2500);
@@ -1026,6 +1038,21 @@ export default function AdminSettings() {
             <div>
               <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Site web / URL QR</label>
               <input className="input-control" placeholder="www.lconq.ma" value={profSite} onChange={e => setProfSite(e.target.value)} />
+            </div>
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem', marginTop: '1rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Banque (Virement/Cash)</label>
+              <input className="input-control" placeholder="CIH Bank (Maroc)" value={bankName} onChange={e => setBankName(e.target.value)} />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>RIB du Compte</label>
+              <input className="input-control" placeholder="230 780 ..." value={bankRIB} onChange={e => setBankRIB(e.target.value)} style={{ fontFamily: 'monospace' }} />
+            </div>
+            <div>
+              <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Bénéficiaire</label>
+              <input className="input-control" placeholder="L'CONQ SARL" value={bankBeneficiary} onChange={e => setBankBeneficiary(e.target.value)} />
             </div>
           </div>
           <button onClick={saveBranding} className="btn"

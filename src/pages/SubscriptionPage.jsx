@@ -19,7 +19,7 @@ function useIsMobile() {
 }
 
 export default function SubscriptionPage() {
-  const { user, plans, activateSubscription, redeemActivationCode, profPhone, upgradedPlan, setUpgradedPlan } = useAuth();
+  const { user, plans, activateSubscription, redeemActivationCode, profPhone, bankName, bankRIB, bankBeneficiary, upgradedPlan, setUpgradedPlan } = useAuth();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
@@ -285,15 +285,15 @@ export default function SubscriptionPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Banque :</span>
-                <strong style={{ color: 'var(--text-main)' }}>CIH Bank (Maroc)</strong>
+                <strong style={{ color: 'var(--text-main)' }}>{bankName || 'CIH Bank (Maroc)'}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>RIB :</span>
-                <strong style={{ color: 'var(--text-main)', fontFamily: 'monospace', fontSize: isMobile ? '0.78rem' : '0.85rem' }}>230 780 4567890123 0001 89</strong>
+                <strong style={{ color: 'var(--text-main)', fontFamily: 'monospace', fontSize: isMobile ? '0.78rem' : '0.85rem' }}>{bankRIB || '230 780 4567890123 0001 89'}</strong>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', background: 'rgba(255,255,255,0.01)', padding: '0.75rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
                 <span style={{ color: 'var(--text-muted)' }}>Bénéficiaire :</span>
-                <strong style={{ color: 'var(--text-main)' }}>L'CONQ SARL</strong>
+                <strong style={{ color: 'var(--text-main)' }}>{bankBeneficiary || "L'CONQ SARL"}</strong>
               </div>
             </div>
           </div>

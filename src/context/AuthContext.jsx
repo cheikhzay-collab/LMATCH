@@ -315,11 +315,17 @@ export function AuthProvider({ children }) {
   const [profName, setProfName] = useState(() => localStorage.getItem('profName') || '');
   const [profPhone, setProfPhone] = useState(() => localStorage.getItem('profPhone') || '');
   const [profSite, setProfSite] = useState(() => localStorage.getItem('profSite') || 'www.lconq.ma');
+  const [bankName, setBankName] = useState(() => localStorage.getItem('bankName') || 'CIH Bank (Maroc)');
+  const [bankRIB, setBankRIB] = useState(() => localStorage.getItem('bankRIB') || '230 780 4567890123 0001 89');
+  const [bankBeneficiary, setBankBeneficiary] = useState(() => localStorage.getItem('bankBeneficiary') || "L'CONQ SARL");
 
   const updateBrandingConfig = async (branding) => {
     const name = sanitizeInputString(branding.profName || '').trim();
     const phone = sanitizeInputString(branding.profPhone || '').trim();
     const site = sanitizeInputString(branding.profSite || '').trim() || 'www.lconq.ma';
+    const bName = sanitizeInputString(branding.bankName || 'CIH Bank (Maroc)').trim();
+    const bRIB = sanitizeInputString(branding.bankRIB || '230 780 4567890123 0001 89').trim();
+    const bBeneficiary = sanitizeInputString(branding.bankBeneficiary || "L'CONQ SARL").trim();
 
     if (phone && !validatePhoneNumber(phone)) {
       console.warn('[Security] Invalid phone format in updateBrandingConfig.');
@@ -328,14 +334,27 @@ export function AuthProvider({ children }) {
     setProfName(name);
     setProfPhone(phone);
     setProfSite(site);
+    setBankName(bName);
+    setBankRIB(bRIB);
+    setBankBeneficiary(bBeneficiary);
 
     localStorage.setItem('profName', name);
     localStorage.setItem('profPhone', phone);
     localStorage.setItem('profSite', site);
+    localStorage.setItem('bankName', bName);
+    localStorage.setItem('bankRIB', bRIB);
+    localStorage.setItem('bankBeneficiary', bBeneficiary);
 
     if (SUPABASE_ENABLED) {
       try {
-        await saveBrandingConfig({ profName: name, profPhone: phone, profSite: site });
+        await saveBrandingConfig({
+          profName: name,
+          profPhone: phone,
+          profSite: site,
+          bankName: bName,
+          bankRIB: bRIB,
+          bankBeneficiary: bBeneficiary
+        });
       } catch (e) {
         console.error('[Supabase] Failed to save branding config:', e);
       }
@@ -1659,12 +1678,22 @@ export function AuthProvider({ children }) {
           setProfName(brandConfig.profName || '');
           setProfPhone(brandConfig.profPhone || '');
           setProfSite(brandConfig.profSite || 'www.lconq.ma');
+          setBankName(brandConfig.bankName || 'CIH Bank (Maroc)');
+          setBankRIB(brandConfig.bankRIB || '230 780 4567890123 0001 89');
+          setBankBeneficiary(brandConfig.bankBeneficiary || "L'CONQ SARL");
+
           localStorage.setItem('profName', brandConfig.profName || '');
           localStorage.setItem('profPhone', brandConfig.profPhone || '');
           localStorage.setItem('profSite', brandConfig.profSite || 'www.lconq.ma');
+          localStorage.setItem('bankName', brandConfig.bankName || 'CIH Bank (Maroc)');
+          localStorage.setItem('bankRIB', brandConfig.bankRIB || '230 780 4567890123 0001 89');
+          localStorage.setItem('bankBeneficiary', brandConfig.bankBeneficiary || "L'CONQ SARL");
         } else {
           // Seed if not exists in DB
-          await saveBrandingConfig({ profName, profPhone, profSite });
+          await saveBrandingConfig({
+            profName, profPhone, profSite,
+            bankName, bankRIB, bankBeneficiary
+          });
         }
 
         // Process Flashcard Settings
@@ -2112,7 +2141,7 @@ export function AuthProvider({ children }) {
       syncStudentsList,
       trackDownload,
       loading,
-      profName, profPhone, profSite, updateBrandingConfig, updateFlashcardSettingsConfig, updatePdfSettingsConfig, updateOmrScannerSettingsConfig,
+      profName, profPhone, profSite, bankName, bankRIB, bankBeneficiary, updateBrandingConfig, updateFlashcardSettingsConfig, updatePdfSettingsConfig, updateOmrScannerSettingsConfig,
       whatsappSettings, updateWhatsAppSettingsConfig,
       upgradedPlan, setUpgradedPlan,
     }}>
