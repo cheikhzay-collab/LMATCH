@@ -55,7 +55,7 @@ export default function RankingPage() {
 
   // Add real users from database
   (dbLeaderboard || []).forEach((u, idx) => {
-    if (!u.name) return;
+    if (!u.name || u.role === 'admin') return;
     const school = u.school || 'Non spécifié';
     mergedUsersMap.set(u.name.toLowerCase(), {
       name: u.name,
@@ -68,7 +68,7 @@ export default function RankingPage() {
   });
 
   // Integrate current logged in user to make sure they are in the dataset with real stats
-  if (user && user.name) {
+  if (user && user.name && user.role !== 'admin') {
     const userSchool = user.school || (user.tier === 'premium' ? 'Médecine / Pharmacie' : 'Général (Prépa)');
     mergedUsersMap.set(user.name.toLowerCase(), {
       name: user.name,
@@ -213,64 +213,66 @@ export default function RankingPage() {
       </div>
 
       {/* ── User Rank Highlight Panel ── */}
-      <div className="spotlight-premium-card">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flex: 1, minWidth: '280px' }}>
-          <div style={{
-            width: 56, height: 56, borderRadius: '16px',
-            background: 'linear-gradient(135deg, rgba(113, 109, 242, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%)',
-            border: '1px solid var(--violet)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(113,109,242,0.2)',
-            flexShrink: 0
-          }}>
-            <Award size={26} className="text-violet" />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-              <h4 style={{ margin: 0, fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-main)' }}>Votre Position Actuelle</h4>
-              <span style={{
-                fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
-                background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid rgba(16, 185, 129, 0.2)',
-                padding: '0.15rem 0.5rem', borderRadius: '4px'
-              }}>
-                {userPctLabel}
-              </span>
+      {user?.role !== 'admin' && (
+        <div className="spotlight-premium-card">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem', flex: 1, minWidth: '280px' }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: '16px',
+              background: 'linear-gradient(135deg, rgba(113, 109, 242, 0.15) 0%, rgba(16, 185, 129, 0.15) 100%)',
+              border: '1px solid var(--violet)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(113,109,242,0.2)',
+              flexShrink: 0
+            }}>
+              <Award size={26} className="text-violet" />
             </div>
-            <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.84rem' }}>
-              Excellent travail ! Continuez à réviser régulièrement pour maintenir votre rythme de progression.
-            </p>
-            {/* XP progress bar */}
-            <div style={{ maxWidth: '380px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-subtle)', marginTop: '0.75rem', fontWeight: 600 }}>
-                <span>Progression XP</span>
-                <span>{currentUserXP} / 10 000 XP</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
+                <h4 style={{ margin: 0, fontWeight: 800, fontSize: '1.15rem', color: 'var(--text-main)' }}>Votre Position Actuelle</h4>
+                <span style={{
+                  fontSize: '0.68rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
+                  background: 'var(--emerald-soft)', color: 'var(--emerald)', border: '1px solid rgba(16, 185, 129, 0.2)',
+                  padding: '0.15rem 0.5rem', borderRadius: '4px'
+                }}>
+                  {userPctLabel}
+                </span>
               </div>
-              <div className="progress-bar-container">
-                <div className="progress-bar-fill" style={{ width: `${Math.min(100, Math.round((currentUserXP / 10000) * 100))}%` }} />
+              <p style={{ margin: '4px 0 0 0', color: 'var(--text-muted)', fontSize: '0.84rem' }}>
+                Excellent travail ! Continuez à réviser régulièrement pour maintenir votre rythme de progression.
+              </p>
+              {/* XP progress bar */}
+              <div style={{ maxWidth: '380px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--text-subtle)', marginTop: '0.75rem', fontWeight: 600 }}>
+                  <span>Progression XP</span>
+                  <span>{currentUserXP} / 10 000 XP</span>
+                </div>
+                <div className="progress-bar-container">
+                  <div className="progress-bar-fill" style={{ width: `${Math.min(100, Math.round((currentUserXP / 10000) * 100))}%` }} />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="spotlight-stats-container">
-          <div style={{ textAlign: 'center' }}>
-            <span style={{ fontSize: '1.85rem', fontWeight: 950, color: 'var(--violet)', letterSpacing: '-0.02em' }}>#{currentUserRank}</span>
-            <p style={{ margin: '2px 0 0 0', fontSize: '0.7rem', color: 'var(--text-subtle)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Rang</p>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <span style={{ fontSize: '1.85rem', fontWeight: 950, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.35rem', justifyContent: 'center', letterSpacing: '-0.02em' }}>
-              <Zap size={20} className="text-violet" /> {currentUserXP}
-            </span>
-            <p style={{ margin: '2px 0 0 0', fontSize: '0.7rem', color: 'var(--text-subtle)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>XP Total</p>
-          </div>
-          <div style={{ textAlign: 'center' }}>
-            <span style={{ fontSize: '1.85rem', fontWeight: 950, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.35rem', justifyContent: 'center', letterSpacing: '-0.02em' }}>
-              <Flame size={20} /> {currentUserStreak}j
-            </span>
-            <p style={{ margin: '2px 0 0 0', fontSize: '0.7rem', color: 'var(--text-subtle)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Série</p>
+          <div className="spotlight-stats-container">
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '1.85rem', fontWeight: 950, color: 'var(--violet)', letterSpacing: '-0.02em' }}>#{currentUserRank}</span>
+              <p style={{ margin: '2px 0 0 0', fontSize: '0.7rem', color: 'var(--text-subtle)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Rang</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '1.85rem', fontWeight: 950, color: 'var(--text-main)', display: 'flex', alignItems: 'center', gap: '0.35rem', justifyContent: 'center', letterSpacing: '-0.02em' }}>
+                <Zap size={20} className="text-violet" /> {currentUserXP}
+              </span>
+              <p style={{ margin: '2px 0 0 0', fontSize: '0.7rem', color: 'var(--text-subtle)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>XP Total</p>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <span style={{ fontSize: '1.85rem', fontWeight: 950, color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.35rem', justifyContent: 'center', letterSpacing: '-0.02em' }}>
+                <Flame size={20} /> {currentUserStreak}j
+              </span>
+              <p style={{ margin: '2px 0 0 0', fontSize: '0.7rem', color: 'var(--text-subtle)', textTransform: 'uppercase', fontWeight: 800, letterSpacing: '0.05em' }}>Série</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── Podium Section (Top 3 Displays) ── */}
       {displayTopThree.length > 0 && searchQuery === '' && (() => {
@@ -622,7 +624,7 @@ export default function RankingPage() {
       </div>
 
       {/* Sticky User Card on Mobile */}
-      {isMobile && (
+      {isMobile && user?.role !== 'admin' && (
         <div style={{
           position: 'fixed',
           bottom: 'calc(58px + env(safe-area-inset-bottom))',
