@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense, useCallback } from 'react';
+import { useState, useEffect, Suspense, useCallback, useMemo } from 'react';
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import BottomNav from './BottomNav';
@@ -54,6 +54,21 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+
+  // Memoize confetti elements configuration so it doesn't recalculate on every render,
+  // preventing constant layout shifts and DOM remounts.
+  const confettiArray = useMemo(() => {
+    const colors = ['#FFC72C', '#FF5A5F', '#00A699', '#7C3AED', '#3B82F6', '#EC4899', '#F59E0B', '#10B981'];
+    return Array.from({ length: 70 }).map((_, i) => ({
+      left: Math.random() * 100,
+      delay: Math.random() * 5,
+      duration: 2.5 + Math.random() * 3.5,
+      size: 10 + Math.random() * 12,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      isStar: Math.random() > 0.6,
+      borderRadius: Math.random() > 0.5 ? '50%' : '3px'
+    }));
+  }, []);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem('sidebar-collapsed') === 'true'; }
@@ -228,37 +243,28 @@ export default function Layout() {
         }}>
           {/* Confetti container with stars and shapes */}
           <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 10001 }}>
-            {Array.from({ length: 70 }).map((_, i) => {
-              const left = Math.random() * 100;
-              const delay = Math.random() * 5;
-              const duration = 2.5 + Math.random() * 3.5;
-              const size = 10 + Math.random() * 12;
-              const colors = ['#FFC72C', '#FF5A5F', '#00A699', '#7C3AED', '#3B82F6', '#EC4899', '#F59E0B', '#10B981'];
-              const color = colors[Math.floor(Math.random() * colors.length)];
-              const isStar = Math.random() > 0.6;
-              return (
-                <div 
-                  key={i}
-                  style={{
-                    position: 'absolute',
-                    top: '-30px',
-                    left: `${left}%`,
-                    fontSize: isStar ? `${size}px` : undefined,
-                    color: isStar ? color : undefined,
-                    width: isStar ? undefined : `${size}px`,
-                    height: isStar ? undefined : `${size}px`,
-                    background: isStar ? undefined : color,
-                    borderRadius: isStar ? undefined : (Math.random() > 0.5 ? '50%' : '3px'),
-                    opacity: 0.9,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    animation: `confettiFall ${duration}s linear ${delay}s infinite`,
-                    pointerEvents: 'none'
-                  }}
-                >
-                  {isStar && '★'}
-                </div>
-              );
-            })}
+            {confettiArray.map((item, i) => (
+              <div 
+                key={i}
+                style={{
+                  position: 'absolute',
+                  top: '-30px',
+                  left: `${item.left}%`,
+                  fontSize: item.isStar ? `${item.size}px` : undefined,
+                  color: item.isStar ? item.color : undefined,
+                  width: item.isStar ? undefined : `${item.size}px`,
+                  height: item.isStar ? undefined : `${item.size}px`,
+                  background: item.isStar ? undefined : item.color,
+                  borderRadius: item.isStar ? undefined : item.borderRadius,
+                  opacity: 0.9,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  animation: `confettiFall ${item.duration}s linear ${item.delay}s infinite`,
+                  pointerEvents: 'none'
+                }}
+              >
+                {item.isStar && '★'}
+              </div>
+            ))}
           </div>
 
           <div style={{
