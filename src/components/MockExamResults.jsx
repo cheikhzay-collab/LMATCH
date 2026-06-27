@@ -1,11 +1,14 @@
 import React, { useState, useMemo } from 'react';
-import { Trophy, CheckCircle2, XCircle, Lightbulb, ArrowLeft, TrendingUp, Zap } from 'lucide-react';
+import { Trophy, CheckCircle2, XCircle, Lightbulb, ArrowLeft, TrendingUp, Zap, Lock } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import { renderWithMath } from '../utils/mathRenderer';
 import DiagnosticReport from './DiagnosticReport';
 
 const renderOptionText = (text) => renderWithMath(text);
 
 const MockExamResults = React.memo(({ questions, answers, exam, onReturn, schoolBranding }) => {
+  const { user } = useAuth();
+  const isPremium = user?.role === 'admin' || user?.tier === 'premium';
   const [tab, setTab] = useState('correction');
 
   const brand = useMemo(
@@ -146,13 +149,46 @@ const MockExamResults = React.memo(({ questions, answers, exam, onReturn, school
 
                 {/* Astuce */}
                 {!isCorrect && q.astuce && (
-                  <div className="astuce-box" style={{ marginTop: '0.75rem' }}>
-                    <div className="astuce-header">
-                      <Lightbulb size={15} /> Astuce
+                  <div className="astuce-box" style={{ marginTop: '0.75rem', position: 'relative', overflow: 'hidden' }}>
+                    <div className="astuce-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                        <Lightbulb size={15} /> Astuce de résolution
+                      </span>
+                      {!isPremium && (
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.2rem', padding: '0.2rem 0.5rem', borderRadius: '99px', background: 'var(--violet)', color: '#fff', fontSize: '0.65rem', fontWeight: 800 }}>
+                          <Lock size={10} /> PRO
+                        </span>
+                      )}
                     </div>
-                    <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.4rem 0 0' }}>
-                      {renderWithMath(q.astuce)}
-                    </div>
+                    {isPremium ? (
+                      <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.4rem 0 0' }}>
+                        {renderWithMath(q.astuce)}
+                      </div>
+                    ) : (
+                      <>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: '0.4rem 0 0', filter: 'blur(4px)', userSelect: 'none', pointerEvents: 'none' }}>
+                          Pour résoudre cette question rapidement en concours, il suffit d'appliquer la formule simplifiée et d'éliminer les options incompatibles directement.
+                        </div>
+                        <div style={{
+                          position: 'absolute',
+                          inset: 0,
+                          top: '24px',
+                          background: 'linear-gradient(180deg, rgba(99, 102, 241, 0.02) 0%, rgba(99, 102, 241, 0.15) 100%)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.3rem',
+                          padding: '0.5rem',
+                          backdropFilter: 'blur(1px)'
+                        }}>
+                          <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 800, color: 'var(--violet)' }}>Explication & Astuce masquées</p>
+                          <a href="/subscription" style={{ fontSize: '0.72rem', fontWeight: 800, color: '#fff', background: 'var(--violet)', padding: '0.25rem 0.65rem', borderRadius: '8px', textDecoration: 'none', boxShadow: '0 4px 10px var(--violet-glow)' }}>
+                            Débloquer l'astuce ⚡
+                          </a>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>
