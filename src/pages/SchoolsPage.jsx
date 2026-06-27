@@ -400,12 +400,9 @@ function DeleteModal({ school, onConfirm, onClose }) {
 }
 
 /* ─── School Card ───────────────────────────────────────────────── */
-function SchoolCard({ school, examCount, brand, isAdmin, onEdit, onDelete, onClick }) {
+function SchoolCard({ school, examCount, brand, isAdmin, onEdit, onDelete, onClick, progressPct = 0 }) {
   const [hovered, setHovered] = useState(false);
   const IconComponent = ICON_MAP[brand.iconKey] || GraduationCap;
-
-  // Calculate completion percentage: 100% if >= 5 exams, 80% if 3-4, 50% if 1-2, 0% if 0
-  const progressPct = examCount >= 5 ? 100 : examCount >= 3 ? 80 : examCount >= 1 ? 50 : 0;
 
   return (
     <div style={{ position:'relative' }}>
@@ -534,7 +531,9 @@ function SchoolCard({ school, examCount, brand, isAdmin, onEdit, onDelete, onCli
             {/* Progress and Completion Section */}
             <div style={{ zIndex: 1, marginBottom: '1rem', marginTop: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.35rem' }}>
-                <span style={{ fontSize: '0.68rem', color: 'var(--text-subtle)', fontWeight: 800, textTransform: 'uppercase' }}>Contenu disponible</span>
+                <span style={{ fontSize: '0.68rem', color: 'var(--text-subtle)', fontWeight: 800, textTransform: 'uppercase' }}>
+                  {isAdmin ? "Contenu disponible" : "Progression"}
+                </span>
                 <span style={{ fontSize: '0.72rem', color: brand.accent, fontWeight: 800 }}>{progressPct}%</span>
               </div>
               <div style={{ height: '5px', width: '100%', background: 'rgba(255,255,255,0.05)', borderRadius: '99px', overflow: 'hidden', border: '1px solid var(--border)' }}>
@@ -603,7 +602,7 @@ function useIsMobile() {
 }
 
 export default function SchoolsPage() {
-  const { exams, schools, addSchool, removeSchool, renameSchool, schoolBranding, updateSchoolBranding, user } = useAuth();
+  const { exams, schools, addSchool, removeSchool, renameSchool, schoolBranding, updateSchoolBranding, user, progress } = useAuth();
   const navigate    = useNavigate();
   const isAdmin     = user?.role === 'admin';
   const isMobile    = useIsMobile();
@@ -781,18 +780,36 @@ export default function SchoolsPage() {
         </div>
       ) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(290px, 1fr))', gap: isMobile ? '1rem' : '1.5rem' }}>
-          {filtered.map(school => (
-            <SchoolCard
-              key={school}
-              school={school}
-              examCount={getExamCount(school)}
-              brand={getBrand(school, schoolBranding)}
-              isAdmin={isAdmin}
-              onEdit={() => handleEdit(school)}
-              onDelete={() => handleDelete(school)}
-              onClick={() => navigate(`/schools/${encodeURIComponent(school)}`)}
-            />
-          ))}
+          {filtered.map(school => {
+            const brand = getBrand(school, schoolBranding);
+            
+            // Calculate interacted questions percentage
+            const schoolExams = exams.filter(e => e.school === school && e.isArchived !== true);
+            const totalQuestions = schoolExams.reduce((sum, exam) => sum + (exam.questionsCount || 0), 0);
+            let interactedCount = 0;
+            schoolExams.forEach(exam => {
+              (exam.questions || []).forEach(q => {
+                if (progress && progress[q.id]) {
+                  interactedCount++;
+                }
+              });
+            });
+            const progressPct = totalQuestions > 0 ? Math.min(100, Math.round((interactedCount / totalQuestions) * 100)) : 0;
+
+            return (
+              <SchoolCard
+                key={school}
+                school={school}
+                examCount={getExamCount(school)}
+                brand={brand}
+                isAdmin={isAdmin}
+                onEdit={() => handleEdit(school)}
+                onDelete={() => handleDelete(school)}
+                onClick={() => navigate(`/schools/${encodeURIComponent(school)}`)}
+                progressPct={progressPct}
+              />
+            );
+          })}
         </div>
       )}
 

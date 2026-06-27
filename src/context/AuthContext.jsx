@@ -1786,16 +1786,29 @@ export function AuthProvider({ children }) {
         }
 
         // Process Exams
+        let finalExams = [];
         if (fbExams && fbExams.length > 0) {
-          setExams(fbExams);
+          finalExams = fbExams;
         } else {
           // Seed the default exam to Database
           const defaultSeedExam = initialExams.find(e => e.id === "QVVOBFE7");
           if (defaultSeedExam) {
             await dbAddExam(defaultSeedExam);
           }
-          setExams(initialExams);
+          finalExams = initialExams;
         }
+        setExams(finalExams);
+
+        // Background prefetch questions for all active, non-archived exams
+        const activeExams = finalExams.filter(e => e.isActive !== false && e.isArchived !== true);
+        Promise.allSettled(activeExams.map(async (exam) => {
+          try {
+            const questions = await getExamQuestionsOnly(exam.id);
+            setExams(prev => prev.map(e => e.id === exam.id ? { ...e, questions } : e));
+          } catch (err) {
+            console.error('[Supabase] Failed to prefetch questions for', exam.id, err);
+          }
+        }));
       } catch (e) {
         console.warn('[Supabase] Error syncing config/exams:', e.message);
       }
