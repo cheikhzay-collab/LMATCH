@@ -33,6 +33,31 @@ clientsClaim();
 precacheAndRoute(self.__WB_MANIFEST || []);
 cleanupOutdatedCaches();
 
+// ── Versioned Cache Names to prevent PWA quota exhaustion on mobile ─────────
+const CACHE_VERSION = 'v2';
+const CACHE_NAMES = {
+  fonts: `lconq-fonts-${CACHE_VERSION}`,
+  images: `lconq-images-${CACHE_VERSION}`,
+  assets: `lconq-assets-${CACHE_VERSION}`,
+};
+
+// ── Clean up old versioned caches on SW activation ──────────────────────────
+self.addEventListener('activate', (event) => {
+  const currentCacheNames = Object.values(CACHE_NAMES);
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName.startsWith('lconq-') && !currentCacheNames.includes(cacheName)) {
+            console.log('[Service Worker] Deleting outdated cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => self.clients.claim())
+  );
+});
+
 // ── FIX #1: Supabase API — NEVER cache, always network ────────────────────
 // Caching Supabase responses would return stale auth/data and cause the
 // "can't fetch from Supabase after cache accumulation" freeze bug.
@@ -64,10 +89,10 @@ registerRoute(
     url.origin === 'https://fonts.googleapis.com' ||
     url.origin === 'https://fonts.gstatic.com',
   new CacheFirst({
-    cacheName: 'lconq-fonts',
+    cacheName: CACHE_NAMES.fonts,
     plugins: [
       new CacheableResponsePlugin({ statuses: [0, 200] }),
-      new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 }),
+      new ExpirationPlugin({ maxEntries: 10, maxAgeSeconds: 60 * 60 * 24 * 365 }),
     ],
   })
 );
@@ -77,10 +102,10 @@ registerRoute(
 registerRoute(
   ({ request }) => request.destination === 'image',
   new StaleWhileRevalidate({
-    cacheName: 'lconq-images',
+    cacheName: CACHE_NAMES.images,
     plugins: [
       new CacheableResponsePlugin({ statuses: [0, 200] }),
-      new ExpirationPlugin({ maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 7 }),
+      new ExpirationPlugin({ maxEntries: 25, maxAgeSeconds: 60 * 60 * 24 * 7 }),
     ],
   })
 );
@@ -93,10 +118,10 @@ registerRoute(
   ({ request }) =>
     request.destination === 'script' || request.destination === 'style',
   new StaleWhileRevalidate({
-    cacheName: 'lconq-assets',
+    cacheName: CACHE_NAMES.assets,
     plugins: [
       new CacheableResponsePlugin({ statuses: [0, 200] }), // ← only cache valid responses
-      new ExpirationPlugin({ maxEntries: 40, maxAgeSeconds: 60 * 60 * 24 * 3 }),
+      new ExpirationPlugin({ maxEntries: 15, maxAgeSeconds: 60 * 60 * 24 * 3 }),
     ],
   })
 );

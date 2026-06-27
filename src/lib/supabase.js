@@ -30,7 +30,23 @@ if (supabaseUrl && supabaseAnonKey) {
       fetch: (url, options = {}) => {
         const controller = new AbortController();
         const id = setTimeout(() => controller.abort(), 15_000); // 15s max
-        return fetch(url, { ...options, signal: controller.signal })
+        
+        // Force network-only by completely disabling browser HTTP caching
+        // for all Rest / Auth queries. This prevents mobile Safari/Chrome
+        // from caching stale database responses or auth tokens.
+        const newOptions = {
+          ...options,
+          signal: controller.signal,
+          cache: 'no-store', // Bypasses HTTP cache completely
+          headers: {
+            ...options.headers,
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+            'Expires': '0',
+          }
+        };
+
+        return fetch(url, newOptions)
           .finally(() => clearTimeout(id));
       },
     },
