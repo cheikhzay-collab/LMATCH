@@ -669,11 +669,23 @@ export function scanAnswerSheet(imageFile, questionCount) {
           ? 1
           : Math.min(1, (bestDark - secondBest) / (bestDark + 1));
 
+        // Calculate coordinates for bubbles in original image pixels
+        const bubbles = getBubblesMM(q, questionCount);
+        const coords = {};
+        bubbles.forEach(b => {
+          const { x: pxCoarse, y: pyCoarse } = project(b.x, b.y);
+          coords[b.opt] = {
+            x: Math.round(pxCoarse / scale),
+            y: Math.round((pyCoarse + rowYOffsets[q]) / scale)
+          };
+        });
+
         results.push({
           q:          q + 1,
           answer:     isEmpty ? null : bestOpt,
           confidence: Math.max(0, confidence),
           darknesses,
+          coords,
         });
       }
 

@@ -206,6 +206,271 @@ function ResultRow({ row }) {
   );
 }
 
+/* ── Interactive AR OMR Copy Overlay Component ──────────────────────── */
+function ARCopyOverlay({ imagePreview, corrected }) {
+  const containerRef = useRef(null);
+  const imgRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [hoveredQuestion, setHoveredQuestion] = useState(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+
+  // Redraw overlays on image load, resize, or data changes
+  const redraw = useCallback(() => {
+    const img = imgRef.current;
+    const canvas = canvasRef.current;
+    if (!img || !canvas || !img.complete || img.naturalWidth === 0) return;
+
+    // Match canvas dimensions to the image's displayed size
+    canvas.width = img.clientWidth;
+    canvas.height = img.clientHeight;
+
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const scaleX = canvas.width / img.naturalWidth;
+    const scaleY = canvas.height / img.naturalHeight;
+
+    // Draw bubbles
+    corrected.forEach(row => {
+      if (!row.coords) return;
+
+      const correctOpt = row.correct;
+      const detectedOpt = row.detected;
+      const result = row.result; // 'correct', 'wrong', 'empty'
+
+      // Radius of the overlay circle (approx. 2.6mm on A4)
+      const r = (2.8 / 210) * canvas.width;
+
+      // Draw correct bubble (always highlight in green)
+      if (row.coords[correctOpt]) {
+        const cx = row.coords[correctOpt].x * scaleX;
+        const cy = row.coords[correctOpt].y * scaleY;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+        // Soft green fill
+        ctx.fillStyle = 'rgba(16, 185, 129, 0.25)';
+        ctx.fill();
+        // Solid green border with a glow
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = Math.max(1.5, canvas.width / 400);
+        ctx.shadowColor = 'rgba(16, 185, 129, 0.6)';
+        ctx.shadowBlur = 4;
+        ctx.stroke();
+        // Reset shadow
+        ctx.shadowBlur = 0;
+      }
+
+      // Draw wrong bubble (highlight in red)
+      if (result === 'wrong' && detectedOpt && row.coords[detectedOpt]) {
+        const cx = row.coords[detectedOpt].x * scaleX;
+        const cy = row.coords[detectedOpt].y * scaleY;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+        // Soft red fill
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.35)';
+        ctx.fill();
+        // Solid red border
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = Math.max(1.5, canvas.width / 400);
+        ctx.shadowColor = 'rgba(239, 68, 68, 0.6)';
+        ctx.shadowBlur = 4;
+        ctx.stroke();
+        
+        // Draw cross/X inside the red bubble
+        ctx.shadowBlur = 0;
+        ctx.beginPath();
+        const size = r * 0.5;
+        ctx.moveTo(cx - size, cy - size);
+        ctx.lineTo(cx + size, cy + size);
+        ctx.moveTo(cx + size, cy - size);
+        ctx.lineTo(cx - size, cy + size);
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = Math.max(2, canvas.width / 350);
+        ctx.stroke();
+      }
+
+      // Draw empty reminder (dashed warning/blue circle around expected correct answer)
+      if (result === 'empty' && row.coords[correctOpt]) {
+        const cx = row.coords[correctOpt].x * scaleX;
+        const cy = row.coords[correctOpt].y * scaleY;
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+        // Soft orange/yellow fill
+        ctx.fillStyle = 'rgba(245, 158, 11, 0.15)';
+        ctx.fill();
+        // Dashed orange border
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = Math.max(1.5, canvas.width / 450);
+        ctx.setLineDash([3, 2]);
+        ctx.stroke();
+        ctx.setLineDash([]); // Reset dash
+      }
+    });
+  }, [corrected]);
+
+  // Handle image load
+  const handleImageLoad = () => {
+    redraw();
+  };
+
+  // Set up resize observer to keep canvas responsive
+  useEffect(() => {
+    const img = imgRef.current;
+    if (!img) return;
+
+    const resizeObserver = new ResizeObserver(() => {
+      redraw();
+    });
+    resizeObserver.observe(img);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [redraw]);
+
+  // Track hover to show floating Glassmorphic tooltips
+  const handleMouseMove = (e) => {
+    const canvas = canvasRef.current;
+    const img = imgRef.current;
+    if (!canvas || !img || !img.complete) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+
+    const scaleX = canvas.width / img.naturalWidth;
+    const scaleY = canvas.height / img.naturalHeight;
+    const r = (4.0 / 210) * canvas.width; // slightly larger hit area
+
+    let foundQuestion = null;
+
+    for (const row of corrected) {
+      if (!row.coords) continue;
+      
+      // Check if mouse is near any of the options for this question
+      for (const [opt, coord] of Object.entries(row.coords)) {
+        const cx = coord.x * scaleX;
+        const cy = coord.y * scaleY;
+        const distSq = (mx - cx) * (mx - cx) + (my - cy) * (my - cy);
+        
+        if (distSq <= r * r) {
+          foundQuestion = row;
+          break;
+        }
+      }
+      if (foundQuestion) break;
+    }
+
+    if (foundQuestion) {
+      setHoveredQuestion(foundQuestion);
+      // Position tooltip near the bubble
+      setTooltipPos({
+        x: mx + 15,
+        y: my - 30
+      });
+    } else {
+      setHoveredQuestion(null);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredQuestion(null);
+  };
+
+  return (
+    <div 
+      ref={containerRef}
+      style={{
+        position: 'relative',
+        width: '100%',
+        maxHeight: '650px',
+        overflow: 'hidden',
+        borderRadius: '1.5rem',
+        border: '1px solid var(--border)',
+        background: '#09090b',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: hoveredQuestion ? 'help' : 'default'
+      }}
+    >
+      <img
+        ref={imgRef}
+        src={imagePreview}
+        alt="Original Scan"
+        onLoad={handleImageLoad}
+        style={{
+          width: '100%',
+          height: 'auto',
+          maxHeight: '650px',
+          objectFit: 'contain',
+          display: 'block'
+        }}
+      />
+      
+      <canvas
+        ref={canvasRef}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'auto'
+        }}
+      />
+
+      {/* Floating glassmorphic tooltip */}
+      {hoveredQuestion && (
+        <div style={{
+          position: 'absolute',
+          left: tooltipPos.x,
+          top: tooltipPos.y,
+          background: 'rgba(15, 23, 42, 0.92)',
+          backdropFilter: 'blur(12px)',
+          border: '1px solid rgba(255,255,255,0.15)',
+          padding: '0.65rem 1rem',
+          borderRadius: '0.75rem',
+          color: '#fff',
+          fontSize: '0.78rem',
+          pointerEvents: 'none',
+          zIndex: 50,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.2rem',
+          whiteSpace: 'nowrap',
+          transition: 'left 0.05s ease, top 0.05s ease'
+        }}>
+          <div style={{ fontWeight: 800, color: '#a5b4fc', fontSize: '0.82rem' }}>
+            Question {hoveredQuestion.q}
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem', fontWeight: 600 }}>
+            <span>Statut :</span>
+            <span style={{ 
+              color: hoveredQuestion.result === 'correct' ? '#10b981' : hoveredQuestion.result === 'wrong' ? '#ef4444' : '#f59e0b',
+              fontWeight: 800
+            }}>
+              {hoveredQuestion.result === 'correct' ? 'Correct' : hoveredQuestion.result === 'wrong' ? 'Incorrect' : 'Laissé Vide'}
+            </span>
+          </div>
+          <div style={{ fontWeight: 500, color: '#94a3b8' }}>
+            Sujet : {hoveredQuestion.topic}
+          </div>
+          <div style={{ fontWeight: 700, color: '#f8fafc' }}>
+            Attendu : {hoveredQuestion.correct} {hoveredQuestion.detected ? `| Coché : ${hoveredQuestion.detected}` : ''}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ── Main Global Scanner Page ────────────────────────────────────── */
 export default function OMRScannerPage() {
   const { user, theme, mockExamHistory, updateCardProgress, saveMockExamResult, schoolBranding, exams, isExamLocked, profName, profPhone, profSite, loadExamQuestions } = useAuth();
@@ -344,7 +609,7 @@ export default function OMRScannerPage() {
       } else {
         result = 'wrong'; neg += Math.abs(rules.wrong); pts += rules.wrong;
       }
-      return { q: idx + 1, question: q.question, detected, correct, result, topic: q.topic || 'Général' };
+      return { q: idx + 1, question: q.question, detected, correct, result, topic: q.topic || 'Général', coords: sc?.coords };
     });
     
     setCorrected(rows);
@@ -1198,6 +1463,7 @@ export default function OMRScannerPage() {
                   }}>
                     {[
                       { id: 'list', label: 'Feuille de Correction', icon: <CheckCircle2 size={15}/> },
+                      { id: 'overlay', label: 'Copie Numérisée (AR)', icon: <Camera size={15}/> },
                       { id: 'diagnostic', label: 'Analyse Thématique', icon: <TrendingUp size={15}/> }
                     ].map(t => (
                       <button 
@@ -1229,6 +1495,12 @@ export default function OMRScannerPage() {
                     ))}
                   </div>
                 </div>
+
+                {resultsTab === 'overlay' && (
+                  <div style={{ padding: '0.25rem 0' }}>
+                    <ARCopyOverlay imagePreview={imagePreview} corrected={corrected} />
+                  </div>
+                )}
 
                 {resultsTab === 'list' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem', maxHeight: 440, overflowY: 'auto', paddingRight: '6px' }}>
