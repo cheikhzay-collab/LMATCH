@@ -19,20 +19,21 @@ BEGIN
   -- Insert missing profiles for all users in auth.users
   INSERT INTO public.profiles (id, name, email, role, tier, xp, streak, total_students, joined)
   SELECT 
-    id, 
+    u.id, 
     COALESCE(
-      raw_user_meta_data->>'name', 
-      raw_user_meta_data->>'full_name', 
-      split_part(email, '@', 1), 
+      u.raw_user_meta_data->>'name', 
+      u.raw_user_meta_data->>'full_name', 
+      split_part(u.email, '@', 1), 
       'Élève'
     ), 
-    email, 
+    u.email, 
     'student', 
     'freemium', 
     0, 0, 1200, 
-    COALESCE(created_at, now())
-  FROM auth.users
-  WHERE id NOT IN (SELECT id FROM public.profiles)
+    COALESCE(u.created_at, now())
+  FROM auth.users u
+  LEFT JOIN public.profiles p ON p.id = u.id
+  WHERE p.id IS NULL
   ON CONFLICT (id) DO NOTHING;
 
   GET DIAGNOSTICS inserted_count = ROW_COUNT;

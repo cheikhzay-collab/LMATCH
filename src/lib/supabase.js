@@ -27,27 +27,35 @@ if (supabaseUrl && supabaseAnonKey) {
     },
     global: {
       // Reasonable timeout — avoids hanging requests on flaky mobile networks
-       fetch: (url, options = {}) => {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 15_000); // 15s max
-        
-        // Safely merge headers regardless of whether options.headers is a Headers object or a plain object.
-        // Spreading a Headers object via ...options.headers strips out apikey and Authorization tokens.
-        const mergedHeaders = new Headers(options.headers || {});
-        mergedHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-        mergedHeaders.set('Pragma', 'no-cache');
-        mergedHeaders.set('Expires', '0');
-
-        const newOptions = {
-          ...options,
-          signal: controller.signal,
-          cache: 'no-store', // Bypasses HTTP cache completely
-          headers: mergedHeaders
-        };
-
-        return fetch(url, newOptions)
-          .finally(() => clearTimeout(id));
-      },
+        fetch: (url, options = {}) => {
+          const controller = new AbortController();
+          const id = setTimeout(() => controller.abort(), 45_000); // 45s timeout for slow mobile networks
+          
+          // Link the caller's signal to our AbortController
+          if (options.signal) {
+            if (options.signal.aborted) {
+              controller.abort();
+            } else {
+              options.signal.addEventListener('abort', () => controller.abort());
+            }
+          }
+          
+          // Safely merge headers regardless of whether options.headers is a Headers object or a plain object.
+          const mergedHeaders = new Headers(options.headers || {});
+          mergedHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+          mergedHeaders.set('Pragma', 'no-cache');
+          mergedHeaders.set('Expires', '0');
+  
+          const newOptions = {
+            ...options,
+            signal: controller.signal,
+            cache: 'no-store', // Bypasses HTTP cache completely
+            headers: mergedHeaders
+          };
+  
+          return fetch(url, newOptions)
+            .finally(() => clearTimeout(id));
+        },
     },
   });
 } else {
