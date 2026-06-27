@@ -3,15 +3,15 @@ import { renderWithMath } from '../utils/mathRenderer';
 import { Lightbulb, CheckCircle2, XCircle, Frown, Meh, Smile, BrainCircuit, Zap, Clock } from 'lucide-react';
 
 export default function Flashcard({ card, onNext }) {
-  // ── Card display settings ──
-  const cardRevealMode  = localStorage.getItem('card_reveal_mode')    || 'flip';
-  const cardFlipEnabled = localStorage.getItem('card_flip_animation') !== 'false';
-  const cardSwipeEnabled = localStorage.getItem('card_swipe_gesture')  !== 'false';
-  const cardFontFamily = localStorage.getItem('card_font_family') || 'Computer Modern Serif';
-  const cardFontSize = localStorage.getItem('card_font_size') || '1rem';
-  const cardQuestionWeight = localStorage.getItem('card_question_weight') || '400';
-  const cardAstuceWeight = localStorage.getItem('card_astuce_weight') || '400';
-  const cardOptionsWeight = localStorage.getItem('card_options_weight') || '500';
+  // ── Card display settings (Read once on mount via lazy initializers) ──
+  const [cardRevealMode] = useState(() => localStorage.getItem('card_reveal_mode') || 'flip');
+  const [cardFlipEnabled] = useState(() => localStorage.getItem('card_flip_animation') !== 'false');
+  const [cardSwipeEnabled] = useState(() => localStorage.getItem('card_swipe_gesture') !== 'false');
+  const [cardFontFamily] = useState(() => localStorage.getItem('card_font_family') || 'Computer Modern Serif');
+  const [cardFontSize] = useState(() => localStorage.getItem('card_font_size') || '1rem');
+  const [cardQuestionWeight] = useState(() => localStorage.getItem('card_question_weight') || '400');
+  const [cardAstuceWeight] = useState(() => localStorage.getItem('card_astuce_weight') || '400');
+  const [cardOptionsWeight] = useState(() => localStorage.getItem('card_options_weight') || '500');
 
   const isFlipMode    = cardRevealMode === 'flip' && cardFlipEnabled;
   const isInstantMode = cardRevealMode === 'instant';
@@ -29,13 +29,24 @@ export default function Flashcard({ card, onNext }) {
   const touchStartPos = useRef({ x: 0, y: 0 });
   const isHorizontalSwipe = useRef(null); // null = undecided, true = horizontal swipe, false = vertical scroll
 
+  // Timeout refs to prevent memory leaks / state updates on unmounted component
+  const revealTimeoutRef = useRef(null);
+  const exitTimeoutRef = useRef(null);
+
+  useState(() => {
+    return () => {
+      if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current);
+      if (exitTimeoutRef.current) clearTimeout(exitTimeoutRef.current);
+    };
+  });
+
   const revealCard = (optionId) => {
-    if (selectedOption) return;
+    if (selectedOption !== null && selectedOption !== undefined) return;
     setSelectedOption(optionId);
     if (cardFlipEnabled && cardRevealMode === 'flip') {
       // 3D flip — switch content midway (220ms into the 600ms flip)
       setIsFlipped(true);
-      setTimeout(() => setIsShowingBack(true), 220);
+      revealTimeoutRef.current = setTimeout(() => setIsShowingBack(true), 220);
     } else if (cardRevealMode === 'fade') {
       // Fade — no rotation, instant content swap with CSS opacity
       setIsShowingBack(true);
@@ -60,7 +71,7 @@ export default function Flashcard({ card, onNext }) {
     setSwipeClass(swipeDir);
     
     // Call the callback after exit animation completes
-    setTimeout(() => {
+    exitTimeoutRef.current = setTimeout(() => {
       onNext(card.id, finalQuality);
     }, 300);
   };
@@ -412,6 +423,7 @@ export default function Flashcard({ card, onNext }) {
                     <button
                       className={`astuce-tab ${astuceTab === 'trick' ? 'active' : ''} ${!card.trick ? 'disabled' : ''}`}
                       onClick={() => card.trick && setAstuceTab('trick')}
+                      disabled={!card.trick}
                       title={!card.trick ? 'Bientôt disponible' : 'Astuce du temps'}
                     >
                       <Clock size={11} />

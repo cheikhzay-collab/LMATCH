@@ -29,19 +29,31 @@ export default function MobileFlashcard({ card, onNext }) {
   const [exitDir,      setExitDir]      = useState('');     // '' | 'left' | 'right'
   const [isFlipped,    setIsFlipped]    = useState(false);  // 3D flip rotation active
 
-  // ── Card display settings ──
-  const cardRevealMode  = localStorage.getItem('card_reveal_mode')    || 'flip';
-  const cardFlipEnabled = localStorage.getItem('card_flip_animation') !== 'false';
-  const cardSwipeEnabled = localStorage.getItem('card_swipe_gesture')  !== 'false';
-  const cardFontFamily = localStorage.getItem('card_font_family') || 'Computer Modern Serif';
-  const cardFontSize = localStorage.getItem('card_font_size') || '1rem';
-  const cardQuestionWeight = localStorage.getItem('card_question_weight') || '400';
-  const cardAstuceWeight = localStorage.getItem('card_astuce_weight') || '400';
-  const cardOptionsWeight = localStorage.getItem('card_options_weight') || '500';
+  // ── Card display settings (Read once on mount via lazy initializers) ──
+  const [cardRevealMode] = useState(() => localStorage.getItem('card_reveal_mode') || 'flip');
+  const [cardFlipEnabled] = useState(() => localStorage.getItem('card_flip_animation') !== 'false');
+  const [cardSwipeEnabled] = useState(() => localStorage.getItem('card_swipe_gesture') !== 'false');
+  const [cardFontFamily] = useState(() => localStorage.getItem('card_font_family') || 'Computer Modern Serif');
+  const [cardFontSize] = useState(() => localStorage.getItem('card_font_size') || '1rem');
+  const [cardQuestionWeight] = useState(() => localStorage.getItem('card_question_weight') || '400');
+  const [cardAstuceWeight] = useState(() => localStorage.getItem('card_astuce_weight') || '400');
+  const [cardOptionsWeight] = useState(() => localStorage.getItem('card_options_weight') || '500');
 
   const isFlipMode = cardRevealMode === 'flip' && cardFlipEnabled;
   const isInstantMode = cardRevealMode === 'instant';
   const swipeActive = cardSwipeEnabled && !isInstantMode;
+
+  const rootRef = useRef(null);
+  const revealTimeoutRef = useRef(null);
+  const exitTimeoutRef = useRef(null);
+
+  // Clean up timeouts on unmount to prevent state updates on unmounted components
+  useEffect(() => {
+    return () => {
+      if (revealTimeoutRef.current) clearTimeout(revealTimeoutRef.current);
+      if (exitTimeoutRef.current) clearTimeout(exitTimeoutRef.current);
+    };
+  }, []);
 
   // Reset scroll container to top when card mounts (next card) or when tab changes
   useEffect(() => {
@@ -49,7 +61,7 @@ export default function MobileFlashcard({ card, onNext }) {
     if (scrollContainer) {
       scrollContainer.scrollTop = 0;
     }
-  }, [astuceTab]);
+  }, [astuceTab, card?.id]);
 
   /* ── Derived ── */
   const isCorrect = selected && card.correct_answer
@@ -68,18 +80,33 @@ export default function MobileFlashcard({ card, onNext }) {
     setSwiping(true);
   };
 
-  const onTouchMove = (e) => {
-    if (!swiping || !revealed || !swipeActive) return;
-    const dx = e.touches[0].clientX - touchStart.current.x;
-    const dy = e.touches[0].clientY - touchStart.current.y;
-    if (axis.current === null) {
-      axis.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-    }
-    if (axis.current === 'h') {
-      e.preventDefault();
-      setSwipeDX(dx);
-    }
-  };
+  // Dynamic touchmove listener binding to support non-passive e.preventDefault() on mobile.
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+
+    const handleTouchMove = (e) => {
+      if (!swiping || !revealed || !swipeActive) return;
+      const dx = e.touches[0].clientX - touchStart.current.x;
+      const dy = e.touches[0].clientY - touchStart.current.y;
+      
+      if (axis.current === null) {
+        axis.current = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+      }
+      
+      if (axis.current === 'h') {
+        if (e.cancelable) {
+          e.preventDefault();
+        }
+        setSwipeDX(dx);
+      }
+    };
+
+    root.addEventListener('touchmove', handleTouchMove, { passive: false });
+    return () => {
+      root.removeEventListener('touchmove', handleTouchMove);
+    };
+  }, [swiping, revealed, swipeActive]);
 
   const onTouchEnd = () => {
     if (!swiping || !swipeActive) return;
@@ -104,7 +131,7 @@ export default function MobileFlashcard({ card, onNext }) {
     setSelected(optId);
     if (isFlipMode) {
       setIsFlipped(true);
-      setTimeout(() => setRevealed(true), 220);
+      revealTimeoutRef.current = setTimeout(() => setRevealed(true), 220);
     } else {
       setRevealed(true);
     }
@@ -115,7 +142,7 @@ export default function MobileFlashcard({ card, onNext }) {
     setSelected('skipped');
     if (isFlipMode) {
       setIsFlipped(true);
-      setTimeout(() => setRevealed(true), 220);
+      revealTimeoutRef.current = setTimeout(() => setRevealed(true), 220);
     } else {
       setRevealed(true);
     }
@@ -124,7 +151,7 @@ export default function MobileFlashcard({ card, onNext }) {
   const triggerExit = (dir) => {
     const quality = dir === 'right' ? (isCorrect ? 5 : 0) : 0;
     setExitDir(dir);
-    setTimeout(() => onNext(card.id, quality), 320);
+    exitTimeoutRef.current = setTimeout(() => onNext(card.id, quality), 320);
   };
 
   const rate = (quality) => {
@@ -161,10 +188,10 @@ export default function MobileFlashcard({ card, onNext }) {
 
   return (
     <div
+      ref={rootRef}
       className="mfc-root"
       style={cardStyle}
       onTouchStart={onTouchStart}
-      onTouchMove={onTouchMove}
       onTouchEnd={onTouchEnd}
     >
       {/* ── Swipe indicators ── */}
@@ -306,6 +333,7 @@ export default function MobileFlashcard({ card, onNext }) {
                   <button
                     className={`mfc-atab ${astuceTab === 'trick' ? 'active' : ''} ${!card.trick ? 'disabled' : ''}`}
                     onClick={() => card.trick && setAstuceTab('trick')}
+                    disabled={!card.trick}
                   >
                     <Clock size={11} /> Astuce
                   </button>
