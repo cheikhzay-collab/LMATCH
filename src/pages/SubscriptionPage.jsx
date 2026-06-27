@@ -29,9 +29,9 @@ export default function SubscriptionPage() {
 
   // Payment simulator modal state
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [cardNumber, setCardNumber] = useState('4242 4242 4242 4242');
-  const [cardExpiry, setCardExpiry] = useState('12/28');
-  const [cardCvc, setCardCvc] = useState('123');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvc, setCardCvc] = useState('');
   const [cardName, setCardName] = useState(user?.name || '');
   const [isProcessing, setIsProcessing] = useState(false);
 
@@ -269,22 +269,6 @@ export default function SubscriptionPage() {
                 Activer le code
               </button>
             </form>
-          </div>
-          
-          <div style={{ background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '12px', padding: '1rem' }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '0.5rem' }}>
-              💡 Codes de test disponibles :
-            </span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: 'var(--violet)', fontWeight: 700 }}>LCONQ-PREM-TEST-30D</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>30 jours</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.03)', paddingTop: '0.5rem' }}>
-                <span style={{ color: 'var(--violet)', fontWeight: 700 }}>LCONQ-GLOB-TEST-365</span>
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>365 jours</span>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -583,6 +567,7 @@ export default function SubscriptionPage() {
                   <input 
                     type="text" 
                     className="input-control" 
+                    placeholder="4242 4242 4242 4242"
                     value={cardNumber} 
                     onChange={e => setCardNumber(e.target.value)} 
                     style={{ paddingLeft: '2.5rem', fontFamily: 'monospace' }}

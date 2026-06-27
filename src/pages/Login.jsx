@@ -38,8 +38,8 @@ export default function Login() {
         }
         navigate('/dashboard');
       } else {
-        await login(email, password);
-        navigate(email === 'admin@lconq.ma' ? '/admin/dashboard' : '/dashboard');
+        const loggedUser = await login(email, password);
+        navigate(loggedUser?.role === 'admin' ? '/admin/dashboard' : '/dashboard');
       }
     } catch (err) {
       console.error('[Auth] Error:', err);

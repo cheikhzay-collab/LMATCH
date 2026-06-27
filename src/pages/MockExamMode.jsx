@@ -72,14 +72,22 @@ export default function MockExamMode() {
   const [showExitModal, setShowExitModal] = useState(false);
 
   const hasSavedResult = useRef(false);
+  // FIX: store questions.length in a ref so the timer effect doesn't restart
+  // when the questions array reference changes (e.g. AuthContext background sync).
+  const questionsLenRef = useRef(questions.length);
+  useEffect(() => { questionsLenRef.current = questions.length; }, [questions.length]);
+
+  const [showFinishModal, setShowFinishModal] = useState(false);
 
   useEffect(() => {
-    if (!questions.length || isFinished) return;
+    if (!questionsLenRef.current || isFinished) return;
     const t = setInterval(() => {
       setTimeLeft(p => { if (p <= 1) { clearInterval(t); setIsFinished(true); return 0; } return p - 1; });
     }, 1000);
     return () => clearInterval(t);
-  }, [isFinished, questions]);
+  // FIX: depend only on isFinished — questions ref is read via questionsLenRef
+  // to prevent the timer from resetting when AuthContext re-fetches questions.
+  }, [isFinished]);
 
   // Save guest answers to sessionStorage as soon as exam finishes (before any redirect)
   useEffect(() => {
@@ -93,11 +101,17 @@ export default function MockExamMode() {
   // Restore answers after OAuth redirect (guest logged in)
   useEffect(() => {
     if (isGuest && user && !guestAnswersRestored) {
-      const saved = sessionStorage.getItem('guest_exam_answers');
+      const raw = sessionStorage.getItem('guest_exam_answers');
       const savedId = sessionStorage.getItem('guest_exam_id');
-      if (saved && savedId === examId) {
-        setAnswers(JSON.parse(saved));
-        setIsFinished(true);
+      // FIX: wrap JSON.parse in try/catch — corrupted sessionStorage data
+      // would otherwise throw an unhandled exception and crash the component.
+      if (raw && savedId === examId) {
+        try {
+          setAnswers(JSON.parse(raw));
+          setIsFinished(true);
+        } catch (e) {
+          console.warn('[MockExam] Could not restore guest answers:', e);
+        }
         sessionStorage.removeItem('guest_exam_answers');
         sessionStorage.removeItem('guest_exam_id');
       }
@@ -333,7 +347,7 @@ export default function MockExamMode() {
 
       {/* ── Mobile Stats Sub-header ── */}
       <div className="mobile-only-stats-bar" style={{
-        display: 'none',
+        display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         padding: '0.45rem 1rem',
@@ -538,7 +552,19 @@ export default function MockExamMode() {
                 <ChevronLeft size={16} /> Précédent
               </button>
               {currentIndex === questions.length - 1 ? (
-                <button className="btn-emerald" onClick={() => setIsFinished(true)} style={{ padding: '0.5rem 1.75rem', fontSize: '0.85rem' }}>
+                <button
+                  className="btn-emerald"
+                  onClick={() => {
+                    // FIX: show confirmation modal if there are unanswered questions
+                    const unanswered = questions.length - Object.keys(answers).length;
+                    if (unanswered > 0) {
+                      setShowFinishModal(true);
+                    } else {
+                      setIsFinished(true);
+                    }
+                  }}
+                  style={{ padding: '0.5rem 1.75rem', fontSize: '0.85rem' }}
+                >
                   Terminer l'examen
                 </button>
               ) : (
@@ -1030,6 +1056,67 @@ export default function MockExamMode() {
                 }}
               >
                 Continuer l'examen
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Finish Exam Confirmation Modal ── */}
+      {showFinishModal && (
+        <div style={{
+          position: 'fixed',
+          inset: 0,
+          background: 'rgba(2, 6, 23, 0.8)',
+          backdropFilter: 'blur(8px)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '1.5rem',
+          zIndex: 1050,
+          animation: 'fadeIn 0.2s ease'
+        }}>
+          <div className="glass-panel" style={{ maxWidth: '440px', width: '100%', padding: '2rem', textAlign: 'center', position: 'relative' }}>
+            <div style={{
+              width: 56,
+              height: 56,
+              borderRadius: '50%',
+              background: 'rgba(245, 158, 11, 0.1)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              margin: '0 auto 1.25rem',
+              border: '1px solid rgba(245, 158, 11, 0.15)',
+              color: 'var(--warning)'
+            }}>
+              <AlertTriangle size={28} />
+            </div>
+            
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '0.75rem', color: 'var(--text-main)' }}>
+              Questions non répondues !
+            </h3>
+            
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', lineHeight: 1.55, marginBottom: '2rem' }}>
+              Il vous reste <strong>{questions.length - Object.keys(answers).length}</strong> question{questions.length - Object.keys(answers).length !== 1 ? 's' : ''} sans réponse. Souhaitez-vous vraiment terminer l'examen maintenant ?
+            </p>
+
+            <div style={{ display: 'flex', gap: '0.85rem' }}>
+              <button 
+                className="btn-outline" 
+                onClick={() => setShowFinishModal(false)}
+                style={{ flex: 1, padding: '0.85rem', fontWeight: 800, borderColor: 'var(--border)', color: 'var(--text-main)' }}
+              >
+                Retour
+              </button>
+              <button 
+                className="btn-emerald" 
+                onClick={() => {
+                  setShowFinishModal(false);
+                  setIsFinished(true);
+                }}
+                style={{ flex: 1, padding: '0.85rem', fontWeight: 800 }}
+              >
+                Terminer
               </button>
             </div>
           </div>

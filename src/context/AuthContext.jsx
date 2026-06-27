@@ -863,13 +863,14 @@ export function AuthProvider({ children }) {
     if (SUPABASE_ENABLED) {
       const sbUser = await loginWithEmail(email, password);
       setUser(sbUser);
-      return;
+      return sbUser;
     }
 
     // ── Fallback when Supabase is disabled ────────────────────────────────────
     if (email === 'admin@lconq.ma') {
-      setUser({ name: 'Directeur', email: email, role: 'admin', uid: 'admin', id: 'admin' });
-      return;
+      const adminUser = { name: 'Directeur', email: email, role: 'admin', uid: 'admin', id: 'admin' };
+      setUser(adminUser);
+      return adminUser;
     }
 
     // ── Fallback: legacy mock users (local dev without Supabase) ─────────────
@@ -885,6 +886,7 @@ export function AuthProvider({ children }) {
         id: existingUser.id
       };
       setUser(mockUser);
+      return mockUser;
     } else {
       const mockUser = {
         name: 'Élève',
@@ -899,6 +901,7 @@ export function AuthProvider({ children }) {
         id: 'mock_student'
       };
       setUser(mockUser);
+      return mockUser;
     }
   };
 
