@@ -311,6 +311,7 @@ export function AuthProvider({ children }) {
   const [upgradedPlan, setUpgradedPlan] = useState(null);
   // Initialize loading to true if Supabase is enabled so we can check and verify the session first
   const [loading, setLoading] = useState(SUPABASE_ENABLED);
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
   const [profName, setProfName] = useState(() => localStorage.getItem('profName') || '');
   const [profPhone, setProfPhone] = useState(() => localStorage.getItem('profPhone') || '');
@@ -876,10 +877,43 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('reviewDates');
     localStorage.removeItem('mockExamHistory');
     localStorage.removeItem('user');
+    localStorage.removeItem('unsynced_progress');
     setProgress({});
     setMockExamHistory([]);
     setUser(null);
   }, []);
+
+  const syncOfflineData = useCallback(async () => {
+    if (!SUPABASE_ENABLED || !user || !navigator.onLine) return;
+    const userId = user.uid || user.id;
+    if (!userId) return;
+
+    try {
+      const queue = JSON.parse(localStorage.getItem('unsynced_progress') || '{}');
+      const questionIds = Object.keys(queue);
+      if (questionIds.length === 0) return;
+
+      console.log(`[Sync] Starting sync of ${questionIds.length} offline progress cards...`);
+      
+      // Sync each card
+      await Promise.all(questionIds.map(async (qId) => {
+        const item = queue[qId];
+        try {
+          await saveQuestionProgress(userId, qId, item.progressData);
+          // Remove from local queue if successful
+          const currentQueue = JSON.parse(localStorage.getItem('unsynced_progress') || '{}');
+          delete currentQueue[qId];
+          localStorage.setItem('unsynced_progress', JSON.stringify(currentQueue));
+        } catch (err) {
+          console.warn(`[Sync] Failed to sync question ${qId}:`, err);
+        }
+      }));
+      
+      console.log('[Sync] Offline progress sync completed.');
+    } catch (err) {
+      console.warn('[Sync] Error during sync offline data:', err);
+    }
+  }, [user]);
 
   const logout = useCallback(async () => {
     if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
@@ -914,6 +948,7 @@ export function AuthProvider({ children }) {
               window.location.href = '/login?expired=1';
             } else {
               console.log('[Auth] Session is still valid.');
+              syncOfflineData();
             }
           }
         } catch (err) {
@@ -924,7 +959,7 @@ export function AuthProvider({ children }) {
     
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [user?.uid, user?.id, logout]);
+  }, [user?.uid, user?.id, logout, syncOfflineData]);
 
   // ── User Inactivity Auto-Logout ──────────────────────────────────────────
   useEffect(() => {
@@ -957,6 +992,71 @@ export function AuthProvider({ children }) {
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
       events.forEach(evt => window.removeEventListener(evt, resetTimer));
+    };
+  }, [user, logout]);
+
+  // ── Online/Offline listener to trigger sync ──────────────────────────────
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      syncOfflineData();
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [syncOfflineData]);
+
+  // ── Periodically verify and refresh session to prevent token expiration ──
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !user) return;
+    
+    // Check every 10 minutes
+    const REFRESH_INTERVAL = 10 * 60 * 1000;
+    
+    const checkAndRefreshSession = async () => {
+      try {
+        const { supabase } = await import('../lib/supabase');
+        if (supabase) {
+          const { data: { session }, error } = await supabase.auth.getSession();
+          if (error) throw error;
+          
+          if (session) {
+            const expiresAt = session.expires_at; // unix timestamp in seconds
+            const nowSeconds = Math.floor(Date.now() / 1000);
+            
+            // If session expires in less than 15 minutes (900 seconds), trigger a refresh
+            if (expiresAt - nowSeconds < 900) {
+              console.log('[Auth] Session near expiry, refreshing...');
+              const { error: refreshError } = await supabase.auth.refreshSession();
+              if (refreshError) throw refreshError;
+              console.log('[Auth] Session refreshed successfully.');
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[Auth] Periodic session refresh check failed:', err.message);
+        if (err.message?.includes('refresh_token') || err.message?.includes('invalid_grant')) {
+          console.warn('[Auth] Refresh token is invalid. Logging out...');
+          await logout();
+          window.location.href = '/login?expired=1';
+        }
+      }
+    };
+    
+    const timeoutId = setTimeout(checkAndRefreshSession, 60_000);
+    const intervalId = setInterval(checkAndRefreshSession, REFRESH_INTERVAL);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      clearInterval(intervalId);
     };
   }, [user, logout]);
 
@@ -1671,9 +1771,19 @@ export function AuthProvider({ children }) {
       };
 
       if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
-        saveQuestionProgress(user.uid || user.id, questionId, updatedCardState).catch(e =>
-          console.error('[Supabase] Failed to save card progress:', e)
-        );
+        saveQuestionProgress(user.uid || user.id, questionId, updatedCardState).catch(e => {
+          console.error('[Supabase] Failed to save card progress:', e);
+          try {
+            const queue = JSON.parse(localStorage.getItem('unsynced_progress') || '{}');
+            queue[questionId] = {
+              progressData: updatedCardState,
+              timestamp: new Date().toISOString()
+            };
+            localStorage.setItem('unsynced_progress', JSON.stringify(queue));
+          } catch (err) {
+            console.warn('[Sync] Failed to queue unsynced card:', err);
+          }
+        });
       }
 
       return {
@@ -1951,6 +2061,9 @@ export function AuthProvider({ children }) {
       }
 
       try {
+        // Await offline sync first
+        await syncOfflineData();
+
         const syncStartTime = new Date().toISOString();
         const [fbProgressDeltas, fbHistory, fbActivity, fbLeaderboard] = await Promise.all([
           getProgressDeltas(userId, lastSyncedAt),
@@ -2272,6 +2385,7 @@ export function AuthProvider({ children }) {
       profName, profPhone, profSite, bankName, bankRIB, bankBeneficiary, updateBrandingConfig, updateFlashcardSettingsConfig, updatePdfSettingsConfig, updateOmrScannerSettingsConfig,
       whatsappSettings, updateWhatsAppSettingsConfig,
       upgradedPlan, setUpgradedPlan,
+      isOnline,
     }}>
       {children}
     </AuthContext.Provider>

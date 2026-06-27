@@ -50,7 +50,7 @@ const LayoutLoadingFallback = () => (
 );
 
 export default function Layout() {
-  const { user, loading, upgradedPlan, setUpgradedPlan } = useAuth();
+  const { user, loading, upgradedPlan, setUpgradedPlan, isOnline } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -220,6 +220,39 @@ export default function Layout() {
 
       {/* Main content area */}
       <main className="main-content" style={{ marginLeft: isMobile ? undefined : (sidebarCollapsed ? '72px' : '260px') }}>
+        {/* Offline Banner */}
+        {isOnline === false && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.08)',
+            borderBottom: '1px solid rgba(239, 68, 68, 0.2)',
+            padding: '0.625rem 1rem',
+            color: 'var(--danger)',
+            fontSize: '0.85rem',
+            fontWeight: 600,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '0.5rem',
+            animation: 'slideDownBanner 0.3s ease-out',
+            position: 'sticky',
+            top: 0,
+            zIndex: 100
+          }}>
+            <style dangerouslySetInnerHTML={{__html: `
+              @keyframes slideDownBanner {
+                from { transform: translateY(-100%); }
+                to { transform: translateY(0); }
+              }
+              @keyframes pulseOffline {
+                0% { transform: scale(0.9); opacity: 0.6; }
+                50% { transform: scale(1.3); opacity: 1; }
+                100% { transform: scale(0.9); opacity: 0.6; }
+              }
+            `}} />
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--danger)', animation: 'pulseOffline 1.5s infinite' }} />
+            <span>Mode hors ligne — Vos révisions sont enregistrées localement et seront synchronisées au retour de la connexion.</span>
+          </div>
+        )}
         <Suspense fallback={<LayoutLoadingFallback />}>
           <Outlet />
         </Suspense>
