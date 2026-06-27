@@ -773,11 +773,6 @@ export function AuthProvider({ children }) {
 
   const [leaderboard, setLeaderboard] = useState([]);
 
-  // FIX #2: Use a ref for plans inside Realtime effect to avoid recreating
-  // the websocket channel on every plans state change.
-  const plansRef = React.useRef(plans);
-  useEffect(() => { plansRef.current = plans; }, [plans]);
-
   // FIX #4: Track last incrementDailyActivity call per-session to avoid
   // sending a Supabase request on every single card answer.
   const lastActivityCallRef = React.useRef(0);
@@ -1165,6 +1160,11 @@ export function AuthProvider({ children }) {
       ]
     }));
   });
+
+  // FIX #2: plansRef must be declared AFTER `plans` useState to avoid
+  // Temporal Dead Zone (Cannot access 'plans' before initialization).
+  const plansRef = React.useRef(plans);
+  useEffect(() => { plansRef.current = plans; }, [plans]);
 
   useEffect(() => {
     safeSetItem('plans', JSON.stringify(plans));
