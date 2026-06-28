@@ -2343,8 +2343,8 @@ html{counter-reset:page ${startPage - 1}}
   padding: 1.2rem 1.5rem;
   background: #f0f9ff;
   margin-top: 0.85rem;
-  page-break-inside: avoid;
-  break-inside: avoid;
+  page-break-inside: auto;
+  break-inside: auto;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
@@ -2357,6 +2357,20 @@ html{counter-reset:page ${startPage - 1}}
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+.ws-tip-body p {
+  page-break-inside: auto !important;
+  break-inside: auto !important;
+}
+.ws-tip-body span,
+.ws-tip-body .mfc-callout-step,
+.ws-tip-body .mfc-callout-response,
+.ws-tip-body .mfc-callout-attention,
+.ws-tip-body .katex-display {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
 .ws-tip-icon {
   font-size: 1.1rem;
@@ -2453,6 +2467,14 @@ html{counter-reset:page ${startPage - 1}}
   }
   .ws-ex-body {
     box-shadow: none !important;
+  }
+  .ws-tip-card {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+  .ws-tip-body p {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
 }
 .katex{font-size:1.05em}.katex-display{margin:4px 0}
