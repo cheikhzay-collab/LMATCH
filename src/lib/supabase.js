@@ -42,9 +42,7 @@ if (supabaseUrl && supabaseAnonKey) {
           
           // Safely merge headers regardless of whether options.headers is a Headers object or a plain object.
           const mergedHeaders = new Headers(options.headers || {});
-          mergedHeaders.set('Cache-Control', 'no-cache, no-store, must-revalidate');
-          mergedHeaders.set('Pragma', 'no-cache');
-          mergedHeaders.set('Expires', '0');
+          mergedHeaders.set('Cache-Control', 'no-cache');
   
           const newOptions = {
             ...options,
