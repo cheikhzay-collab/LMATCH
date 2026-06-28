@@ -17,7 +17,7 @@ export default function MockExamMode() {
   const { exams, saveMockExamResult, schoolBranding, isExamLocked, updateCardProgress, user, loading, loadExamQuestions } = useAuth();
   const [searchParams] = useSearchParams();
   const examId  = searchParams.get('exam');
-  const isGuest = searchParams.get('guest') === 'true';
+  const isGuest = searchParams.get('guest') === 'true' || !user;
   const navigate = useNavigate();
   const location = useLocation();
   const fromPath = location.state?.from || (user ? '/dashboard' : '/schools');
