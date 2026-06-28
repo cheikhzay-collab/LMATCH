@@ -20,32 +20,35 @@ requestAnimationFrame(() => {
   });
 });
 
-// ── PWA Service Worker Registration (Production only) ─────────────────────
-// SW is disabled in dev (devOptions.enabled: false in vite.config.js) to avoid
-// a Workbox bug with apostrophes in Windows file paths.
-// In production (npm run build), the SW is fully generated and active.
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  import('virtual:pwa-register').then(({ registerSW }) => {
-    const updateServiceWorker = registerSW({
-      onNeedRefresh() {
-        console.log('[PWA] Nouvelle version disponible — demande de rechargement...');
-        if (confirm("Une mise à jour importante de L'CONQ est disponible. Voulez-vous recharger la page pour l'appliquer ?")) {
-          updateServiceWorker(true);
-        }
-      },
-      onOfflineReady() {
-        console.log('[PWA] Application disponible hors ligne');
-      },
-      onRegistered(r) {
-        if (r) {
-          // Poll for updates every hour
-          setInterval(() => r.update(), 60 * 60 * 1000);
-        }
-      },
-      onRegisterError(error) {
-        console.warn('[PWA] Service Worker non enregistré:', error);
-      },
-      immediate: true,
-    });
+// ── Programmatic Service Worker & Cache Removal (Radical mobile cache solution) ──
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (let registration of registrations) {
+      registration.unregister().then(() => {
+        console.log('[PWA] Unregistered service worker programmatically.');
+      });
+    }
+  }).catch(err => {
+    console.warn('[PWA] Failed to get SW registrations:', err);
   });
 }
+
+if ('caches' in window) {
+  caches.keys().then(names => {
+    for (let name of names) {
+      caches.delete(name).then(() => {
+        console.log('[Cache] Deleted cache bucket:', name);
+      });
+    }
+  }).catch(err => {
+    console.warn('[Cache] Failed to clear caches:', err);
+  });
+}
+
+// ── Break BFcache (Back-Forward Cache) on Mobile Safari/Chrome ──
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted) {
+    console.log('[BFcache] Page restored from cache. Forcing clean reload...');
+    window.location.reload();
+  }
+});
