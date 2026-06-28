@@ -932,68 +932,6 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('supabase-auth-unauthorized', handleUnauthorized);
   }, [logout]);
 
-  // Active session check when app returns from background to foreground
-  useEffect(() => {
-    if (!SUPABASE_ENABLED || !user) return;
-    
-    const handleVisibilityChange = async () => {
-      if (document.visibilityState === 'visible') {
-        try {
-          const { supabase } = await import('../lib/supabase');
-          if (supabase) {
-            const { data: { user: serverUser }, error } = await supabase.auth.getUser();
-            if (error || !serverUser) {
-              console.warn('[Auth] Session invalid on foreground wake-up. Logging out...', error?.message);
-              await logout();
-              window.location.href = '/login?expired=1';
-            } else {
-              console.log('[Auth] Session is still valid.');
-              syncOfflineData();
-            }
-          }
-        } catch (err) {
-          console.warn('[Auth] Network issue checking session on wake-up. Keeping cached session.');
-        }
-      }
-    };
-    
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [user?.uid, user?.id, logout, syncOfflineData]);
-
-  // ── User Inactivity Auto-Logout ──────────────────────────────────────────
-  useEffect(() => {
-    if (!SUPABASE_ENABLED || !user) return;
-
-    // 30 minutes inactivity timeout
-    const INACTIVITY_TIMEOUT = 30 * 60 * 1000; 
-    let timeoutId;
-
-    const resetTimer = () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      timeoutId = setTimeout(handleInactivity, INACTIVITY_TIMEOUT);
-    };
-
-    const handleInactivity = async () => {
-      console.warn('[Auth] User inactive for 30 minutes. Logging out...');
-      await logout();
-      window.location.href = '/login?inactive=1';
-    };
-
-    // Events to monitor for user activity
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    
-    // Set initial timer
-    resetTimer();
-
-    // Add listeners
-    events.forEach(evt => window.addEventListener(evt, resetTimer));
-
-    return () => {
-      if (timeoutId) clearTimeout(timeoutId);
-      events.forEach(evt => window.removeEventListener(evt, resetTimer));
-    };
-  }, [user, logout]);
 
   // ── Online/Offline listener to trigger sync ──────────────────────────────
   useEffect(() => {
