@@ -645,7 +645,24 @@ export function AuthProvider({ children }) {
 
 
   const { exams: initialExams, needsSave } = loadAndMigrateExams();
-  const [exams, setExams] = useState(initialExams);
+  const [exams, setExams] = useState(() => {
+    if (SUPABASE_ENABLED) {
+      const cached = localStorage.getItem('exams');
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          if (parsed.some(e => e.id === "QVVOBFE7" && parsed.length === 1)) {
+            return [];
+          }
+          return parsed;
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    }
+    return initialExams;
+  });
 
   // Persist migration result immediately if schema was upgraded
   React.useEffect(() => {
@@ -1053,64 +1070,14 @@ export function AuthProvider({ children }) {
     }
 
     // ── Fallback when Supabase is disabled ────────────────────────────────────
-    if (email === 'admin@lconq.ma') {
-      const adminUser = { name: 'Directeur', email: email, role: 'admin', uid: 'admin', id: 'admin' };
-      setUser(adminUser);
-      return adminUser;
-    }
-
-    // ── Fallback: legacy mock users (local dev without Supabase) ─────────────
-    const existingUser = users.find(u => u.email === email);
-    if (existingUser) {
-      const mockUser = {
-        ...existingUser,
-        role: 'student',
-        rank: existingUser.tier === 'premium' ? 12 : 445,
-        totalStudents: 1200,
-        streak: 3,
-        uid: existingUser.id,
-        id: existingUser.id
-      };
-      setUser(mockUser);
-      return mockUser;
-    } else {
-      const mockUser = {
-        name: 'Élève',
-        email: email,
-        role: 'student',
-        tier: 'freemium',
-        rank: 445,
-        totalStudents: 1200,
-        xp: 0,
-        streak: 0,
-        uid: 'mock_student',
-        id: 'mock_student'
-      };
-      setUser(mockUser);
-      return mockUser;
-    }
+    throw new Error('Supabase integration is required. Please check your environment variables configuration.');
   };
 
   const loginGoogle = async () => {
     if (SUPABASE_ENABLED) {
       return await loginWithGoogle();
     } else {
-      // Fallback: mock Google OAuth user in local environment when Supabase is disabled
-      const mockUser = {
-        name: 'Élève Google',
-        email: 'google-student@lconq.ma',
-        role: 'student',
-        tier: 'freemium',
-        rank: 445,
-        totalStudents: 1200,
-        xp: 0,
-        streak: 0,
-        uid: 'mock_google_student',
-        id: 'mock_google_student',
-        joined: new Date().toISOString(),
-        subscription: null,
-      };
-      setUser(mockUser);
+      throw new Error('Supabase integration is required. Please check your environment variables configuration.');
     }
   };
 
@@ -1981,16 +1948,8 @@ export function AuthProvider({ children }) {
         if (fbExams && fbExams.length > 0) {
           finalExams = fbExams;
         } else {
-          // Seed the default exam to Database
-          const defaultSeedExam = initialExams.find(e => e.id === "QVVOBFE7");
-          if (defaultSeedExam) {
-            try {
-              await dbAddExam(defaultSeedExam);
-            } catch (seedErr) {
-              console.warn('[Supabase] Failed to seed default exam:', seedErr.message);
-            }
-          }
-          finalExams = initialExams;
+          // Require Supabase data — do not fall back to local mock exams
+          finalExams = fbExams || [];
         }
         setExams(finalExams);
 

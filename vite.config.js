@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      selfDestroying: true,
       // Use 'injectManifest' so we provide our own SW file,
       // bypassing the Workbox path-apostrophe bug on Windows.
       strategies: 'injectManifest',
