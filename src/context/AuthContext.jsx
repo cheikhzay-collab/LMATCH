@@ -576,13 +576,19 @@ export function AuthProvider({ children }) {
       } catch (e) {
         console.warn('[Auth] Error during initial session recovery:', e.message);
         if (active) {
-          // Offline fallback
-          const cached = localStorage.getItem('user');
-          if (cached) {
-            try {
-              setUser(JSON.parse(cached));
-            } catch (err) {
-              console.warn('[Auth] Failed to parse cached user:', err);
+          if (SUPABASE_ENABLED) {
+            // Strictly require live validated Supabase session - do not restore stale user cache
+            setUser(null);
+            localStorage.removeItem('user');
+          } else {
+            // Offline fallback when Supabase is completely disabled
+            const cached = localStorage.getItem('user');
+            if (cached) {
+              try {
+                setUser(JSON.parse(cached));
+              } catch (err) {
+                console.warn('[Auth] Failed to parse cached user:', err);
+              }
             }
           }
         }
@@ -932,9 +938,10 @@ export function AuthProvider({ children }) {
     }
   }, [user]);
 
-  const logout = useCallback(async () => {
+  const logout = useCallback(() => {
     if (SUPABASE_ENABLED && (user?.uid || user?.id)) {
-      try { await logoutUser(); } catch { /* ignore */ }
+      // Async fire-and-forget: do not await remote signOut so local session clears instantly
+      logoutUser().catch(err => console.warn('[Auth] Remote signOut failed:', err));
     }
     clearLocalSessionData();
   }, [user?.uid, user?.id, clearLocalSessionData]);
