@@ -2178,6 +2178,11 @@ html{counter-reset:page ${startPage - 1}}
   margin-left: ${pdfConf.showSidebar ? '85px' : '0'};
 }
 
+.ws-section {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
 /* ── Section Header ── */
 .ws-sec-hdr {
   display: flex;
@@ -2217,10 +2222,12 @@ html{counter-reset:page ${startPage - 1}}
 
 /* ── Exercise Wrapper ── */
 .ws-exercise { margin-bottom: 0.45rem;
-  page-break-inside: avoid;
-  break-inside: avoid;
+  page-break-inside: auto;
+  break-inside: auto;
 }
 .ws-ex-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.35rem; margin-bottom: 0.15rem;
+  page-break-after: avoid;
+  break-after: avoid;
 }
 .ws-ex-pill { background: #005086; color: #ffffff; padding: 0.2rem 0.65rem;
   border-radius: 10px;
@@ -2270,6 +2277,8 @@ html{counter-reset:page ${startPage - 1}}
   display: flow-root;
   break-inside: avoid;
   page-break-inside: avoid;
+  page-break-after: avoid;
+  break-after: avoid;
   white-space: pre-line;
   text-align: justify;
 }
@@ -2343,8 +2352,8 @@ html{counter-reset:page ${startPage - 1}}
   padding: 1.2rem 1.5rem;
   background: #f0f9ff;
   margin-top: 0.85rem;
-  page-break-inside: avoid;
-  break-inside: avoid;
+  page-break-inside: auto;
+  break-inside: auto;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
@@ -2357,6 +2366,20 @@ html{counter-reset:page ${startPage - 1}}
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+.ws-tip-body p {
+  page-break-inside: auto !important;
+  break-inside: auto !important;
+}
+.ws-tip-body span,
+.ws-tip-body .mfc-callout-step,
+.ws-tip-body .mfc-callout-response,
+.ws-tip-body .mfc-callout-attention,
+.ws-tip-body .katex-display {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
 .ws-tip-icon {
   font-size: 1.1rem;
@@ -2389,8 +2412,8 @@ html{counter-reset:page ${startPage - 1}}
   padding: 1.2rem 1.5rem;
   background: #faf5ff;
   margin-top: 0.65rem;
-  page-break-inside: avoid;
-  break-inside: avoid;
+  page-break-inside: auto;
+  break-inside: auto;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
@@ -2403,6 +2426,20 @@ html{counter-reset:page ${startPage - 1}}
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+.ws-trick-body p {
+  page-break-inside: auto !important;
+  break-inside: auto !important;
+}
+.ws-trick-body span,
+.ws-trick-body .mfc-callout-step,
+.ws-trick-body .mfc-callout-response,
+.ws-trick-body .mfc-callout-attention,
+.ws-trick-body .katex-display {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
 .ws-trick-icon {
   font-size: 1.1rem;
@@ -2453,6 +2490,10 @@ html{counter-reset:page ${startPage - 1}}
   }
   .ws-ex-body {
     box-shadow: none !important;
+  }
+  .ws-section {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 }
 .katex{font-size:1.05em}.katex-display{margin:4px 0}
