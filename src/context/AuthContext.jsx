@@ -1833,7 +1833,11 @@ export function AuthProvider({ children }) {
           setSchoolBranding(schoolsConfig.branding || {});
         } else {
           // Seed defaults if config document doesn't exist
-          await saveSchoolsConfig(schools, schoolBranding);
+          try {
+            await saveSchoolsConfig(schools, schoolBranding);
+          } catch (seedErr) {
+            console.warn('[Supabase] Failed to seed schools config (probably RLS restricted):', seedErr.message);
+          }
         }
 
         // Process General Branding
@@ -1853,10 +1857,14 @@ export function AuthProvider({ children }) {
           localStorage.setItem('bankBeneficiary', brandConfig.bankBeneficiary || "L'CONQ SARL");
         } else {
           // Seed if not exists in DB
-          await saveBrandingConfig({
-            profName, profPhone, profSite,
-            bankName, bankRIB, bankBeneficiary
-          });
+          try {
+            await saveBrandingConfig({
+              profName, profPhone, profSite,
+              bankName, bankRIB, bankBeneficiary
+            });
+          } catch (seedErr) {
+            console.warn('[Supabase] Failed to seed branding config:', seedErr.message);
+          }
         }
 
         // Process Flashcard Settings
@@ -1881,7 +1889,11 @@ export function AuthProvider({ children }) {
             cardAstuceWeight: '400',
             cardOptionsWeight: '400'
           };
-          await saveFlashcardSettingsConfig(defaultFlashcard);
+          try {
+            await saveFlashcardSettingsConfig(defaultFlashcard);
+          } catch (seedErr) {
+            console.warn('[Supabase] Failed to seed flashcard settings config:', seedErr.message);
+          }
           localStorage.setItem('card_reveal_mode', defaultFlashcard.cardRevealMode);
           localStorage.setItem('card_flip_animation', String(defaultFlashcard.cardFlipEnabled));
           localStorage.setItem('card_swipe_gesture', String(defaultFlashcard.cardSwipeEnabled));
@@ -1911,7 +1923,11 @@ export function AuthProvider({ children }) {
             pdfForcePrintColors: true,
             pdfShowSidebar: true
           };
-          await savePdfSettingsConfig(defaultPdf);
+          try {
+            await savePdfSettingsConfig(defaultPdf);
+          } catch (seedErr) {
+            console.warn('[Supabase] Failed to seed PDF settings config:', seedErr.message);
+          }
           localStorage.setItem('pdf_page_margins', defaultPdf.pdfPageMargins);
           localStorage.setItem('pdf_font_size', defaultPdf.pdfFontSize);
           localStorage.setItem('pdf_font_family', defaultPdf.pdfFontFamily);
@@ -1928,7 +1944,11 @@ export function AuthProvider({ children }) {
           const defaultOmr = {
             scannerDirectCapture: true
           };
-          await saveOmrScannerSettingsConfig(defaultOmr);
+          try {
+            await saveOmrScannerSettingsConfig(defaultOmr);
+          } catch (seedErr) {
+            console.warn('[Supabase] Failed to seed OMR scanner settings:', seedErr.message);
+          }
           localStorage.setItem('scanner_direct_capture_enabled', String(defaultOmr.scannerDirectCapture));
         }
 
@@ -1937,7 +1957,11 @@ export function AuthProvider({ children }) {
           setWhatsappSettings(whatsappConfig);
           localStorage.setItem('whatsappSettings', JSON.stringify(whatsappConfig));
         } else {
-          await saveWhatsAppSettingsConfig(whatsappSettings);
+          try {
+            await saveWhatsAppSettingsConfig(whatsappSettings);
+          } catch (seedErr) {
+            console.warn('[Supabase] Failed to seed WhatsApp settings:', seedErr.message);
+          }
         }
 
         // Process Plans
@@ -1945,7 +1969,11 @@ export function AuthProvider({ children }) {
           setPlans(fbPlans);
         } else {
           // Seed default plans if not present
-          await savePlans(plans);
+          try {
+            await savePlans(plans);
+          } catch (seedErr) {
+            console.warn('[Supabase] Failed to seed default plans:', seedErr.message);
+          }
         }
 
         // Process Exams
@@ -1956,7 +1984,11 @@ export function AuthProvider({ children }) {
           // Seed the default exam to Database
           const defaultSeedExam = initialExams.find(e => e.id === "QVVOBFE7");
           if (defaultSeedExam) {
-            await dbAddExam(defaultSeedExam);
+            try {
+              await dbAddExam(defaultSeedExam);
+            } catch (seedErr) {
+              console.warn('[Supabase] Failed to seed default exam:', seedErr.message);
+            }
           }
           finalExams = initialExams;
         }
