@@ -2490,6 +2490,12 @@ html{counter-reset:page ${startPage - 1}}
   }
   .ws-exercise {
     padding: 10px 12px !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  .ws-ex-header {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
   .ws-tip-card, .ws-trick-card {
     padding: 8px 12px !important;
