@@ -2343,8 +2343,8 @@ html{counter-reset:page ${startPage - 1}}
   padding: 1.2rem 1.5rem;
   background: #f0f9ff;
   margin-top: 0.85rem;
-  page-break-inside: auto;
-  break-inside: auto;
+  page-break-inside: avoid;
+  break-inside: avoid;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
@@ -2357,20 +2357,6 @@ html{counter-reset:page ${startPage - 1}}
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
-  page-break-after: avoid;
-  break-after: avoid;
-}
-.ws-tip-body p {
-  page-break-inside: auto !important;
-  break-inside: auto !important;
-}
-.ws-tip-body span,
-.ws-tip-body .mfc-callout-step,
-.ws-tip-body .mfc-callout-response,
-.ws-tip-body .mfc-callout-attention,
-.ws-tip-body .katex-display {
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
 }
 .ws-tip-icon {
   font-size: 1.1rem;
@@ -2403,8 +2389,8 @@ html{counter-reset:page ${startPage - 1}}
   padding: 1.2rem 1.5rem;
   background: #faf5ff;
   margin-top: 0.65rem;
-  page-break-inside: auto;
-  break-inside: auto;
+  page-break-inside: avoid;
+  break-inside: avoid;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
@@ -2417,20 +2403,6 @@ html{counter-reset:page ${startPage - 1}}
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
-  page-break-after: avoid;
-  break-after: avoid;
-}
-.ws-trick-body p {
-  page-break-inside: auto !important;
-  break-inside: auto !important;
-}
-.ws-trick-body span,
-.ws-trick-body .mfc-callout-step,
-.ws-trick-body .mfc-callout-response,
-.ws-trick-body .mfc-callout-attention,
-.ws-trick-body .katex-display {
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
 }
 .ws-trick-icon {
   font-size: 1.1rem;
@@ -2481,31 +2453,6 @@ html{counter-reset:page ${startPage - 1}}
   }
   .ws-ex-body {
     box-shadow: none !important;
-    padding: 6px 10px !important;
-  }
-  .ws-section {
-    margin-bottom: 12px !important;
-    page-break-inside: auto !important;
-    break-inside: auto !important;
-  }
-  .ws-exercise {
-    padding: 10px 12px !important;
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-  .ws-ex-header {
-    page-break-after: avoid !important;
-    break-after: avoid !important;
-  }
-  .ws-tip-card, .ws-trick-card {
-    padding: 8px 12px !important;
-    margin-top: 6px !important;
-  }
-  .ws-opts {
-    gap: 4px 8px !important;
-  }
-  .ws-opt {
-    padding: 2px 6px !important;
   }
 }
 .katex{font-size:1.05em}.katex-display{margin:4px 0}
