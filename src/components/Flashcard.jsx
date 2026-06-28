@@ -434,11 +434,11 @@ export default function Flashcard({ card, onNext }) {
 
                 <div className="astuce-match-content" key={astuceTab}>
                   {astuceTab === 'rule' ? (
-                    <div style={{ margin: 0, lineHeight: '1.65', color: 'var(--text-main)', fontSize: '0.88rem' }}>
+                    <div style={{ margin: 0, color: 'var(--text-main)' }}>
                       {renderWithMath(card.astuce)}
                     </div>
                   ) : (
-                    <div style={{ margin: 0, lineHeight: '1.65', color: 'var(--text-main)', fontSize: '0.88rem', opacity: 0.6, fontStyle: 'italic' }}>
+                    <div style={{ margin: 0, color: 'var(--text-main)', opacity: 0.6, fontStyle: 'italic' }}>
                       {card.trick ? renderWithMath(card.trick) : 'Astuce du temps — bientôt disponible ✨'}
                     </div>
                   )}

@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertOctagon, RefreshCw, Home } from 'lucide-react';
+import { logErrorToSupabase } from '../services/logger';
 
 export default class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -14,6 +15,9 @@ export default class ErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error('[ErrorBoundary] Caught runtime error:', error, errorInfo);
+    
+    // Log to Supabase error_logs table
+    logErrorToSupabase(error, { componentStack: errorInfo?.componentStack });
     
     // Tentative de récupération automatique en cas d'erreur de chargement de chunk (déploiements récents)
     const errorStr = error?.toString() || '';
