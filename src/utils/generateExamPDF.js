@@ -2343,8 +2343,8 @@ html{counter-reset:page ${startPage - 1}}
   padding: 1.2rem 1.5rem;
   background: #f0f9ff;
   margin-top: 0.85rem;
-  page-break-inside: avoid;
-  break-inside: avoid;
+  page-break-inside: auto;
+  break-inside: auto;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
@@ -2357,6 +2357,16 @@ html{counter-reset:page ${startPage - 1}}
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+.ws-tip-body > *,
+.ws-tip-body .mfc-callout-step,
+.ws-tip-body .mfc-callout-response,
+.ws-tip-body .mfc-callout-attention,
+.ws-tip-body .katex-display {
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
 .ws-tip-icon {
   font-size: 1.1rem;
@@ -2389,8 +2399,8 @@ html{counter-reset:page ${startPage - 1}}
   padding: 1.2rem 1.5rem;
   background: #faf5ff;
   margin-top: 0.65rem;
-  page-break-inside: avoid;
-  break-inside: avoid;
+  page-break-inside: auto;
+  break-inside: auto;
   print-color-adjust: exact;
   -webkit-print-color-adjust: exact;
 }
@@ -2403,6 +2413,16 @@ html{counter-reset:page ${startPage - 1}}
   align-items: center;
   gap: 0.5rem;
   margin-bottom: 0.5rem;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+.ws-trick-body > *,
+.ws-trick-body .mfc-callout-step,
+.ws-trick-body .mfc-callout-response,
+.ws-trick-body .mfc-callout-attention,
+.ws-trick-body .katex-display {
+  page-break-inside: avoid;
+  break-inside: avoid;
 }
 .ws-trick-icon {
   font-size: 1.1rem;
