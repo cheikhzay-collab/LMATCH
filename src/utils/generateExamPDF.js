@@ -2360,13 +2360,17 @@ html{counter-reset:page ${startPage - 1}}
   page-break-after: avoid;
   break-after: avoid;
 }
-.ws-tip-body > *,
+.ws-tip-body p {
+  page-break-inside: auto !important;
+  break-inside: auto !important;
+}
+.ws-tip-body span,
 .ws-tip-body .mfc-callout-step,
 .ws-tip-body .mfc-callout-response,
 .ws-tip-body .mfc-callout-attention,
 .ws-tip-body .katex-display {
-  page-break-inside: avoid;
-  break-inside: avoid;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
 .ws-tip-icon {
   font-size: 1.1rem;
@@ -2416,13 +2420,17 @@ html{counter-reset:page ${startPage - 1}}
   page-break-after: avoid;
   break-after: avoid;
 }
-.ws-trick-body > *,
+.ws-trick-body p {
+  page-break-inside: auto !important;
+  break-inside: auto !important;
+}
+.ws-trick-body span,
 .ws-trick-body .mfc-callout-step,
 .ws-trick-body .mfc-callout-response,
 .ws-trick-body .mfc-callout-attention,
 .ws-trick-body .katex-display {
-  page-break-inside: avoid;
-  break-inside: avoid;
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
 .ws-trick-icon {
   font-size: 1.1rem;
