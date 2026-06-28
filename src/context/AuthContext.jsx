@@ -946,6 +946,38 @@ export function AuthProvider({ children }) {
     clearLocalSessionData();
   }, [user?.uid, user?.id, clearLocalSessionData]);
 
+  // ── Sync state across multiple tabs/windows via localStorage events ──
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (!e.newValue) {
+        // If key was removed (e.g. on logout/clear)
+        if (e.key === 'user') setUser(null);
+        if (e.key === 'progress') setProgress({});
+        if (e.key === 'mockExamHistory') setMockExamHistory([]);
+        return;
+      }
+
+      try {
+        if (e.key === 'progress') {
+          setProgress(JSON.parse(e.newValue));
+        } else if (e.key === 'user') {
+          setUser(JSON.parse(e.newValue));
+        } else if (e.key === 'mockExamHistory') {
+          setMockExamHistory(JSON.parse(e.newValue));
+        } else if (e.key === 'theme') {
+          setTheme(e.newValue);
+        } else if (e.key === 'whatsappSettings') {
+          setWhatsappSettings(JSON.parse(e.newValue));
+        }
+      } catch (err) {
+        console.warn('[Storage Sync] Failed to parse cross-tab storage change:', err);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Handle global 401 Unauthorized events from Supabase client fetch wrapper
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -996,10 +1028,28 @@ export function AuthProvider({ children }) {
             
             // If session expires in less than 15 minutes (900 seconds), trigger a refresh
             if (expiresAt - nowSeconds < 900) {
-              console.log('[Auth] Session near expiry, refreshing...');
-              const { error: refreshError } = await supabase.auth.refreshSession();
-              if (refreshError) throw refreshError;
-              console.log('[Auth] Session refreshed successfully.');
+              // Mutex/Lock implementation for multi-tab setups:
+              // Acquire a lock key in localStorage to prevent other tabs from attempting refresh concurrently
+              const nowMs = Date.now();
+              const lock = localStorage.getItem('supabase_refresh_lock');
+              
+              if (lock && (nowMs - parseInt(lock, 10)) < 15000) {
+                console.log('[Auth] Another tab is currently refreshing the session. Skipping.');
+                return;
+              }
+              
+              // Set the lock with a timestamp
+              localStorage.setItem('supabase_refresh_lock', String(nowMs));
+              
+              try {
+                console.log('[Auth] Session near expiry, refreshing...');
+                const { error: refreshError } = await supabase.auth.refreshSession();
+                if (refreshError) throw refreshError;
+                console.log('[Auth] Session refreshed successfully.');
+              } finally {
+                // Release lock immediately
+                localStorage.removeItem('supabase_refresh_lock');
+              }
             }
           }
         }
@@ -1021,6 +1071,29 @@ export function AuthProvider({ children }) {
       clearInterval(intervalId);
     };
   }, [user, logout]);
+
+  // ── Sync session when the tab becomes active/visible ──
+  useEffect(() => {
+    if (!SUPABASE_ENABLED || !user) return;
+
+    const handleVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Auth] Tab became visible. Syncing session from storage...');
+        try {
+          const { supabase } = await import('../lib/supabase');
+          if (supabase) {
+            // getSession reads the latest session from localStorage and updates the client memory
+            await supabase.auth.getSession();
+          }
+        } catch (err) {
+          console.warn('[Auth] Failed to sync session on visibility change:', err);
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [user]);
 
 
   const [users, setUsers] = useState(() => {
