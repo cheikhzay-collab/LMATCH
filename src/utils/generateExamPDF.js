@@ -2473,6 +2473,25 @@ html{counter-reset:page ${startPage - 1}}
   }
   .ws-ex-body {
     box-shadow: none !important;
+    padding: 6px 10px !important;
+  }
+  .ws-section {
+    margin-bottom: 12px !important;
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+  .ws-exercise {
+    padding: 10px 12px !important;
+  }
+  .ws-tip-card, .ws-trick-card {
+    padding: 8px 12px !important;
+    margin-top: 6px !important;
+  }
+  .ws-opts {
+    gap: 4px 8px !important;
+  }
+  .ws-opt {
+    padding: 2px 6px !important;
   }
 }
 .katex{font-size:1.05em}.katex-display{margin:4px 0}
