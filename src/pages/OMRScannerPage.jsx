@@ -397,76 +397,78 @@ function ARCopyOverlay({ imagePreview, corrected }) {
         cursor: hoveredQuestion ? 'help' : 'default'
       }}
     >
-      <img
-        ref={imgRef}
-        src={imagePreview}
-        alt="Original Scan"
-        onLoad={handleImageLoad}
-        style={{
-          width: '100%',
-          height: 'auto',
-          maxHeight: '650px',
-          objectFit: 'contain',
-          display: 'block'
-        }}
-      />
-      
-      <canvas
-        ref={canvasRef}
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleMouseLeave}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          pointerEvents: 'auto'
-        }}
-      />
+      {/* Wrapper to constrain canvas overlays precisely to the visible, centered image boundary */}
+      <div style={{ position: 'relative', display: 'inline-block', maxWidth: '100%', maxHeight: '650px' }}>
+        <img
+          ref={imgRef}
+          src={imagePreview}
+          alt="Original Scan"
+          onLoad={handleImageLoad}
+          style={{
+            maxWidth: '100%',
+            height: 'auto',
+            maxHeight: '650px',
+            display: 'block'
+          }}
+        />
+        
+        <canvas
+          ref={canvasRef}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            height: '100%',
+            pointerEvents: 'auto'
+          }}
+        />
 
-      {/* Floating glassmorphic tooltip */}
-      {hoveredQuestion && (
-        <div style={{
-          position: 'absolute',
-          left: tooltipPos.x,
-          top: tooltipPos.y,
-          background: 'rgba(15, 23, 42, 0.92)',
-          backdropFilter: 'blur(12px)',
-          border: '1px solid rgba(255,255,255,0.15)',
-          padding: '0.65rem 1rem',
-          borderRadius: '0.75rem',
-          color: '#fff',
-          fontSize: '0.78rem',
-          pointerEvents: 'none',
-          zIndex: 50,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '0.2rem',
-          whiteSpace: 'nowrap',
-          transition: 'left 0.05s ease, top 0.05s ease'
-        }}>
-          <div style={{ fontWeight: 800, color: '#a5b4fc', fontSize: '0.82rem' }}>
-            Question {hoveredQuestion.q}
+        {/* Floating glassmorphic tooltip (relative to wrapper coordinates) */}
+        {hoveredQuestion && (
+          <div style={{
+            position: 'absolute',
+            left: tooltipPos.x,
+            top: tooltipPos.y,
+            background: 'rgba(15, 23, 42, 0.92)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.15)',
+            padding: '0.65rem 1rem',
+            borderRadius: '0.75rem',
+            color: '#fff',
+            fontSize: '0.78rem',
+            pointerEvents: 'none',
+            zIndex: 50,
+            boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.2rem',
+            whiteSpace: 'nowrap',
+            transition: 'left 0.05s ease, top 0.05s ease'
+          }}>
+            <div style={{ fontWeight: 800, color: '#a5b4fc', fontSize: '0.82rem' }}>
+              Question {hoveredQuestion.q}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', fontWeight: 600 }}>
+              <span>Statut :</span>
+              <span style={{ 
+                color: hoveredQuestion.result === 'correct' ? '#10b981' : hoveredQuestion.result === 'wrong' ? '#ef4444' : '#f59e0b',
+                fontWeight: 800
+              }}>
+                {hoveredQuestion.result === 'correct' ? 'Correct' : hoveredQuestion.result === 'wrong' ? 'Incorrect' : 'Laissé Vide'}
+              </span>
+            </div>
+            <div style={{ fontWeight: 500, color: '#94a3b8' }}>
+              Sujet : {hoveredQuestion.topic}
+            </div>
+            <div style={{ fontWeight: 700, color: '#f8fafc' }}>
+              Attendu : {hoveredQuestion.correct} {hoveredQuestion.detected ? `| Coché : ${hoveredQuestion.detected}` : ''}
+            </div>
           </div>
-          <div style={{ display: 'flex', gap: '0.5rem', fontWeight: 600 }}>
-            <span>Statut :</span>
-            <span style={{ 
-              color: hoveredQuestion.result === 'correct' ? '#10b981' : hoveredQuestion.result === 'wrong' ? '#ef4444' : '#f59e0b',
-              fontWeight: 800
-            }}>
-              {hoveredQuestion.result === 'correct' ? 'Correct' : hoveredQuestion.result === 'wrong' ? 'Incorrect' : 'Laissé Vide'}
-            </span>
-          </div>
-          <div style={{ fontWeight: 500, color: '#94a3b8' }}>
-            Sujet : {hoveredQuestion.topic}
-          </div>
-          <div style={{ fontWeight: 700, color: '#f8fafc' }}>
-            Attendu : {hoveredQuestion.correct} {hoveredQuestion.detected ? `| Coché : ${hoveredQuestion.detected}` : ''}
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

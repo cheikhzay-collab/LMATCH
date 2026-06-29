@@ -15,6 +15,22 @@ export function sanitizeInputString(str) {
 }
 
 /**
+ * Décode les entités HTML en caractères normaux (notamment pour l'affichage et l'envoi de messages).
+ * @param {string} str - La chaîne avec entités HTML.
+ * @returns {string}
+ */
+export function unescapeHTML(str) {
+  if (typeof str !== 'string') return '';
+  return str
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&#x2F;/g, '/');
+}
+
+/**
  * Valide un numéro de téléphone selon un format standard (chiffres, espaces, tirets, +).
  * Autorise les numéros de 8 à 20 caractères.
  * @param {string} phone

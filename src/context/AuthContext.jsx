@@ -1518,6 +1518,26 @@ export function AuthProvider({ children }) {
     }
   };
 
+  const updateStudentCRM = async (userId, crmData) => {
+    if (SUPABASE_ENABLED) {
+      try {
+        await updateUserDoc(userId, { crm: crmData });
+        setUsers(prev => prev.map(u => u.id === userId || u.uid === userId ? { ...u, crm: crmData } : u));
+        if (user && (user.uid === userId || user.id === userId)) {
+          setUser(u => ({ ...u, crm: crmData }));
+        }
+      } catch (e) {
+        console.error('[Supabase] Failed to update student CRM:', e);
+        throw e;
+      }
+    } else {
+      setUsers(prev => prev.map(u => u.id === userId || u.uid === userId ? { ...u, crm: crmData } : u));
+      if (user && (user.uid === userId || user.id === userId)) {
+        setUser(u => ({ ...u, crm: crmData }));
+      }
+    }
+  };
+
   const deleteStudent = async (userId) => {
     if (SUPABASE_ENABLED) {
       try {
@@ -2376,7 +2396,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{ 
       user, users, login, logout, register, loginWithGoogle: loginGoogle, exams, addExam, updateUserTier, updateProfile,
       toggleExamStatus, updateExamDetails, deleteExam, toggleArchiveExam,
-      plans, activateSubscription, cancelSubscription, deleteStudent, addPlan, removePlan, updatePlan,
+      plans, activateSubscription, cancelSubscription, updateStudentCRM, deleteStudent, addPlan, removePlan, updatePlan,
       activationCodes, generateActivationCodes, redeemActivationCode,
       progress, updateCardProgress, getStudentStats, dueTodayCount,
       theme, toggleTheme,

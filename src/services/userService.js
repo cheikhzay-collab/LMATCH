@@ -20,6 +20,7 @@ const mapProfileToDB = (profile) => ({
   city: profile.city,
   school: profile.school,
   downloads: profile.downloads,
+  crm: profile.crm,
 });
 
 // Helper to map snake_case DB columns to camelCase fields
@@ -44,6 +45,7 @@ const mapDBToProfile = (row) => {
     city: row.city,
     school: row.school,
     downloads: row.downloads,
+    crm: row.crm || { stage: 'Lead', notes: [], reminders: [], interactions: [] },
   };
 };
 
@@ -104,6 +106,7 @@ export const updateUserDoc = async (uid, updates) => {
   if (updates.city !== undefined) dbUpdates.city = updates.city;
   if (updates.school !== undefined) dbUpdates.school = updates.school;
   if (updates.downloads !== undefined) dbUpdates.downloads = updates.downloads;
+  if (updates.crm !== undefined) dbUpdates.crm = updates.crm;
   dbUpdates.updated_at = new Date().toISOString();
 
   const { error } = await supabase

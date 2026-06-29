@@ -5,8 +5,10 @@ import { getAllProgress, getMockHistory, getLoginLogs } from '../services/userSe
 import { 
   ArrowLeft, Crown, User, Calendar, Target, 
   BarChart3, Clock, BookOpen, TrendingUp, Loader2,
-  Phone, MapPin, FileDown, FileText
+  Phone, MapPin, FileDown, FileText,
+  MessageSquare, AlertCircle, Plus, Trash2, Send, CheckSquare
 } from 'lucide-react';
+import { unescapeHTML } from '../utils/security';
 
 const WhatsAppIcon = ({ size = 20, ...props }) => (
   <svg 
@@ -32,6 +34,12 @@ const getWhatsAppLink = (phone) => {
   return `https://wa.me/${cleaned}`;
 };
 
+const getWhatsAppTemplateLink = (phone, text) => {
+  const baseLink = getWhatsAppLink(phone);
+  if (baseLink === '#') return '#';
+  return `${baseLink}?text=${encodeURIComponent(text)}`;
+};
+
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   useEffect(() => {
@@ -46,7 +54,7 @@ function useIsMobile() {
 export default function AdminStudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { users, plans, activateSubscription, cancelSubscription, deleteStudent } = useAuth();
+  const { users, plans, activateSubscription, cancelSubscription, updateStudentCRM, deleteStudent } = useAuth();
   const isMobile = useIsMobile();
   
   const [isWaHovered, setIsWaHovered] = useState(false);
@@ -56,6 +64,14 @@ export default function AdminStudentDetail() {
   const [selectedPlanId, setSelectedPlanId] = useState('');
   const [selectedDuration, setSelectedDuration] = useState('365');
   
+  // CRM Campaign / Tracking State variables
+  const [activeTab, setActiveTab] = useState('academic'); // 'academic' | 'crm'
+  const [interactionType, setInteractionType] = useState('whatsapp');
+  const [interactionContent, setInteractionContent] = useState('');
+  const [reminderDate, setReminderDate] = useState('');
+  const [reminderText, setReminderText] = useState('');
+  const [crmLoading, setCrmLoading] = useState(false);
+
   const handleDeleteStudent = async () => {
     const confirmDelete = window.confirm(
       `Êtes-vous sûr de vouloir supprimer définitivement l'élève "${student.name || 'cet étudiant'}" et toutes ses données associées (progression, historique des examens, etc.) ? Cette action est irréversible.`
@@ -112,6 +128,158 @@ export default function AdminStudentDetail() {
   }, [plans, selectedPlanId]);
 
   if (!student) return <div style={{ padding: '2rem' }}>Utilisateur non trouvé.</div>;
+
+  // CRM Safe Variables
+  const crmData = student.crm || { stage: 'Lead', notes: [], reminders: [], interactions: [] };
+  const crmStage = crmData.stage || 'Lead';
+  const crmInteractions = crmData.interactions || [];
+  const crmReminders = crmData.reminders || [];
+
+  // ── CRM Updates Functions ──
+  const handleUpdateStage = async (newStage) => {
+    try {
+      setCrmLoading(true);
+      const updatedCrm = {
+        ...crmData,
+        stage: newStage,
+        interactions: [
+          {
+            id: Date.now().toString(),
+            type: 'note',
+            content: `Changement de statut CRM vers: ${newStage} (تعديل مسار العميل)`,
+            date: new Date().toISOString(),
+            by: 'Système'
+          },
+          ...crmInteractions
+        ]
+      };
+      await updateStudentCRM(student.id || student.uid, updatedCrm);
+    } catch (err) {
+      alert("Échec de la mise à jour du statut CRM: " + err.message);
+    } finally {
+      setCrmLoading(false);
+    }
+  };
+
+  const handleAddInteraction = async (e) => {
+    e.preventDefault();
+    if (!interactionContent.trim()) return;
+    try {
+      setCrmLoading(true);
+      const updatedCrm = {
+        ...crmData,
+        interactions: [
+          {
+            id: Date.now().toString(),
+            type: interactionType,
+            content: interactionContent.trim(),
+            date: new Date().toISOString(),
+            by: 'Admin'
+          },
+          ...crmInteractions
+        ]
+      };
+      await updateStudentCRM(student.id || student.uid, updatedCrm);
+      setInteractionContent('');
+    } catch (err) {
+      alert("Échec de l'enregistrement: " + err.message);
+    } finally {
+      setCrmLoading(false);
+    }
+  };
+
+  const handleDeleteInteraction = async (itemId) => {
+    if (!window.confirm("Supprimer cette note/interaction ?")) return;
+    try {
+      setCrmLoading(true);
+      const updatedCrm = {
+        ...crmData,
+        interactions: crmInteractions.filter(item => item.id !== itemId)
+      };
+      await updateStudentCRM(student.id || student.uid, updatedCrm);
+    } catch (err) {
+      alert("Échec de la suppression: " + err.message);
+    } finally {
+      setCrmLoading(false);
+    }
+  };
+
+  const handleAddReminder = async (e) => {
+    e.preventDefault();
+    if (!reminderText.trim() || !reminderDate) return;
+    try {
+      setCrmLoading(true);
+      const updatedCrm = {
+        ...crmData,
+        reminders: [
+          {
+            id: Date.now().toString(),
+            date: reminderDate,
+            content: reminderText.trim(),
+            completed: false
+          },
+          ...crmReminders
+        ]
+      };
+      await updateStudentCRM(student.id || student.uid, updatedCrm);
+      setReminderText('');
+      setReminderDate('');
+    } catch (err) {
+      alert("Échec de l'ajout: " + err.message);
+    } finally {
+      setCrmLoading(false);
+    }
+  };
+
+  const handleToggleReminder = async (remId) => {
+    try {
+      setCrmLoading(true);
+      const updatedCrm = {
+        ...crmData,
+        reminders: crmReminders.map(r => r.id === remId ? { ...r, completed: !r.completed } : r)
+      };
+      await updateStudentCRM(student.id || student.uid, updatedCrm);
+    } catch (err) {
+      alert("Modification du rappel échouée: " + err.message);
+    } finally {
+      setCrmLoading(false);
+    }
+  };
+
+  const handleDeleteReminder = async (remId) => {
+    try {
+      setCrmLoading(true);
+      const updatedCrm = {
+        ...crmData,
+        reminders: crmReminders.filter(r => r.id !== remId)
+      };
+      await updateStudentCRM(student.id || student.uid, updatedCrm);
+    } catch (err) {
+      alert("Suppression du rappel échouée: " + err.message);
+    } finally {
+      setCrmLoading(false);
+    }
+  };
+
+  // WhatsApp template texts in Arabic for 2026 conversion campaigns
+  const getWhatsAppTemplateText = (templateKey) => {
+    const sName = unescapeHTML(student.name || 'تلميذنا العزيز');
+    const sSchool = unescapeHTML(student.school || 'المدرسة المستهدفة');
+    
+    if (templateKey === 'welcome') {
+      return `السلام عليكم ${sName}، معك فريق منصة L'Conq للتحضير للمباريات. كيف تسير استعداداتك لمباراة ${sSchool}؟ نحن هنا لمساعدتك وتوجيهك خطوة بخطوة 🚀`;
+    }
+    if (templateKey === 'congrats') {
+      return `ألف مبروك ${sName} على نتائجك المتميزة في الامتحانات التجريبية! لزيادة فرص نجاحك واجتياز مباراة ${sSchool} بنجاح، نقترح عليك تفعيل حساب البريميوم اليوم للحصول على التصحيح بالفيديو لجميع الامتحانات وتغطية شاملة للمنهج 🏆`;
+    }
+    if (templateKey === 'discount') {
+      return `مرحباً ${sName}، بمناسبة تميزك واجتهادك في منصتنا، يسعدنا أن نقدم لك كود خصم خاص 20% لتفعيل حساب البريميوم اليوم والاستفادة من كل الدروس والامتحانات الحصرية. كود الخصم: LCONQ2026 🎁`;
+    }
+    if (templateKey === 'renewal') {
+      return `مرحباً ${sName}، نأمل أنك تستفيد لأقصى حد من حساب البريميوم. نذكرك أن اشتراكك سينتهي قريباً. لتجنب انقطاع الخدمة ومواصلة التحضير لمباراة ${sSchool}، يمكنك التجديد الآن بكل سهولة. بالتوفيق! ⚡`;
+    }
+    return '';
+  };
 
   // ── Calculate real academic progression parameters ──
   const now = new Date();
@@ -214,7 +382,7 @@ export default function AdminStudentDetail() {
               {student.name ? student.name.charAt(0) : 'U'}
             </div>
             <h2 style={{ margin: '0 0 0.5rem 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              {student.name || 'Étudiant'}
+              {unescapeHTML(student.name || 'Étudiant')}
               {(() => {
                 const isOnline = student.updatedAt && (new Date() - new Date(student.updatedAt) < 5 * 60 * 1000);
                 return (
@@ -290,7 +458,7 @@ export default function AdminStudentDetail() {
                   Supprimer l'élève
                 </button>
               </div>
-           </div>
+          </div>
 
           {/* ── Coordonnées de l'élève ── */}
           <div className="glass-panel" style={{ padding: '2rem' }}>
@@ -320,7 +488,7 @@ export default function AdminStudentDetail() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Ville</div>
                   <div style={{ fontWeight: 700, fontSize: '0.95rem', color: student.city ? 'var(--text-main)' : 'var(--text-subtle)' }}>
-                    {student.city || 'Non renseignée'}
+                    {unescapeHTML(student.city || 'Non renseignée')}
                   </div>
                 </div>
               </div>
@@ -333,7 +501,7 @@ export default function AdminStudentDetail() {
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>École Ciblée</div>
                   <div style={{ fontWeight: 700, fontSize: '0.95rem', color: student.school ? 'var(--text-main)' : 'var(--text-subtle)' }}>
-                    {student.school || 'Non renseignée'}
+                    {unescapeHTML(student.school || 'Non renseignée')}
                   </div>
                 </div>
               </div>
@@ -503,281 +671,795 @@ export default function AdminStudentDetail() {
           </div>
         </div>
 
-        {/* ── RIGHT COLUMN: Detailed Analytics ── */}
+        {/* ── RIGHT COLUMN: Detailed Analytics / CRM Tabbed Panel ── */}
         <div className="col-span-8" style={{ display:'flex', flexDirection:'column', gap:'1.5rem' }}>
           
-          {/* Subject / School Performance */}
-          <div className="glass-panel" style={{ padding:'2rem' }}>
-            <h3 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
-              <BarChart3 size={24} color="var(--accent)" /> Maîtrise par Type de Concours
-            </h3>
-            
-            {loadingStats ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
-                <Loader2 className="animate-spin" size={32} color="var(--primary)" />
-              </div>
-            ) : (
-              <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '1rem' : '2rem' }}>
-                {performanceData.map(data => (
-                  <div key={data.subject}>
-                    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.5rem', fontSize:'0.9rem' }}>
-                      <span style={{ fontWeight:600 }}>{data.subject}</span>
-                      <span style={{ fontWeight:900, color: data.color }}>{data.score}%</span>
-                    </div>
-                    <div style={{ height:'10px', background:'rgba(255,255,255,0.05)', borderRadius:'5px' }}>
-                      <div style={{ width:`${data.score}%`, height:'100%', background:data.color, borderRadius:'5px', boxShadow:`0 0 10px ${data.color}40` }}></div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+          {/* Tab Selection */}
+          <div style={{
+            display: 'flex',
+            background: 'var(--bg-glass)',
+            border: '1px solid var(--border)',
+            borderRadius: '12px',
+            padding: '4px',
+            gap: '4px',
+            marginBottom: '0.5rem'
+          }}>
+            <button
+              onClick={() => setActiveTab('academic')}
+              style={{
+                flex: 1,
+                border: 'none',
+                background: activeTab === 'academic' ? 'var(--primary)' : 'transparent',
+                color: activeTab === 'academic' ? '#fff' : 'var(--text-muted)',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <BarChart3 size={18} />
+              Dossier Académique
+            </button>
+            <button
+              onClick={() => setActiveTab('crm')}
+              style={{
+                flex: 1,
+                border: 'none',
+                background: activeTab === 'crm' ? 'var(--primary)' : 'transparent',
+                color: activeTab === 'crm' ? '#fff' : 'var(--text-muted)',
+                padding: '0.75rem',
+                borderRadius: '8px',
+                fontSize: '0.9rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <MessageSquare size={18} />
+              Espace CRM & Suivi
+            </button>
           </div>
 
-          {/* Exam Result History */}
-          <div className="glass-panel" style={{ padding:'2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <Clock size={24} color="var(--violet)" /> Historique des Examens
-              </h3>
-              
-              <div style={{
-                background: 'rgba(255, 255, 255, 0.02)',
-                border: '1px solid var(--border)',
-                borderRadius: '8px',
-                padding: '2px',
-                display: 'flex',
-                gap: '2px'
-              }}>
-                <button
-                  onClick={() => setExamTab('online')}
-                  style={{
-                    border: 'none',
-                    background: examTab === 'online' ? 'var(--violet)' : 'transparent',
-                    color: examTab === 'online' ? '#fff' : 'var(--text-muted)',
-                    padding: '0.4rem 0.8rem',
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  Examens en Ligne
-                </button>
-                <button
-                  onClick={() => setExamTab('omr')}
-                  style={{
-                    border: 'none',
-                    background: examTab === 'omr' ? 'var(--violet)' : 'transparent',
-                    color: examTab === 'omr' ? '#fff' : 'var(--text-muted)',
-                    padding: '0.4rem 0.8rem',
-                    borderRadius: '6px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    transition: 'all 0.2s'
-                  }}
-                >
-                  Scans OMR (Papier)
-                </button>
+          {activeTab === 'academic' ? (
+            <>
+              {/* Subject / School Performance */}
+              <div className="glass-panel" style={{ padding:'2rem' }}>
+                <h3 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                  <BarChart3 size={24} color="var(--accent)" /> Maîtrise par Type de Concours
+                </h3>
+                
+                {loadingStats ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
+                    <Loader2 className="animate-spin" size={32} color="var(--primary)" />
+                  </div>
+                ) : (
+                  <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '1rem' : '2rem' }}>
+                    {performanceData.map(data => (
+                      <div key={data.subject}>
+                        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:'0.5rem', fontSize:'0.9rem' }}>
+                          <span style={{ fontWeight:600 }}>{data.subject}</span>
+                          <span style={{ fontWeight:900, color: data.color }}>{data.score}%</span>
+                        </div>
+                        <div style={{ height:'10px', background:'rgba(255,255,255,0.05)', borderRadius:'5px' }}>
+                          <div style={{ width:`${data.score}%`, height:'100%', background:data.color, borderRadius:'5px', boxShadow:`0 0 10px ${data.color}40` }}></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-            
-            {loadingStats ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
-                <Loader2 className="animate-spin" size={32} color="var(--primary)" />
-              </div>
-            ) : examTab === 'online' ? (
-              formattedOnlineHistory.length === 0 ? (
-                <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
-                  Aucun examen blanc n'a été passé en ligne pour le moment.
+
+              {/* Exam Result History */}
+              <div className="glass-panel" style={{ padding:'2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+                  <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <Clock size={24} color="var(--violet)" /> Historique des Examens
+                  </h3>
+                  
+                  <div style={{
+                    background: 'rgba(255, 255, 255, 0.02)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    padding: '2px',
+                    display: 'flex',
+                    gap: '2px'
+                  }}>
+                    <button
+                      onClick={() => setExamTab('online')}
+                      style={{
+                        border: 'none',
+                        background: examTab === 'online' ? 'var(--violet)' : 'transparent',
+                        color: examTab === 'online' ? '#fff' : 'var(--text-muted)',
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      Examens en Ligne
+                    </button>
+                    <button
+                      onClick={() => setExamTab('omr')}
+                      style={{
+                        border: 'none',
+                        background: examTab === 'omr' ? 'var(--violet)' : 'transparent',
+                        color: examTab === 'omr' ? '#fff' : 'var(--text-muted)',
+                        padding: '0.4rem 0.8rem',
+                        borderRadius: '6px',
+                        fontSize: '0.8rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      Scans OMR (Papier)
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-                  {formattedOnlineHistory.map((item, idx) => (
-                    <div key={idx} style={{ padding:'1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'1rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '1rem' : '0' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', textAlign: 'left' }}>
-                        <div style={{ 
-                          width:'48px', height:'48px', borderRadius:'12px', 
-                          background: item.status === 'pass' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                          display:'flex', alignItems:'center', justifyContent:'center',
-                          color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)'
-                        }}>
-                          <BookOpen size={24} />
-                        </div>
-                        <div>
-                          <div style={{ fontWeight:800, fontSize:'1.05rem' }}>{item.exam}</div>
-                          <div style={{ fontSize:'0.85rem', color:'var(--text-muted)' }}>Date : {item.date}</div>
-                        </div>
-                      </div>
-                      <div style={{ textAlign:'right' }}>
-                        <div style={{ fontSize:'1.25rem', fontWeight:900, color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)' }}>
-                          {item.result}
-                        </div>
-                        <div style={{ fontSize:'0.75rem', fontWeight:800, textTransform:'uppercase', color:'var(--text-muted)' }}>
-                          {item.status === 'pass' ? 'REÇU' : 'ÉCHEC'}
-                        </div>
-                      </div>
+                
+                {loadingStats ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
+                    <Loader2 className="animate-spin" size={32} color="var(--primary)" />
+                  </div>
+                ) : examTab === 'online' ? (
+                  formattedOnlineHistory.length === 0 ? (
+                    <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
+                      Aucun examen blanc n'a été passé en ligne pour le moment.
                     </div>
-                  ))}
-                </div>
-              )
-            ) : (
-              formattedOmrHistory.length === 0 ? (
-                <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
-                  Aucun scan OMR n'a été importé pour le moment.
-                </div>
-              ) : (
-                <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
-                  {formattedOmrHistory.map((item, idx) => (
-                    <div key={idx} style={{ padding:'1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'1rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '1rem' : '0' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', textAlign: 'left' }}>
-                        <div style={{ 
-                          width:'48px', height:'48px', borderRadius:'12px', 
-                          background: item.status === 'pass' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                          display:'flex', alignItems:'center', justifyContent:'center',
-                          color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)'
-                        }}>
-                          <BookOpen size={24} />
-                        </div>
-                        <div>
-                          <div style={{ fontWeight:800, fontSize:'1.05rem' }}>{item.exam}</div>
-                          <div style={{ fontSize:'0.85rem', color:'var(--text-muted)' }}>Date : {item.date}</div>
-                          
-                          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', background: 'rgba(16, 185, 129, 0.08)', color: 'var(--emerald)', fontWeight: 800 }}>
-                              {item.correctCount || 0} Corrects
-                            </span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', fontWeight: 800 }}>
-                              {item.wrongCount || 0} Incorrects
-                            </span>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', fontWeight: 800 }}>
-                              {item.emptyCount || 0} Vides
-                            </span>
+                  ) : (
+                    <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+                      {formattedOnlineHistory.map((item, idx) => (
+                        <div key={idx} style={{ padding:'1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'1rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '1rem' : '0' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', textAlign: 'left' }}>
+                            <div style={{ 
+                              width:'48px', height:'48px', borderRadius:'12px', 
+                              background: item.status === 'pass' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                              display:'flex', alignItems:'center', justifyContent:'center',
+                              color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)'
+                            }}>
+                              <BookOpen size={24} />
+                            </div>
+                            <div>
+                              <div style={{ fontWeight:800, fontSize:'1.05rem' }}>{item.exam}</div>
+                              <div style={{ fontSize:'0.85rem', color:'var(--text-muted)' }}>Date : {item.date}</div>
+                            </div>
+                          </div>
+                          <div style={{ textAlign:'right' }}>
+                            <div style={{ fontSize:'1.25rem', fontWeight:900, color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)' }}>
+                              {item.result}
+                            </div>
+                            <div style={{ fontSize:'0.75rem', fontWeight:800, textTransform:'uppercase', color:'var(--text-muted)' }}>
+                              {item.status === 'pass' ? 'REÇU' : 'ÉCHEC'}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      <div style={{ textAlign:'right' }}>
-                        <div style={{ fontSize:'1.25rem', fontWeight:900, color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)' }}>
-                          {item.result}
-                        </div>
-                        <div style={{ fontSize:'0.75rem', fontWeight:800, textTransform:'uppercase', color:'var(--text-muted)' }}>
-                          {item.status === 'pass' ? 'REÇU' : 'ÉCHEC'}
-                        </div>
-                      </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              )
-            )}
-          </div>
-
-          {/* Historique des Téléchargements */}
-          <div className="glass-panel" style={{ padding:'2rem' }}>
-            <h3 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
-              <FileDown size={24} color="var(--violet)" /> Historique des Téléchargements
-            </h3>
-            
-            {!student.downloads || student.downloads.length === 0 ? (
-              <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
-                Aucun téléchargement enregistré pour le moment.
-              </div>
-            ) : (
-              <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.25rem' }}>
-                {student.downloads.map((item, idx) => {
-                  const dateObj = new Date(item.downloadedAt || item.date || new Date());
-                  const dateStr = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-                  const timeStr = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                  
-                  let TypeIcon = FileText;
-                  let typeColor = 'var(--violet)';
-                  let typeLabel = 'DOCUMENT';
-                  
-                  if (item.type === 'sujet') {
-                    typeColor = 'var(--primary)';
-                    typeLabel = 'SUJET';
-                  } else if (item.type === 'corrige') {
-                    typeColor = 'var(--emerald)';
-                    typeLabel = 'CORRIGÉ';
-                  } else if (item.type === 'grille') {
-                    typeColor = 'var(--warning)';
-                    typeLabel = 'GRILLE OMR';
-                  } else if (item.type === 'lesson') {
-                    typeColor = 'var(--accent)';
-                    typeLabel = 'COURS';
-                  } else if (item.type === 'report') {
-                    typeColor = '#A78BFA';
-                    typeLabel = 'RAPPORT';
-                  }
-                  
-                  return (
-                    <div key={idx} style={{ padding:'0.85rem 1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'0.75rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0.5rem' : '0' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', textAlign: 'left' }}>
-                        <div style={{ 
-                          width: '36px', height: '36px', borderRadius: '8px', 
-                          background: `${typeColor}15`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          color: typeColor
-                        }}>
-                          <TypeIcon size={18} />
+                  )
+                ) : (
+                  formattedOmrHistory.length === 0 ? (
+                    <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
+                      Aucun scan OMR n'a été importé pour le moment.
+                    </div>
+                  ) : (
+                    <div style={{ display:'flex', flexDirection:'column', gap:'0.75rem' }}>
+                      {formattedOmrHistory.map((item, idx) => (
+                        <div key={idx} style={{ padding:'1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'1rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '1rem' : '0' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:'1.25rem', textAlign: 'left' }}>
+                            <div style={{ 
+                              width:'48px', height:'48px', borderRadius:'12px', 
+                              background: item.status === 'pass' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                              display:'flex', alignItems:'center', justifyContent:'center',
+                              color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)'
+                            }}>
+                              <BookOpen size={24} />
+                            </div>
+                            <div>
+                              <div style={{ fontWeight:800, fontSize:'1.05rem' }}>{item.exam}</div>
+                              <div style={{ fontSize:'0.85rem', color:'var(--text-muted)' }}>Date : {item.date}</div>
+                              
+                              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem', flexWrap: 'wrap' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', background: 'rgba(16, 185, 129, 0.08)', color: 'var(--emerald)', fontWeight: 800 }}>
+                                  {item.correctCount || 0} Corrects
+                                </span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', background: 'rgba(239, 68, 68, 0.08)', color: 'var(--danger)', fontWeight: 800 }}>
+                                  {item.wrongCount || 0} Incorrects
+                                </span>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', padding: '0.15rem 0.45rem', borderRadius: '6px', fontSize: '0.7rem', background: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-muted)', fontWeight: 800 }}>
+                                  {item.emptyCount || 0} Vides
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ textAlign:'right' }}>
+                            <div style={{ fontSize:'1.25rem', fontWeight:900, color: item.status === 'pass' ? 'var(--emerald)' : 'var(--danger)' }}>
+                              {item.result}
+                            </div>
+                            <div style={{ fontSize:'0.75rem', fontWeight:800, textTransform:'uppercase', color:'var(--text-muted)' }}>
+                              {item.status === 'pass' ? 'REÇU' : 'ÉCHEC'}
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>{item.title || 'Téléchargement'}</span>
-                          <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
-                            <span style={{
-                              fontSize: '0.65rem',
-                              fontWeight: 800,
-                              padding: '0.1rem 0.4rem',
-                              borderRadius: '4px',
+                      ))}
+                    </div>
+                  )
+                )}
+              </div>
+
+              {/* Historique des Téléchargements */}
+              <div className="glass-panel" style={{ padding:'2rem' }}>
+                <h3 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                  <FileDown size={24} color="var(--violet)" /> Historique des Téléchargements
+                </h3>
+                
+                {!student.downloads || student.downloads.length === 0 ? (
+                  <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
+                    Aucun téléchargement enregistré pour le moment.
+                  </div>
+                ) : (
+                  <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                    {student.downloads.map((item, idx) => {
+                      const dateObj = new Date(item.downloadedAt || item.date || new Date());
+                      const dateStr = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+                      const timeStr = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                      
+                      let TypeIcon = FileText;
+                      let typeColor = 'var(--violet)';
+                      let typeLabel = 'DOCUMENT';
+                      
+                      if (item.type === 'sujet') {
+                        typeColor = 'var(--primary)';
+                        typeLabel = 'SUJET';
+                      } else if (item.type === 'corrige') {
+                        typeColor = 'var(--emerald)';
+                        typeLabel = 'CORRIGÉ';
+                      } else if (item.type === 'grille') {
+                        typeColor = 'var(--warning)';
+                        typeLabel = 'GRILLE OMR';
+                      } else if (item.type === 'lesson') {
+                        typeColor = 'var(--accent)';
+                        typeLabel = 'COURS';
+                      } else if (item.type === 'report') {
+                        typeColor = '#A78BFA';
+                        typeLabel = 'RAPPORT';
+                      }
+                      
+                      return (
+                        <div key={idx} style={{ padding:'0.85rem 1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'0.75rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0.5rem' : '0' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', textAlign: 'left' }}>
+                            <div style={{ 
+                              width: '36px', height: '36px', borderRadius: '8px', 
                               background: `${typeColor}15`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center',
                               color: typeColor
                             }}>
-                              {typeLabel}
-                            </span>
+                              <TypeIcon size={18} />
+                            </div>
+                            <div>
+                              <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-main)' }}>{item.title || 'Téléchargement'}</span>
+                              <div style={{ display: 'flex', gap: '0.4rem', marginTop: '0.2rem' }}>
+                                <span style={{
+                                  fontSize: '0.65rem',
+                                  fontWeight: 800,
+                                  padding: '0.1rem 0.4rem',
+                                  borderRadius: '4px',
+                                  background: `${typeColor}15`,
+                                  color: typeColor
+                                }}>
+                                  {typeLabel}
+                                </span>
+                              </div>
+                            </div>
                           </div>
+                          <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>{dateStr} à {timeStr}</span>
                         </div>
-                      </div>
-                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontWeight: 600 }}>{dateStr} à {timeStr}</span>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Access Logs History */}
-          <div className="glass-panel" style={{ padding:'2rem' }}>
-            <h3 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
-              <Clock size={24} color="var(--primary)" /> Historique des Connexions
-            </h3>
-            
-            {loadingStats ? (
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
-                <Loader2 className="animate-spin" size={32} color="var(--primary)" />
+              {/* Access Logs History */}
+              <div className="glass-panel" style={{ padding:'2rem' }}>
+                <h3 style={{ margin:'0 0 1.5rem 0', display:'flex', alignItems:'center', gap:'0.75rem' }}>
+                  <Clock size={24} color="var(--primary)" /> Historique des Connexions
+                </h3>
+                
+                {loadingStats ? (
+                  <div style={{ display: 'flex', justifyContent: 'center', padding: '2rem 0' }}>
+                    <Loader2 className="animate-spin" size={32} color="var(--primary)" />
+                  </div>
+                ) : realLoginLogs.length === 0 ? (
+                  <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
+                    Aucune connexion enregistrée.
+                  </div>
+                ) : (
+                  <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                    {realLoginLogs.slice(0, 50).map((log, idx) => {
+                      const dateObj = new Date(log.loggedAt);
+                      const dateStr = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+                      const timeStr = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                      return (
+                        <div key={log.id || idx} style={{ padding:'0.85rem 1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'0.75rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0.5rem' : '0' }}>
+                          <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', textAlign: 'left' }}>
+                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--emerald)', boxShadow: '0 0 8px var(--emerald)' }}></div>
+                            <span style={{ fontWeight:700, fontSize:'0.9rem', color: 'var(--text-main)' }}>Connexion réussie</span>
+                          </div>
+                          <span style={{ fontSize:'0.82rem', color:'var(--text-muted)', fontWeight: 600 }}>{dateStr} à {timeStr}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            ) : realLoginLogs.length === 0 ? (
-              <div style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem 0' }}>
-                Aucune connexion enregistrée.
+            </>
+          ) : (
+            <>
+              {/* ── CRM & Marketing Dashboard Tab ── */}
+              
+              {/* 1. Pipeline Stepper */}
+              <div className="glass-panel" style={{ padding: '2rem' }}>
+                 <h3 style={{ margin: '0 0 1.5rem 0', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                   <TrendingUp size={24} color="var(--primary)" /> Pipeline de suivi (CRM Pipeline)
+                 </h3>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  {['Lead', 'Trial', 'Hot Lead', 'Active Premium', 'Churn Risk', 'Inactive'].map((stage, idx) => {
+                    const isActive = crmStage === stage;
+                    let stepColor = 'var(--text-muted)';
+                    let stepBg = 'rgba(255, 255, 255, 0.01)';
+                    let borderStyle = '1px solid var(--border)';
+                    
+                    if (isActive) {
+                      borderStyle = '1px solid transparent';
+                      if (stage === 'Lead') { stepColor = '#fff'; stepBg = 'var(--primary)'; }
+                      else if (stage === 'Trial') { stepColor = '#fff'; stepBg = '#06B6D4'; }
+                      else if (stage === 'Hot Lead') { stepColor = '#fff'; stepBg = '#F97316'; }
+                      else if (stage === 'Active Premium') { stepColor = '#fff'; stepBg = '#10B981'; }
+                      else if (stage === 'Churn Risk') { stepColor = '#fff'; stepBg = '#EF4444'; }
+                      else if (stage === 'Inactive') { stepColor = '#fff'; stepBg = '#9CA3AF'; }
+                    }
+                    
+                    const stepLabels = {
+                      'Lead': 'Prospect',
+                      'Trial': 'Essai actif',
+                      'Hot Lead': 'Prospect chaud',
+                      'Active Premium': 'Abonné actif',
+                      'Churn Risk': 'Risque de churn',
+                      'Inactive': 'Inactif'
+                    };
+
+                    return (
+                      <button
+                        key={stage}
+                        disabled={crmLoading}
+                        onClick={() => handleUpdateStage(stage)}
+                        style={{
+                          flex: '1 1 110px',
+                          padding: '0.75rem 0.5rem',
+                          borderRadius: '12px',
+                          border: borderStyle,
+                          background: stepBg,
+                          color: stepColor,
+                          fontWeight: 800,
+                          fontSize: '0.8rem',
+                          cursor: crmLoading ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '0.2rem',
+                          transition: 'all 0.25s ease',
+                          transform: isActive ? 'scale(1.05)' : 'none',
+                          boxShadow: isActive ? '0 8px 16px rgba(0,0,0,0.25)' : 'none'
+                        }}
+                      >
+                        <span style={{ fontSize: '0.65rem', opacity: isActive ? 0.95 : 0.6 }}>ÉTAPE {idx + 1}</span>
+                        <span style={{ fontSize: '0.85rem' }}>{stage}</span>
+                        <span style={{ fontSize: '0.72rem', fontWeight: 600, opacity: isActive ? 0.9 : 0.7 }}>({stepLabels[stage]})</span>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            ) : (
-              <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.25rem' }}>
-                {realLoginLogs.slice(0, 50).map((log, idx) => {
-                  const dateObj = new Date(log.loggedAt);
-                  const dateStr = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-                  const timeStr = dateObj.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                  return (
-                    <div key={log.id || idx} style={{ padding:'0.85rem 1.25rem', background:'rgba(255,255,255,0.01)', border:'1px solid var(--border)', borderRadius:'0.75rem', display:'flex', flexDirection: isMobile ? 'column' : 'row', justifyContent:'space-between', alignItems: isMobile ? 'flex-start' : 'center', gap: isMobile ? '0.5rem' : '0' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:'0.75rem', textAlign: 'left' }}>
-                        <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--emerald)', boxShadow: '0 0 8px var(--emerald)' }}></div>
-                        <span style={{ fontWeight:700, fontSize:'0.9rem', color: 'var(--text-main)' }}>Connexion réussie</span>
+
+              {/* 2. Insights & WhatsApp campaigns templates */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1.2fr', gap: '1.5rem' }}>
+                
+                {/* Marketing Insight Panel */}
+                <div className="glass-panel" style={{ padding: '2rem' }}>
+                  <h4 style={{ margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <AlertCircle size={20} color="var(--accent)" /> Analyses Marketing Intelligentes
+                  </h4>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', fontSize: '0.9rem' }}>
+                    
+                    <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '10px' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Niveau d'engagement de l'élève</div>
+                      <div style={{ fontWeight: 800, color: 'var(--emerald)', fontSize: '1.05rem', marginTop: '0.25rem' }}>
+                        {(() => {
+                          const logins = realLoginLogs.length;
+                          const downloads = student.downloads?.length || 0;
+                          if (logins > 10 || downloads > 5) return 'Très élevé ⚡';
+                          if (logins > 3 || downloads > 1) return 'Actif 📈';
+                          return 'Faible 💤';
+                        })()}
                       </div>
-                      <span style={{ fontSize:'0.82rem', color:'var(--text-muted)', fontWeight: 600 }}>{dateStr} à {timeStr}</span>
                     </div>
-                  );
-                })}
+
+                    <div style={{ padding: '1rem', background: 'rgba(255,255,255,0.01)', border: '1px solid var(--border)', borderRadius: '10px' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Indice de conversion estimé</div>
+                      <div style={{ fontWeight: 800, color: 'var(--warning)', fontSize: '1.05rem', marginTop: '0.25rem' }}>
+                        {(() => {
+                          if (student.tier === 'premium') return 'Déjà abonné 💎';
+                          const score = realHistory.length > 0 ? Math.max(...realHistory.map(h => h.pct || 0)) : 0;
+                          if (score > 60) return 'Hot Lead (Prospect chaud) 🌟';
+                          if (realHistory.length > 0) return 'Moyen - À encourager ⏱️';
+                          return 'Nouveau - En exploration 🔍';
+                        })()}
+                      </div>
+                    </div>
+
+                    <div style={{ padding: '1rem', background: 'rgba(245,158,11,0.03)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: '10px' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--warning)', fontWeight: 800 }}>Stratégie marketing suggérée (2026)</div>
+                      <div style={{ fontWeight: 600, color: 'var(--text-main)', marginTop: '0.4rem', lineHeight: '1.4', fontSize: '0.85rem' }}>
+                        {(() => {
+                          if (student.tier === 'premium') return 'Fidélisation: Envoyez-lui des liens vers les nouveaux cours et interagissez pour soutenir sa réussite et éviter le churn.';
+                          if (crmStage === 'Hot Lead') return 'Prospect chaud prêt à acheter! Envoyez-lui directement le code de réduction de 20% sur WhatsApp.';
+                          if (crmStage === 'Trial') return 'Prospect intéressé: Encouragez-le à passer un nouveau test blanc ou envoyez-lui un guide gratuit.';
+                          if (crmStage === 'Churn Risk') return 'Attention! Son abonnement expire bientôt. Envoyez-lui l\'offre spéciale de renouvellement.';
+                          if (crmStage === 'Inactive') return 'Réengagement: Envoyez-lui un message WhatsApp avec les dernières mises à jour du site pour le réactiver.';
+                          return 'Nouveau prospect: Envoyez-lui un message de bienvenue et aidez-le à choisir son école cible.';
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* WhatsApp Message Panel */}
+                <div className="glass-panel" style={{ padding: '2rem' }}>
+                  <h4 style={{ margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Send size={20} color="#25D366" /> Campagnes WhatsApp Rapides (Campaign Templates)
+                  </h4>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {[
+                      { key: 'welcome', label: '👋 Message de bienvenue & orientation', color: 'var(--primary)' },
+                      { key: 'congrats', label: '🏆 Félicitations pour les résultats & offre Premium', color: 'var(--emerald)' },
+                      { key: 'discount', label: '🎁 Code de réduction spécial (20%)', color: 'var(--warning)' },
+                      { key: 'renewal', label: '⚡ Rappel de renouvellement d\'abonnement', color: 'var(--danger)' }
+                    ].map(tmpl => {
+                      const messageText = getWhatsAppTemplateText(tmpl.key);
+                      const waLink = getWhatsAppTemplateLink(student.phone, messageText);
+                      const hasPhone = !!student.phone;
+                      
+                      return (
+                        <div 
+                          key={tmpl.key} 
+                          style={{ 
+                            padding: '1rem', 
+                            background: 'rgba(255,255,255,0.01)', 
+                            border: '1px solid var(--border)', 
+                            borderRadius: '12px',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '0.5rem'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-main)' }}>{tmpl.label}</span>
+                            {hasPhone ? (
+                              <a 
+                                href={waLink} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                style={{
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '0.35rem',
+                                  padding: '0.35rem 0.75rem',
+                                  borderRadius: '8px',
+                                  background: 'linear-gradient(135deg, #25D366 0%, #128C7E 100%)',
+                                  color: '#fff',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 700,
+                                  textDecoration: 'none',
+                                  boxShadow: '0 4px 10px rgba(37,211,102,0.15)'
+                                }}
+                              >
+                                Écrire via WhatsApp
+                              </a>
+                            ) : (
+                              <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>Téléphone absent</span>
+                            )}
+                          </div>
+                          <p style={{ 
+                            margin: 0, 
+                            fontSize: '0.8rem', 
+                            color: 'var(--text-muted)', 
+                            direction: 'rtl', 
+                            textAlign: 'right',
+                            background: 'rgba(0,0,0,0.15)',
+                            padding: '0.6rem 0.8rem',
+                            borderRadius: '6px',
+                            lineHeight: '1.4'
+                          }}>
+                            {messageText}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
+
+              {/* 3. Notes & Reminders timeline */}
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1.2fr 1fr', gap: '1.5rem' }}>
+                
+                {/* Notes and Interactions Feed */}
+                <div className="glass-panel" style={{ padding: '2rem' }}>
+                  <h4 style={{ margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.05rem', fontWeight: 800 }}>
+                    <FileText size={20} color="var(--violet)" /> Historique des Notes & Interactions
+                  </h4>
+
+                  <form onSubmit={handleAddInteraction} style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
+                    <select
+                      value={interactionType}
+                      onChange={e => setInteractionType(e.target.value)}
+                      style={{
+                        padding: '0.6rem',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-glass)',
+                        color: 'var(--text-main)',
+                        fontSize: '0.85rem',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="call">Appel</option>
+                      <option value="support">Support Technique</option>
+                      <option value="note">Note</option>
+                    </select>
+                    <input
+                      type="text"
+                      placeholder="Écrire une note ou les détails de l'interaction..."
+                      value={interactionContent}
+                      onChange={e => setInteractionContent(e.target.value)}
+                      style={{
+                        flex: 1,
+                        padding: '0.6rem 1rem',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-glass)',
+                        color: 'white',
+                        fontSize: '0.85rem',
+                        outline: 'none'
+                      }}
+                    />
+                    <button
+                      type="submit"
+                      disabled={crmLoading || !interactionContent.trim()}
+                      style={{
+                        padding: '0.6rem 1.2rem',
+                        borderRadius: '10px',
+                        background: 'var(--primary)',
+                        color: '#fff',
+                        border: 'none',
+                        fontWeight: 700,
+                        fontSize: '0.85rem',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      Ajouter
+                    </button>
+                  </form>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '350px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                    {crmInteractions.length === 0 ? (
+                      <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem 0', fontSize: '0.9rem' }}>
+                        Aucune note ou interaction enregistrée pour cet élève.
+                      </div>
+                    ) : (
+                      crmInteractions.map(item => {
+                        const dateStr = new Date(item.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+                        
+                        let typeColor = 'var(--primary)';
+                        let typeLabel = 'Note';
+                        if (item.type === 'call') { typeColor = 'var(--violet)'; typeLabel = 'Appel 📞'; }
+                        else if (item.type === 'whatsapp') { typeColor = '#25D366'; typeLabel = 'WhatsApp 💬'; }
+                        else if (item.type === 'support') { typeColor = 'var(--danger)'; typeLabel = 'Support 🔧'; }
+                        
+                        return (
+                          <div 
+                            key={item.id} 
+                            style={{ 
+                              padding: '1rem', 
+                              background: 'rgba(255,255,255,0.01)', 
+                              border: '1px solid var(--border)', 
+                              borderRadius: '12px',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              gap: '0.4rem'
+                            }}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{
+                                  fontSize: '0.65rem',
+                                  fontWeight: 800,
+                                  padding: '0.15rem 0.5rem',
+                                  borderRadius: '4px',
+                                  background: `${typeColor}15`,
+                                  color: typeColor
+                                }}>
+                                  {typeLabel}
+                                </span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>par {item.by || 'Admin'}</span>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>{dateStr}</span>
+                                <button
+                                  onClick={() => handleDeleteInteraction(item.id)}
+                                  style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                                  title="Supprimer"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
+                            <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--text-main)', lineHeight: '1.4' }}>
+                              {item.content}
+                            </p>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+
+                {/* Smart Reminders Panel */}
+                <div className="glass-panel" style={{ padding: '2rem' }}>
+                  <h4 style={{ margin: '0 0 1.25rem 0', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Clock size={20} color="var(--warning)" /> Rappels & Suivis Planifiés
+                  </h4>
+
+                  <form onSubmit={handleAddReminder} style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <input
+                        type="date"
+                        value={reminderDate}
+                        onChange={e => setReminderDate(e.target.value)}
+                        style={{
+                          padding: '0.6rem',
+                          borderRadius: '10px',
+                          border: '1px solid var(--border)',
+                          background: 'var(--bg-glass)',
+                          color: 'white',
+                          fontSize: '0.85rem',
+                          outline: 'none',
+                          flex: 1
+                        }}
+                      />
+                      <button
+                        type="submit"
+                        disabled={crmLoading || !reminderText.trim() || !reminderDate}
+                        style={{
+                          padding: '0.6rem 1.2rem',
+                          borderRadius: '10px',
+                          background: 'var(--primary)',
+                          color: '#fff',
+                          border: 'none',
+                          fontWeight: 700,
+                          fontSize: '0.85rem',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Planifier
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Que faut-il faire ? (Ex: Appeler le tuteur pour l'offre)"
+                      value={reminderText}
+                      onChange={e => setReminderText(e.target.value)}
+                      style={{
+                        padding: '0.6rem',
+                        borderRadius: '10px',
+                        border: '1px solid var(--border)',
+                        background: 'var(--bg-glass)',
+                        color: 'white',
+                        fontSize: '0.85rem',
+                        outline: 'none'
+                      }}
+                    />
+                  </form>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '350px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                    {crmReminders.length === 0 ? (
+                      <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem 0', fontSize: '0.9rem' }}>
+                        Aucun rappel planifié.
+                      </div>
+                    ) : (
+                      crmReminders.map(rem => {
+                        const isOverdue = new Date(rem.date) < new Date() && !rem.completed;
+                        const dateObj = new Date(rem.date);
+                        const dateStr = dateObj.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+                        
+                        return (
+                          <div 
+                            key={rem.id} 
+                            style={{ 
+                              padding: '1rem', 
+                              background: rem.completed ? 'rgba(16, 185, 129, 0.02)' : isOverdue ? 'rgba(239, 68, 68, 0.04)' : 'rgba(255,255,255,0.01)', 
+                              border: `1px solid ${rem.completed ? 'rgba(16, 185, 129, 0.2)' : isOverdue ? 'rgba(239, 68, 68, 0.3)' : 'var(--border)'}`, 
+                              borderRadius: '12px',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.75rem'
+                            }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleToggleReminder(rem.id)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: rem.completed ? 'var(--emerald)' : 'var(--text-muted)',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                padding: 0
+                              }}
+                            >
+                              <CheckSquare size={20} style={{ color: rem.completed ? 'var(--emerald)' : 'var(--text-muted)' }} />
+                            </button>
+                            <div style={{ flex: 1, textAlign: 'left' }}>
+                              <span style={{ 
+                                fontSize: '0.8rem', 
+                                fontWeight: 700, 
+                                color: rem.completed ? 'var(--emerald)' : isOverdue ? 'var(--danger)' : 'var(--text-muted)'
+                              }}>
+                                {dateStr} {isOverdue && '(En retard ⚠️)'}
+                              </span>
+                              <p style={{ 
+                                margin: '0.1rem 0 0 0', 
+                                fontSize: '0.88rem', 
+                                color: rem.completed ? 'var(--text-muted)' : 'var(--text-main)',
+                                textDecoration: rem.completed ? 'line-through' : 'none',
+                                lineHeight: '1.3'
+                              }}>
+                                {rem.content}
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteReminder(rem.id)}
+                              style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: '2px', display: 'flex', alignItems: 'center' }}
+                              title="Supprimer"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
 
         </div>
       </div>
