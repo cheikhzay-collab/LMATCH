@@ -373,6 +373,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('card_reveal_mode', settings.cardRevealMode);
     localStorage.setItem('card_flip_animation', String(settings.cardFlipEnabled));
     localStorage.setItem('card_swipe_gesture', String(settings.cardSwipeEnabled));
+    localStorage.setItem('card_sound_effects', String(settings.cardSoundEnabled !== false));
     localStorage.setItem('card_font_family', settings.cardFontFamily || 'Computer Modern Serif');
     localStorage.setItem('card_font_size', settings.cardFontSize || '1rem');
     localStorage.setItem('card_question_weight', settings.cardQuestionWeight || '400');
@@ -1939,6 +1940,7 @@ export function AuthProvider({ children }) {
           localStorage.setItem('card_reveal_mode', flashcardConfig.cardRevealMode || 'flip');
           localStorage.setItem('card_flip_animation', String(flashcardConfig.cardFlipEnabled !== false));
           localStorage.setItem('card_swipe_gesture', String(flashcardConfig.cardSwipeEnabled !== false));
+          localStorage.setItem('card_sound_effects', String(flashcardConfig.cardSoundEnabled !== false));
           localStorage.setItem('card_font_family', flashcardConfig.cardFontFamily || 'Computer Modern Serif');
           localStorage.setItem('card_font_size', flashcardConfig.cardFontSize || '1rem');
           localStorage.setItem('card_question_weight', flashcardConfig.cardQuestionWeight || '400');
@@ -1950,6 +1952,7 @@ export function AuthProvider({ children }) {
             cardRevealMode: 'flip',
             cardFlipEnabled: true,
             cardSwipeEnabled: true,
+            cardSoundEnabled: true,
             cardFontFamily: 'Computer Modern Serif',
             cardFontSize: '1rem',
             cardQuestionWeight: '400',
@@ -1964,6 +1967,7 @@ export function AuthProvider({ children }) {
           localStorage.setItem('card_reveal_mode', defaultFlashcard.cardRevealMode);
           localStorage.setItem('card_flip_animation', String(defaultFlashcard.cardFlipEnabled));
           localStorage.setItem('card_swipe_gesture', String(defaultFlashcard.cardSwipeEnabled));
+          localStorage.setItem('card_sound_effects', String(defaultFlashcard.cardSoundEnabled));
           localStorage.setItem('card_font_family', defaultFlashcard.cardFontFamily);
           localStorage.setItem('card_font_size', defaultFlashcard.cardFontSize);
           localStorage.setItem('card_question_weight', defaultFlashcard.cardQuestionWeight);

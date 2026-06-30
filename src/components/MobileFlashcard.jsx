@@ -19,6 +19,7 @@ import {
   Frown, Meh, Smile,
   BrainCircuit, Zap, Clock, Lightbulb,
 } from 'lucide-react';
+import { playCorrectSound, playIncorrectSound } from '../utils/audio';
 
 export default function MobileFlashcard({ card, onNext }) {
   /* ── State ── */
@@ -33,6 +34,7 @@ export default function MobileFlashcard({ card, onNext }) {
   const [cardRevealMode] = useState(() => localStorage.getItem('card_reveal_mode') || 'flip');
   const [cardFlipEnabled] = useState(() => localStorage.getItem('card_flip_animation') !== 'false');
   const [cardSwipeEnabled] = useState(() => localStorage.getItem('card_swipe_gesture') !== 'false');
+  const [cardSoundEnabled] = useState(() => localStorage.getItem('card_sound_effects') !== 'false');
   const [cardFontFamily] = useState(() => localStorage.getItem('card_font_family') || 'Computer Modern Serif');
   const [cardFontSize] = useState(() => localStorage.getItem('card_font_size') || '1rem');
   const [cardQuestionWeight] = useState(() => localStorage.getItem('card_question_weight') || '400');
@@ -129,6 +131,16 @@ export default function MobileFlashcard({ card, onNext }) {
   const choose = (optId) => {
     if (selected) return;
     setSelected(optId);
+
+    if (cardSoundEnabled && optId !== 'skipped') {
+      const isOptionCorrect = optId && card.correct_answer && optId.toLowerCase() === card.correct_answer.toLowerCase();
+      if (isOptionCorrect) {
+        playCorrectSound();
+      } else {
+        playIncorrectSound();
+      }
+    }
+
     if (isFlipMode) {
       setIsFlipped(true);
       revealTimeoutRef.current = setTimeout(() => setRevealed(true), 220);

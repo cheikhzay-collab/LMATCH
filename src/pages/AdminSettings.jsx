@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, RefreshCw, Layers, MousePointerClick, Crown, Download, Sliders, FileText, Camera, MessageCircle } from 'lucide-react';
+import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, RefreshCw, Layers, MousePointerClick, Crown, Download, Sliders, FileText, Camera, MessageCircle, Volume2 } from 'lucide-react';
 
 export default function AdminSettings() {
   const { 
@@ -64,6 +64,7 @@ export default function AdminSettings() {
   const [cardFlip,   setCardFlip]   = useState(() => localStorage.getItem('card_flip_animation') !== 'false');
   const [cardReveal, setCardReveal] = useState(() => localStorage.getItem('card_reveal_mode') || 'flip');
   const [cardSwipe,  setCardSwipe]  = useState(() => localStorage.getItem('card_swipe_gesture') !== 'false');
+  const [cardSound,  setCardSound]  = useState(() => localStorage.getItem('card_sound_effects') !== 'false');
   const [cardFontFamily, setCardFontFamily] = useState(() => localStorage.getItem('card_font_family') || 'Computer Modern Serif');
   const [cardFontSize, setCardFontSize] = useState(() => localStorage.getItem('card_font_size') || '1rem');
   const [cardQuestionWeight, setCardQuestionWeight] = useState(() => localStorage.getItem('card_question_weight') || '400');
@@ -76,6 +77,7 @@ export default function AdminSettings() {
       cardRevealMode: cardReveal,
       cardFlipEnabled: cardFlip,
       cardSwipeEnabled: cardSwipe,
+      cardSoundEnabled: cardSound,
       cardFontFamily,
       cardFontSize,
       cardQuestionWeight,
@@ -771,6 +773,33 @@ export default function AdminSettings() {
                   width: 20, height: 20, borderRadius: '50%', background: '#fff',
                   position: 'absolute', top: 3, transition: 'left 0.2s',
                   left: cardSwipe ? 25 : 3,
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
+                }} />
+              </button>
+            </div>
+
+            {/* Sound effects toggle */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.8rem 1rem', borderRadius: 12, background: 'var(--bg-glass)', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <Volume2 size={18} style={{ color: 'var(--violet)' }} />
+                <div>
+                  <p style={{ fontWeight: 700, fontSize: '0.88rem', margin: 0 }}>Effets sonores (Sons)</p>
+                  <p style={{ fontSize: '0.73rem', color: 'var(--text-subtle)', margin: 0 }}>Jouer un son court lors de la validation d'une réponse (correcte / incorrecte)</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCardSound(v => !v)}
+                style={{
+                  width: 48, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer',
+                  background: cardSound ? 'var(--violet)' : 'var(--bg-card)',
+                  position: 'relative', transition: 'background 0.2s',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+                }}
+              >
+                <div style={{
+                  width: 20, height: 20, borderRadius: '50%', background: '#fff',
+                  position: 'absolute', top: 3, transition: 'left 0.2s',
+                  left: cardSound ? 25 : 3,
                   boxShadow: '0 1px 3px rgba(0,0,0,0.3)',
                 }} />
               </button>

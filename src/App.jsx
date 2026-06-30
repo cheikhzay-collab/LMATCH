@@ -2,6 +2,7 @@ import React, { lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import ErrorBoundary from './components/ErrorBoundary';
+import { initFacebookPixel, trackPixelEvent } from './utils/facebookPixel';
 
 // Core pages kept statically for instant initial render
 import LandingPage from './pages/LandingPage';
@@ -131,6 +132,9 @@ function AppContent() {
     }
 
     document.title = title;
+
+    // Track PageView on route change via Facebook Pixel
+    trackPixelEvent('PageView');
   }, [location]);
 
   return (
@@ -216,6 +220,10 @@ const LoadingFallback = () => (
 );
 
 function App() {
+  React.useEffect(() => {
+    initFacebookPixel();
+  }, []);
+
   return (
     <ErrorBoundary>
       <AuthProvider>
