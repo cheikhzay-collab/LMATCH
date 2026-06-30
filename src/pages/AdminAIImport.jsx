@@ -319,6 +319,12 @@ export default function AdminAIImport() {
   const [apiKey, setApiKey] = useState(() => localStorage.getItem('claudeApiKey') || '');
   const [proxyUrl, setProxyUrl] = useState(() => localStorage.getItem('claudeProxyUrl') || '');
   const [claudeModel, setClaudeModel] = useState(() => localStorage.getItem('claudeModel') || 'claude-opus-4-5');
+  const [deepseekKey, setDeepseekKey] = useState(() => localStorage.getItem('deepseekApiKey') || '');
+  const [deepseekUrl, setDeepseekUrl] = useState(() => localStorage.getItem('deepseekApiUrl') || 'https://api.deepseek.com');
+  const [deepseekModel, setDeepseekModel] = useState(() => {
+    let m = draft?.deepseekModel || localStorage.getItem('deepseekModel') || 'deepseek-chat';
+    return m;
+  });
   const [pdfFile, setPdfFile] = useState(null);
   const [pdfName, setPdfName] = useState('');
   const [pageFrom, setPageFrom] = useState(1);
@@ -368,6 +374,8 @@ export default function AdminAIImport() {
       setApiKey(localStorage.getItem('claudeApiKey') || '');
       setProxyUrl(localStorage.getItem('claudeProxyUrl') || '');
       setGeminiKey(localStorage.getItem('geminiApiKey') || '');
+      setDeepseekKey(localStorage.getItem('deepseekApiKey') || '');
+      setDeepseekUrl(localStorage.getItem('deepseekApiUrl') || 'https://api.deepseek.com');
     };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
@@ -377,8 +385,8 @@ export default function AdminAIImport() {
   useEffect(() => {
     if (phase === 3) { localStorage.removeItem(DRAFT_KEY); return; } // clear after publish
     if (phase === 1 && questions.length === 0) return; // nothing to save yet
-    localStorage.setItem(DRAFT_KEY, JSON.stringify({ phase, questions, examName, school, year, tier, mode, correctionPageFrom, correctionPageTo, provider, geminiModel }));
-  }, [phase, questions, examName, school, year, tier, mode, correctionPageFrom, correctionPageTo, provider, geminiModel]);
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ phase, questions, examName, school, year, tier, mode, correctionPageFrom, correctionPageTo, provider, geminiModel, deepseekModel }));
+  }, [phase, questions, examName, school, year, tier, mode, correctionPageFrom, correctionPageTo, provider, geminiModel, deepseekModel]);
 
   const clearDraft = () => {
     localStorage.removeItem(DRAFT_KEY);
@@ -390,6 +398,7 @@ export default function AdminAIImport() {
     setCorrectionPageTo(1);
     setProvider('gemini');
     setGeminiModel('gemini-3.5-flash');
+    setDeepseekModel('deepseek-chat');
     setError('');
     setProgress('');
   };
@@ -686,6 +695,137 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
     throw new Error(`Erreur de parsing: réponse reçue (${rawJson.length} car.) mais JSON invalide. Réessayez.`);
   };
 
+  // Extract text from specified pages of the PDF file
+  const extractTextFromPdf = async (file, startPage, endPage) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = startPage; i <= endPage; i++) {
+      const page = await doc.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map(item => item.str).join(' ');
+      fullText += `--- PAGE ${i} ---\n${pageText}\n\n`;
+    }
+    return fullText;
+  };
+
+  // Call DeepSeek Chat Completions API with extracted text
+  const fetchDeepSeekWithText = async (pdfText, correctionText) => {
+    let pageNote = '';
+    let userPromptText = '';
+
+    if (mode === 'with_correction') {
+      pageNote = `IMPORTANT : Les données textuelles fournies contiennent à la fois les questions de l'examen et la correction officielle.
+- Les questions QCM à extraire se trouvent dans les données sous TEXTE DES QUESTIONS.
+- Les réponses correctes ou les pages de correction se trouvent sous TEXTE DU CORRIGÉ.
+
+Tu devez :
+1. Parcourir les questions se trouvant sous TEXTE DES QUESTIONS.
+2. Pour chaque question, trouver la réponse officielle correspondante sous TEXTE DU CORRIGÉ. Ne résous pas la question toi-même si elle est présente dans le corrigé, extrait strictement la réponse indiquée dans la grille ou le texte de correction (A, B, C, D ou E).
+3. Remplir le champ "correct_answer" avec la lettre correspondante de la grille de correction.
+4. Remplir le champ "astuce" en résumant l'explication/justification du corrigé officiel de la question pour aider l'élève à comprendre.
+
+TEXTE DES QUESTIONS:
+${pdfText}
+
+TEXTE DU CORRIGÉ:
+${correctionText}
+`;
+      userPromptText = `${pageNote}\n\nExtrais toutes les questions en associant les réponses du corrigé et retourne le tableau JSON demandé.`;
+    } else {
+      pageNote = `TEXTE DES QUESTIONS EXTRAIT DU PDF:
+${pdfText}
+`;
+      userPromptText = `${pageNote}Extrais TOUTES les questions QCM de ce texte et retourne le tableau JSON demandé.`;
+    }
+
+    const modelToUse = deepseekModel || 'deepseek-chat';
+    const cleanUrl = deepseekUrl.trim().replace(/\/$/, '');
+    const endpoint = `${cleanUrl}/v1/chat/completions`;
+    
+    // Create fresh AbortController for this request
+    abortRef.current = new AbortController();
+    
+    const payload = {
+      model: modelToUse,
+      messages: [
+        {
+          role: "system",
+          content: SYSTEM_PROMPT
+        },
+        {
+          role: "user",
+          content: userPromptText
+        }
+      ],
+      response_format: modelToUse === 'deepseek-chat' ? { type: 'json_object' } : undefined,
+      temperature: 0.1
+    };
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${deepseekKey}`
+    };
+
+    const res = await fetch(endpoint, {
+      signal: abortRef.current.signal,
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || err?.message || JSON.stringify(err);
+      throw new Error(`Erreur DeepSeek ${res.status}: ${msg}`);
+    }
+
+    const data = await res.json();
+    let rawText = data?.choices?.[0]?.message?.content;
+    if (!rawText) {
+      throw new Error("DeepSeek n'a renvoyé aucun texte.");
+    }
+
+    // Strip thoughts tags <think>...</think> if generated by DeepSeek-R1 (deepseek-reasoner)
+    if (rawText.includes('</think>')) {
+      rawText = rawText.split('</think>').pop().trim();
+    }
+
+    const cleanJson = sanitizeLatexJson(rawText.trim());
+
+    // Try parsing
+    try {
+      const parsed = JSON.parse(cleanJson);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed.questions && Array.isArray(parsed.questions)) return parsed.questions;
+      if (parsed.items && Array.isArray(parsed.items)) return parsed.items;
+      if (parsed.question) return [parsed];
+    } catch {
+      const jsonMatch = cleanJson.match(/\[[\s\S]*/);
+      if (jsonMatch) {
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          if (Array.isArray(parsed)) return parsed;
+          if (parsed.questions && Array.isArray(parsed.questions)) return parsed.questions;
+          return parsed;
+        } catch (e) {
+          const last = cleanJson.lastIndexOf('}');
+          if (last !== -1) {
+            try {
+              const repaired = cleanJson.slice(0, last + 1).replace(/,\s*$/, '') + ']';
+              const parsed = JSON.parse(repaired);
+              if (Array.isArray(parsed)) return parsed;
+              if (parsed.questions && Array.isArray(parsed.questions)) return parsed.questions;
+              return parsed;
+            } catch {}
+          }
+        }
+      }
+    }
+
+    throw new Error("Erreur de parsing : réponse reçue de DeepSeek mais JSON invalide. Réessayez.");
+  };
+
   const handleAnalyze = async () => {
     setDetectedModels([]);
     if (provider === 'claude') {
@@ -696,6 +836,8 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
           return;
         }
       }
+    } else if (provider === 'deepseek') {
+      if (!deepseekKey) { setError('Clé API DeepSeek manquante. Configurez-la dans Paramètres.'); return; }
     } else {
       if (!geminiKey) { setError('Clé API Gemini manquante. Configurez-la dans Paramètres.'); return; }
     }
@@ -709,7 +851,7 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
       elapsed++;
       setProgress(prev => {
         // Only update timer part if we're still in initial phase
-        if (prev.includes('Encodage') || prev.includes('Envoi')) {
+        if (prev.includes('Encodage') || prev.includes('Envoi') || prev.includes('Extraction')) {
           return `${prev.split('(')[0].trim()} (${elapsed}s)`;
         }
         return prev;
@@ -717,16 +859,27 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
     }, 1000);
 
     try {
-      setProgress('Encodage du PDF...');
-      const base64Pdf = await fileToBase64(pdfFile);
-
       let parsedRaw;
-      if (provider === 'claude') {
-        setProgress('Envoi du PDF à Claude AI...');
-        parsedRaw = await streamClaudeWithPdf(base64Pdf);
+      if (provider === 'deepseek') {
+        setProgress('Extraction du texte du PDF...');
+        const pdfText = await extractTextFromPdf(pdfFile, pageFrom, pageTo);
+        let correctionText = '';
+        if (mode === 'with_correction') {
+          setProgress('Extraction du corrigé du PDF...');
+          correctionText = await extractTextFromPdf(pdfFile, correctionPageFrom, correctionPageTo);
+        }
+        setProgress('Envoi du texte à DeepSeek AI...');
+        parsedRaw = await fetchDeepSeekWithText(pdfText, correctionText);
       } else {
-        setProgress('Envoi du PDF à Gemini AI...');
-        parsedRaw = await fetchGeminiWithPdf(base64Pdf);
+        setProgress('Encodage du PDF...');
+        const base64Pdf = await fileToBase64(pdfFile);
+        if (provider === 'claude') {
+          setProgress('Envoi du PDF à Claude AI...');
+          parsedRaw = await streamClaudeWithPdf(base64Pdf);
+        } else {
+          setProgress('Envoi du PDF à Gemini AI...');
+          parsedRaw = await fetchGeminiWithPdf(base64Pdf);
+        }
       }
 
       // Clean double backslashes recursively in both Gemini and Claude outputs
@@ -961,6 +1114,30 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
                 <span style={{ fontSize: '1.1rem' }}>🧠</span>
                 Anthropic Claude (Modèle d'Examen)
               </button>
+              <button
+                type="button"
+                onClick={() => { setProvider('deepseek'); localStorage.setItem('aiImportProvider', 'deepseek'); }}
+                style={{
+                  flex: 1,
+                  padding: '0.6rem 1rem',
+                  borderRadius: '10px',
+                  border: '1px solid',
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  borderColor: provider === 'deepseek' ? '#00BA7C' : 'var(--border)',
+                  background: provider === 'deepseek' ? 'rgba(0,186,124,0.12)' : 'var(--bg-glass)',
+                  color: provider === 'deepseek' ? '#00BA7C' : 'var(--text-muted)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <span style={{ fontSize: '1.1rem' }}>🚀</span>
+                DeepSeek AI (Super Économique)
+              </button>
             </div>
           </div>
 
@@ -996,6 +1173,16 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
             </div>
           )}
 
+          {provider === 'deepseek' && !deepseekKey && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '1rem 1.25rem', borderRadius: 12, background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)', marginBottom: '1.5rem' }}>
+              <AlertCircle size={20} color="var(--danger)" />
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, color: 'var(--danger)', fontSize: '0.9rem' }}>Clé API DeepSeek manquante</p>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>Allez dans <strong>Paramètres</strong> pour configurer votre clé API DeepSeek.</p>
+              </div>
+            </div>
+          )}
+
           {/* PDF Upload */}
           <div className="input-group" style={{ marginBottom: '1.5rem' }}>
             <label>Fichier PDF (Sujet de concours)</label>
@@ -1003,12 +1190,12 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
               <input ref={fileRef} type="file" accept=".pdf" onChange={handlePdfSelect} style={{ display: 'none' }} />
               {!pdfFile ? (
                 <>
-                  <UploadCloud size={36} style={{ marginBottom: '0.75rem', color: provider === 'claude' ? 'var(--violet)' : '#4285F4' }} />
+                  <UploadCloud size={36} style={{ marginBottom: '0.75rem', color: provider === 'claude' ? 'var(--violet)' : provider === 'deepseek' ? '#00BA7C' : '#4285F4' }} />
                   <p style={{ fontWeight: 700 }}>Cliquez pour choisir un PDF</p>
                   <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Sujets de concours, examens, corrigés...</p>
                 </>
               ) : (
-                <div style={{ color: provider === 'claude' ? 'var(--violet)' : '#4285F4' }}>
+                <div style={{ color: provider === 'claude' ? 'var(--violet)' : provider === 'deepseek' ? '#00BA7C' : '#4285F4' }}>
                   <CheckCircle2 size={36} style={{ margin: '0 auto 0.5rem' }} />
                   <p style={{ fontWeight: 800 }}>{pdfName}</p>
                   {totalPages && <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{totalPages} pages détectées</p>}
@@ -1159,6 +1346,33 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
                 → Models. La clé API doit venir de <strong>console.anthropic.com</strong> (≠ claude.ai).
               </p>
             </div>
+          ) : provider === 'deepseek' ? (
+            <div className="input-group" style={{ marginBottom: '1.5rem' }}>
+              <label>Modèle DeepSeek <span style={{fontWeight:400, color:'var(--text-muted)'}}>— ID exact de l'API</span></label>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                {['deepseek-chat', 'deepseek-reasoner'].map(m => (
+                  <button key={m} type="button"
+                    onClick={() => { setDeepseekModel(m); localStorage.setItem('deepseekModel', m); }}
+                    style={{ padding: '0.3rem 0.65rem', borderRadius: 8, border: '1px solid', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s',
+                      borderColor: deepseekModel === m ? '#00BA7C' : 'var(--border)',
+                      background: deepseekModel === m ? 'rgba(0,186,124,0.15)' : 'var(--bg-glass)',
+                      color: deepseekModel === m ? '#00BA7C' : 'var(--text-muted)'
+                    }}>{m === 'deepseek-chat' ? 'deepseek-chat (V3 - Rapide/Éco)' : 'deepseek-reasoner (R1 - Réflexion)'}</button>
+                ))}
+              </div>
+              <input
+                type="text"
+                className="input-control"
+                value={deepseekModel}
+                onChange={e => { setDeepseekModel(e.target.value); localStorage.setItem('deepseekModel', e.target.value); }}
+                placeholder="ex: deepseek-chat"
+                style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+              />
+              <p style={{ marginTop: '0.4rem', fontSize: '0.73rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                💡 Utilisez <strong>deepseek-chat</strong> pour l'analyse rapide et l'extraction au coût le plus bas. 
+                Le modèle <strong>deepseek-reasoner</strong> (DeepSeek R1) utilise le raisonnement logique poussé pour résoudre les énoncés complexes.
+              </p>
+            </div>
           ) : (
             <div className="input-group" style={{ marginBottom: '1.5rem' }}>
               <label>Modèle Gemini <span style={{fontWeight:400, color:'var(--text-muted)'}}>— ID exact de l'API</span></label>
@@ -1253,7 +1467,15 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
               <button
                 className="btn"
                 disabled
-                style={{ flex: 1, padding: '1.1rem', fontSize: '1rem', justifyContent: 'center', background: provider === 'claude' ? 'linear-gradient(135deg,#7c3aed,#6366f1)' : 'linear-gradient(135deg,#4285F4,#34A853)', boxShadow: provider === 'claude' ? '0 8px 24px rgba(124,58,237,0.35)' : '0 8px 24px rgba(66,133,244,0.35)', opacity: 0.85 }}
+                style={{
+                  flex: 1,
+                  padding: '1.1rem',
+                  fontSize: '1rem',
+                  justifyContent: 'center',
+                  background: provider === 'claude' ? 'linear-gradient(135deg,#7c3aed,#6366f1)' : provider === 'deepseek' ? 'linear-gradient(135deg,#00BA7C,#4f46e5)' : 'linear-gradient(135deg,#4285F4,#34A853)',
+                  boxShadow: provider === 'claude' ? '0 8px 24px rgba(124,58,237,0.35)' : provider === 'deepseek' ? '0 8px 24px rgba(0,186,124,0.35)' : '0 8px 24px rgba(66,133,244,0.35)',
+                  opacity: 0.85
+                }}
               >
                 <Loader2 size={20} style={{ animation: 'spin 1s linear infinite' }} /> {progress || 'Traitement...'}
               </button>
@@ -1269,10 +1491,17 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
             <button
               className="btn"
               onClick={handleAnalyze}
-              disabled={!pdfFile || (provider === 'claude' ? (!apiKey && !proxyUrl) : !geminiKey)}
-              style={{ width: '100%', padding: '1.1rem', fontSize: '1rem', justifyContent: 'center', background: provider === 'claude' ? 'linear-gradient(135deg,#7c3aed,#6366f1)' : 'linear-gradient(135deg,#4285F4,#34A853)', boxShadow: provider === 'claude' ? '0 8px 24px rgba(124,58,237,0.35)' : '0 8px 24px rgba(66,133,244,0.35)' }}
+              disabled={!pdfFile || (provider === 'claude' ? (!apiKey && !proxyUrl) : provider === 'deepseek' ? !deepseekKey : !geminiKey)}
+              style={{
+                width: '100%',
+                padding: '1.1rem',
+                fontSize: '1rem',
+                justifyContent: 'center',
+                background: provider === 'claude' ? 'linear-gradient(135deg,#7c3aed,#6366f1)' : provider === 'deepseek' ? 'linear-gradient(135deg,#00BA7C,#4f46e5)' : 'linear-gradient(135deg,#4285F4,#34A853)',
+                boxShadow: provider === 'claude' ? '0 8px 24px rgba(124,58,237,0.35)' : provider === 'deepseek' ? '0 8px 24px rgba(0,186,124,0.35)' : '0 8px 24px rgba(66,133,244,0.35)'
+              }}
             >
-              <Sparkles size={20} /> Analyser avec {provider === 'claude' ? 'Claude AI' : 'Gemini AI'} ✨
+              <Sparkles size={20} /> Analyser avec {provider === 'claude' ? 'Claude AI' : provider === 'deepseek' ? 'DeepSeek AI' : 'Gemini AI'} ✨
             </button>
           )}
         </div>

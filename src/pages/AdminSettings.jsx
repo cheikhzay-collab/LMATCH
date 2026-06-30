@@ -50,12 +50,23 @@ export default function AdminSettings() {
   const [showGeminiKey, setShowGeminiKey] = useState(false);
   const [geminiKeySaved, setGeminiKeySaved] = useState(false);
 
-
+  // DeepSeek API Key
+  const [deepseekKey, setDeepseekKey] = useState(() => localStorage.getItem('deepseekApiKey') || '');
+  const [deepseekUrl, setDeepseekUrl] = useState(() => localStorage.getItem('deepseekApiUrl') || 'https://api.deepseek.com');
+  const [showDeepseekKey, setShowDeepseekKey] = useState(false);
+  const [deepseekKeySaved, setDeepseekKeySaved] = useState(false);
 
   const saveGeminiKey = () => {
     localStorage.setItem('geminiApiKey', geminiKey.trim());
     setGeminiKeySaved(true);
     setTimeout(() => setGeminiKeySaved(false), 2500);
+  };
+
+  const saveDeepseekKey = () => {
+    localStorage.setItem('deepseekApiKey', deepseekKey.trim());
+    localStorage.setItem('deepseekApiUrl', deepseekUrl.trim() || 'https://api.deepseek.com');
+    setDeepseekKeySaved(true);
+    setTimeout(() => setDeepseekKeySaved(false), 2500);
   };
 
 
@@ -1041,6 +1052,74 @@ export default function AdminSettings() {
             <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ fontSize: '0.78rem', color: '#34A853' }}>✓ Clé Gemini configurée — {geminiKey.slice(0, 10)}...</span>
               <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '99px', background: 'rgba(52,168,83,0.12)', color: '#34A853', fontWeight: 600 }}>Imagen 3 activé ✨</span>
+            </div>
+          )}
+        </div>
+
+        {/* ── DeepSeek API Key ── */}
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'apis' ? 'block' : 'none', borderColor: 'rgba(0,186,124,0.25)', background: 'linear-gradient(135deg, rgba(0,186,124,0.04) 0%, rgba(99,102,241,0.02) 100%)', marginTop: '1.5rem' }}>
+          <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <KeyRound size={20} style={{ color: '#00BA7C' }} /> Clé API DeepSeek (Modèle Chinois Économique)
+          </h3>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
+            Utilisée pour l'import IA à coût minime (DeepSeek-V3) ou avec réflexion scientifique avancée (DeepSeek-R1). 
+            Obtenez votre clé sur{' '}
+            <a href="https://platform.deepseek.com" target="_blank" rel="noopener noreferrer" style={{ color: '#00BA7C', fontWeight: 600 }}>platform.deepseek.com</a> ou utilisez un fournisseur compatible OpenAI (ex: SiliconFlow).
+          </p>
+
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <div style={{ flex: 1, position: 'relative' }}>
+              <input
+                type={showDeepseekKey ? 'text' : 'password'}
+                className="input-control"
+                placeholder="sk-..."
+                value={deepseekKey}
+                onChange={e => setDeepseekKey(e.target.value)}
+                style={{ paddingRight: '3rem', fontFamily: deepseekKey && !showDeepseekKey ? 'monospace' : 'inherit', borderColor: deepseekKey ? 'rgba(0,186,124,0.4)' : undefined }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowDeepseekKey(v => !v)}
+                style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex' }}
+              >
+                {showDeepseekKey ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            <button
+              onClick={saveDeepseekKey}
+              className="btn"
+              style={{
+                padding: '0.75rem 1.5rem', whiteSpace: 'nowrap',
+                background: deepseekKeySaved ? 'linear-gradient(135deg,var(--emerald),#34d399)' : 'linear-gradient(135deg,#00BA7C,#4f46e5)',
+                boxShadow: deepseekKeySaved ? '0 4px 16px rgba(16,185,129,0.35)' : '0 4px 16px rgba(0,186,124,0.3)',
+                transition: 'all 0.3s'
+              }}
+            >
+              {deepseekKeySaved ? <><CheckCircle2 size={16} /> Sauvegardé !</> : 'Sauvegarder'}
+            </button>
+          </div>
+
+          <div style={{ marginTop: '1.25rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+              URL de l'API DeepSeek (Endpoint)
+            </label>
+            <input
+              type="text"
+              className="input-control"
+              placeholder="https://api.deepseek.com"
+              value={deepseekUrl}
+              onChange={e => setDeepseekUrl(e.target.value)}
+              style={{ fontFamily: 'monospace', fontSize: '0.85rem' }}
+            />
+            <p style={{ marginTop: '0.4rem', fontSize: '0.73rem', color: 'var(--text-muted)' }}>
+              💡 Par défaut : <code>https://api.deepseek.com</code>. Vous pouvez la remplacer par celle de SiliconFlow (<code>https://api.siliconflow.cn</code>) pour profiter de l'offre gratuite.
+            </p>
+          </div>
+
+          {deepseekKey && (
+            <div style={{ marginTop: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.78rem', color: '#00BA7C' }}>✓ Clé DeepSeek configurée — {deepseekKey.slice(0, 10)}...</span>
+              <span style={{ fontSize: '0.75rem', padding: '0.15rem 0.5rem', borderRadius: '99px', background: 'rgba(0,186,124,0.12)', color: '#00BA7C', fontWeight: 600 }}>DeepSeek disponible 🚀</span>
             </div>
           )}
         </div>
