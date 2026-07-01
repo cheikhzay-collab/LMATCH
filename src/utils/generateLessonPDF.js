@@ -232,6 +232,12 @@ const renderMath = (text) => {
     return `<div style="text-align:center;margin:0.5rem 0"><img src="${url}" alt="" style="max-width:100%;max-height:200px;border-radius:8px;object-fit:contain" /></div>`;
   }
 
+  // SVG shorthand (for physics/chemistry curves, graphs, and schemas)
+  if (repaired.trim().startsWith('svg:')) {
+    const svgCode = repaired.trim().slice(4).trim();
+    return `<div style="display:flex;justify-content:center;align-items:center;margin:0.5rem 0;width:100%;overflow-x:auto;">${svgCode}</div>`;
+  }
+
   // Normalize line endings & escaped \n → real newlines (outside math blocks only)
   let normalised = repaired.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
   normalised = normalised.split(/(\$\$[\s\S]*?\$\$|\$[\s\S]*?\$)/g)

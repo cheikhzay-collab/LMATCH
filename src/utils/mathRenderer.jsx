@@ -350,6 +350,7 @@ export function renderWithMath(text) {
     );
   }
 
+
   // ── Normalise line endings ──
   // Also convert literal escape sequences "\n" (2-char: backslash + n) → real newline.
   // These appear when astuces are stored/transmitted as JSON-escaped strings.

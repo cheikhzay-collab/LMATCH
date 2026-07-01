@@ -41,9 +41,9 @@ const sanitizeLatexJson = (str) => {
         result += '\\\\';
         i += 2;
       } else if (next === 'n') {
-        // Check if it's a LaTeX command starting with \n (like \nu, \neq, \neg, \nearrow, \nabla)
+        // Check if it's a LaTeX command starting with \n (like \nu, \neq, \neg, \nearrow, \nabla, \notin, \nexists, \norm, etc.)
         const rest = str.slice(i + 2, i + 12); // lookahead
-        if (/^(u|eq|eg|earrow|abla|onumber|ewline)([^a-zA-Z]|$)/.test(rest)) {
+        if (/^(u|eq|eg|earrow|abla|onumber|ewline|otin|exists|orm|mid|cong|sim|parallel|subseteq|supseteq|left|right)([^a-zA-Z]|$)/i.test(rest)) {
           result += '\\\\';
           i += 1;
         } else {
@@ -60,6 +60,220 @@ const sanitizeLatexJson = (str) => {
     }
   }
   return result;
+};
+
+// Repair truncated JSON by closing open braces/brackets
+const repairTruncatedJson = (s) => {
+  if (!s) return s;
+  s = s.replace(/,\s*$/, '');
+  const stack = [];
+  let inString = false;
+  let escaped = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === '\\' && inString) { escaped = true; continue; }
+    if (c === '"') { inString = !inString; continue; }
+    if (!inString) {
+      if (c === '{') stack.push('}');
+      else if (c === '[') stack.push(']');
+      else if (c === '}' || c === ']') stack.pop();
+    }
+  }
+  if (inString) s += '"';
+  while (stack.length > 0) s += stack.pop();
+  return s;
+};
+
+// Escape literal newlines inside JSON string values to prevent JSON.parse syntax errors
+const escapeLiteralNewlinesInJson = (str) => {
+  let inString = false;
+  let escaped = false;
+  let result = '';
+  for (let i = 0; i < str.length; i++) {
+    const char = str[i];
+    if (escaped) {
+      result += char;
+      escaped = false;
+      continue;
+    }
+    if (char === '\\') {
+      result += char;
+      escaped = true;
+      continue;
+    }
+    if (char === '"') {
+      inString = !inString;
+      result += char;
+      continue;
+    }
+    if (inString && (char === '\n' || char === '\r')) {
+      if (char === '\n') {
+        result += '\\n';
+      }
+      continue;
+    }
+    result += char;
+  }
+  return result;
+};
+
+// Extract JSON object/array from a string that may contain markdown fences or leading text
+const extractJsonFromText = (str) => {
+  if (!str) return str;
+  let s = str.trim();
+  s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/i, '').trim();
+  const firstBrace = s.indexOf('{');
+  const firstBracket = s.indexOf('[');
+  let start = -1;
+  if (firstBrace === -1 && firstBracket === -1) return s;
+  if (firstBrace === -1) start = firstBracket;
+  else if (firstBracket === -1) start = firstBrace;
+  else start = Math.min(firstBrace, firstBracket);
+  const openChar = s[start];
+  const closeChar = openChar === '{' ? '}' : ']';
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  let end = -1;
+  for (let i = start; i < s.length; i++) {
+    const c = s[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === '\\' && inString) { escaped = true; continue; }
+    if (c === '"') { inString = !inString; continue; }
+    if (!inString) {
+      if (c === openChar) depth++;
+      else if (c === closeChar) {
+        depth--;
+        if (depth === 0) { end = i; break; }
+      }
+    }
+  }
+  if (end !== -1) return s.slice(start, end + 1);
+  return s.slice(start);
+};
+
+// Helper for brace tracking to extract objects
+const extractObjectsBraceTracking = (text) => {
+  const results = [];
+  let i = 0, depth = 0, objStart = -1;
+  let inStr = false, esc = false;
+  while (i < text.length) {
+    const c = text[i];
+    if (esc) { esc = false; }
+    else if (c === '\\' && inStr) { esc = true; }
+    else if (c === '"') { inStr = !inStr; }
+    else if (!inStr) {
+      if (c === '{') { if (depth++ === 0) objStart = i; }
+      else if (c === '}') {
+        if (--depth === 0 && objStart !== -1) {
+          try { 
+            const parsedObj = JSON.parse(text.slice(objStart, i + 1));
+            results.push(parsedObj); 
+          } catch { /* skip malformed */ }
+          objStart = -1;
+        }
+      }
+    }
+    i++;
+  }
+  return results;
+};
+
+// Helper to extract questions array from parsed JSON
+const extractQuestionsArray = (parsed) => {
+  if (Array.isArray(parsed)) return parsed;
+  if (typeof parsed === 'object' && parsed !== null) {
+    if (parsed.questions && Array.isArray(parsed.questions)) return parsed.questions;
+    if (parsed.items && Array.isArray(parsed.items)) return parsed.items;
+    for (const key in parsed) {
+      if (Array.isArray(parsed[key])) {
+        return parsed[key];
+      }
+    }
+    if (parsed.question || parsed.question_number) {
+      return [parsed];
+    }
+  }
+  return null;
+};
+
+// Bulletproof parser pipeline
+const parseAiJson = (rawText) => {
+  if (!rawText) throw new Error("Aucun contenu textuel reçu de l'IA.");
+
+  let cleanText = rawText.trim();
+  if (cleanText.includes('</think>')) {
+    cleanText = cleanText.split('</think>').pop().trim();
+  }
+
+  // Strategy 1: Direct JSON parsing
+  try {
+    const parsed = JSON.parse(cleanText);
+    const res = extractQuestionsArray(parsed);
+    if (res) return res;
+  } catch (e) {
+    console.warn("[JSON Parse] Strategy 1 (Direct) failed:", e.message);
+  }
+
+  // Strategy 2: Extract JSON matching brace structure
+  let extracted = extractJsonFromText(cleanText);
+
+  // Strategy 3: Direct parse of extracted
+  try {
+    const parsed = JSON.parse(extracted);
+    const res = extractQuestionsArray(parsed);
+    if (res) return res;
+  } catch (e) {
+    console.warn("[JSON Parse] Strategy 3 (Extracted) failed:", e.message);
+  }
+
+  // Strategy 4: Try with literal newlines escaped
+  try {
+    const escaped = escapeLiteralNewlinesInJson(extracted);
+    const parsed = JSON.parse(escaped);
+    const res = extractQuestionsArray(parsed);
+    if (res) return res;
+  } catch (e) {
+    console.warn("[JSON Parse] Strategy 4 (Escaped newlines) failed:", e.message);
+  }
+
+  // Strategy 5: Try with LaTeX sanitized + newlines escaped
+  try {
+    const sanitized = sanitizeLatexJson(extracted);
+    const escaped = escapeLiteralNewlinesInJson(sanitized);
+    const parsed = JSON.parse(escaped);
+    const res = extractQuestionsArray(parsed);
+    if (res) return res;
+  } catch (e) {
+    console.warn("[JSON Parse] Strategy 5 (LaTeX sanitized) failed:", e.message);
+  }
+
+  // Strategy 6: Try with truncation repair
+  try {
+    const sanitized = sanitizeLatexJson(extracted);
+    const escaped = escapeLiteralNewlinesInJson(sanitized);
+    const repaired = repairTruncatedJson(escaped);
+    const parsed = JSON.parse(repaired);
+    const res = extractQuestionsArray(parsed);
+    if (res) return res;
+  } catch (e) {
+    console.warn("[JSON Parse] Strategy 6 (Truncation repaired) failed:", e.message);
+  }
+
+  // Strategy 7: Fallback: Brace tracking objects search
+  try {
+    const sanitized = sanitizeLatexJson(extracted);
+    const escaped = escapeLiteralNewlinesInJson(sanitized);
+    const objects = extractObjectsBraceTracking(escaped);
+    if (objects && objects.length > 0) {
+      return objects;
+    }
+  } catch (e) {
+    console.warn("[JSON Parse] Strategy 7 (Brace tracking) failed:", e.message);
+  }
+
+  throw new Error("Erreur de parsing : réponse reçue de l'IA mais JSON invalide ou incomplet. Réessayez.");
 };
 
 
@@ -515,29 +729,7 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
 
     const data = await res.json();
     const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-    if (!rawText) {
-      throw new Error("Gemini n'a renvoyé aucun texte ou la génération a été bloquée.");
-    }
-
-    try {
-      return JSON.parse(rawText.trim());
-    } catch (directErr) {
-      console.warn("[JSON Parse] Direct parse failed, trying sanitization...", directErr);
-      const cleanRawText = sanitizeLatexJson(rawText.trim());
-      try {
-        return JSON.parse(cleanRawText);
-      } catch (err) {
-        const jsonMatch = cleanRawText.match(/\[[\s\S]*/);
-        if (jsonMatch) {
-          try {
-            return JSON.parse(jsonMatch[0]);
-          } catch (e) {
-            throw new Error(`Erreur lors du décodage du JSON de Gemini : ${err.message}`, { cause: e });
-          }
-        }
-        throw new Error(`Erreur lors du décodage du JSON de Gemini : ${err.message}`, { cause: err });
-      }
-    }
+    return parseAiJson(rawText);
   };
 
   // Stream PDF to Claude using SSE streaming API
@@ -637,62 +829,7 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
       }
     }
 
-    // ── Robust multi-strategy JSON parser ──────────────────────────────
-    const jsonMatch = accumulated.match(/\[[\s\S]*/);
-    if (!jsonMatch) throw new Error('Aucune donnée JSON trouvée dans la réponse de Claude.');
-    const rawJson = jsonMatch[0];
-
-    const cleanJson = sanitizeLatexJson(rawJson);
-
-    // Strategy 1: direct parse
-    try { return JSON.parse(cleanJson); } catch { /* try next */ }
-
-    // Strategy 2: truncation repair (remove incomplete last object)
-    const repairTruncated = (str) => {
-      const last = str.lastIndexOf('}');
-      if (last === -1) throw new Error('JSON incomplet: aucun objet complet.');
-      return str.slice(0, last + 1).replace(/,\s*$/, '') + ']';
-    };
-    try { return JSON.parse(repairTruncated(cleanJson)); } catch { /* try next */ }
-
-    // Strategy 3: brace-tracking object-by-object extraction
-    // Correctly handles LaTeX { } and quotes inside strings
-    const extractObjects = (text) => {
-      const results = [];
-      let i = 0, depth = 0, objStart = -1;
-      let inStr = false, esc = false;
-      while (i < text.length) {
-        const c = text[i];
-        if (esc) { esc = false; }
-        else if (c === '\\' && inStr) { esc = true; }
-        else if (c === '"') { inStr = !inStr; }
-        else if (!inStr) {
-          if (c === '{') { if (depth++ === 0) objStart = i; }
-          else if (c === '}') {
-            if (--depth === 0 && objStart !== -1) {
-              try { results.push(JSON.parse(text.slice(objStart, i + 1))); } catch { /* skip malformed */ }
-              objStart = -1;
-            }
-          }
-        }
-        i++;
-      }
-      return results;
-    };
-    const extracted = extractObjects(cleanJson);
-    if (extracted.length > 0) return extracted;
-
-    // Strategy 4: sanitize control chars then re-parse
-    /* eslint-disable no-control-regex */
-    const sanitized = cleanJson
-      .replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, '') // strip control chars except \n
-      .replace(/\n/g, '\\n')
-      .replace(/,\s*([\]}])/g, '$1');
-    /* eslint-enable no-control-regex */
-    try { return JSON.parse(sanitized); } catch { /* give up */ }
-    try { return JSON.parse(repairTruncated(sanitized)); } catch { /* give up */ }
-
-    throw new Error(`Erreur de parsing: réponse reçue (${rawJson.length} car.) mais JSON invalide. Réessayez.`);
+    return parseAiJson(accumulated);
   };
 
   // Extract text from specified pages of the PDF file
@@ -719,11 +856,16 @@ Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le
 - Les questions QCM à extraire se trouvent dans les données sous TEXTE DES QUESTIONS.
 - Les réponses correctes ou les pages de correction se trouvent sous TEXTE DU CORRIGÉ.
 
-Tu devez :
+Tu dois :
 1. Parcourir les questions se trouvant sous TEXTE DES QUESTIONS.
 2. Pour chaque question, trouver la réponse officielle correspondante sous TEXTE DU CORRIGÉ. Ne résous pas la question toi-même si elle est présente dans le corrigé, extrait strictement la réponse indiquée dans la grille ou le texte de correction (A, B, C, D ou E).
 3. Remplir le champ "correct_answer" avec la lettre correspondante de la grille de correction.
 4. Remplir le champ "astuce" en résumant l'explication/justification du corrigé officiel de la question pour aider l'élève à comprendre.
+
+⚠️ EXIGENCE DE SÉCURITÉ DE L'INFORMATION ET RIGUEUR :
+Tu dois extraire les questions et les choix de réponses EXACTEMENT telles qu'elles sont écrites dans le document original, sans aucune modification de texte, sans correction d'erreurs, sans traduction et sans reformulation.
+Pour les réponses correctes (field 'correct_answer'), tu dois STRICTEMENT extraire la lettre de réponse depuis le texte du corrigé ou de la grille de correction. N'essaye pas de résoudre la question toi-même et ne change pas la réponse officielle sous aucun prétexte, même si tu penses qu'elle est fausse ou incomplète. Extrais la réponse telle qu'elle est indiquée dans le corrigé/grille.
+Pour le champ 'astuce', extrais/résume l'explication officielle fournie dans le document sous TEXTE DU CORRIGÉ, sans inventer ta propre explication.
 
 TEXTE DES QUESTIONS:
 ${pdfText}
@@ -782,48 +924,7 @@ ${pdfText}
 
     const data = await res.json();
     let rawText = data?.choices?.[0]?.message?.content;
-    if (!rawText) {
-      throw new Error("DeepSeek n'a renvoyé aucun texte.");
-    }
-
-    // Strip thoughts tags <think>...</think> if generated by DeepSeek-R1 (deepseek-reasoner)
-    if (rawText.includes('</think>')) {
-      rawText = rawText.split('</think>').pop().trim();
-    }
-
-    const cleanJson = sanitizeLatexJson(rawText.trim());
-
-    // Try parsing
-    try {
-      const parsed = JSON.parse(cleanJson);
-      if (Array.isArray(parsed)) return parsed;
-      if (parsed.questions && Array.isArray(parsed.questions)) return parsed.questions;
-      if (parsed.items && Array.isArray(parsed.items)) return parsed.items;
-      if (parsed.question) return [parsed];
-    } catch {
-      const jsonMatch = cleanJson.match(/\[[\s\S]*/);
-      if (jsonMatch) {
-        try {
-          const parsed = JSON.parse(jsonMatch[0]);
-          if (Array.isArray(parsed)) return parsed;
-          if (parsed.questions && Array.isArray(parsed.questions)) return parsed.questions;
-          return parsed;
-        } catch (e) {
-          const last = cleanJson.lastIndexOf('}');
-          if (last !== -1) {
-            try {
-              const repaired = cleanJson.slice(0, last + 1).replace(/,\s*$/, '') + ']';
-              const parsed = JSON.parse(repaired);
-              if (Array.isArray(parsed)) return parsed;
-              if (parsed.questions && Array.isArray(parsed.questions)) return parsed.questions;
-              return parsed;
-            } catch {}
-          }
-        }
-      }
-    }
-
-    throw new Error("Erreur de parsing : réponse reçue de DeepSeek mais JSON invalide. Réessayez.");
+    return parseAiJson(rawText);
   };
 
   const handleAnalyze = async () => {

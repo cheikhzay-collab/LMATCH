@@ -4,9 +4,9 @@
  */
 
 export function initFacebookPixel() {
-  const pixelId = import.meta.env.VITE_FACEBOOK_PIXEL_ID;
+  const pixelId = localStorage.getItem('facebook_pixel_id') || import.meta.env.VITE_FACEBOOK_PIXEL_ID;
   if (!pixelId) {
-    console.warn("[Facebook Pixel] Missing VITE_FACEBOOK_PIXEL_ID in environment variables. Tracking is disabled.");
+    console.warn("[Facebook Pixel] Missing Pixel ID in localStorage or VITE_FACEBOOK_PIXEL_ID in environment variables. Tracking is disabled.");
     return;
   }
 

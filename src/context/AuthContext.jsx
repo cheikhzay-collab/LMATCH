@@ -319,6 +319,7 @@ export function AuthProvider({ children }) {
   const [bankName, setBankName] = useState(() => localStorage.getItem('bankName') || 'CIH Bank (Maroc)');
   const [bankRIB, setBankRIB] = useState(() => localStorage.getItem('bankRIB') || '230 780 4567890123 0001 89');
   const [bankBeneficiary, setBankBeneficiary] = useState(() => localStorage.getItem('bankBeneficiary') || "L'CONQ SARL");
+  const [facebookPixelId, setFacebookPixelId] = useState(() => localStorage.getItem('facebook_pixel_id') || '');
 
   const updateBrandingConfig = async (branding) => {
     const name = sanitizeInputString(branding.profName || '').trim();
@@ -327,6 +328,7 @@ export function AuthProvider({ children }) {
     const bName = sanitizeInputString(branding.bankName || 'CIH Bank (Maroc)').trim();
     const bRIB = sanitizeInputString(branding.bankRIB || '230 780 4567890123 0001 89').trim();
     const bBeneficiary = sanitizeInputString(branding.bankBeneficiary || "L'CONQ SARL").trim();
+    const pixelId = sanitizeInputString(branding.fbPixelId || '').trim();
 
     if (phone && !validatePhoneNumber(phone)) {
       console.warn('[Security] Invalid phone format in updateBrandingConfig.');
@@ -338,6 +340,7 @@ export function AuthProvider({ children }) {
     setBankName(bName);
     setBankRIB(bRIB);
     setBankBeneficiary(bBeneficiary);
+    setFacebookPixelId(pixelId);
 
     localStorage.setItem('profName', name);
     localStorage.setItem('profPhone', phone);
@@ -345,6 +348,14 @@ export function AuthProvider({ children }) {
     localStorage.setItem('bankName', bName);
     localStorage.setItem('bankRIB', bRIB);
     localStorage.setItem('bankBeneficiary', bBeneficiary);
+    localStorage.setItem('facebook_pixel_id', pixelId);
+
+    // Dynamic Pixel re-init on settings update
+    if (pixelId && window.fbq) {
+      window.fbq('init', pixelId);
+    } else if (pixelId && !window.fbq) {
+      import('../utils/facebookPixel').then(m => m.initFacebookPixel());
+    }
 
     if (SUPABASE_ENABLED) {
       try {
@@ -354,7 +365,8 @@ export function AuthProvider({ children }) {
           profSite: site,
           bankName: bName,
           bankRIB: bRIB,
-          bankBeneficiary: bBeneficiary
+          bankBeneficiary: bBeneficiary,
+          fbPixelId: pixelId
         });
       } catch (e) {
         console.error('[Supabase] Failed to save branding config:', e);
@@ -1916,6 +1928,7 @@ export function AuthProvider({ children }) {
           setBankName(brandConfig.bankName || 'CIH Bank (Maroc)');
           setBankRIB(brandConfig.bankRIB || '230 780 4567890123 0001 89');
           setBankBeneficiary(brandConfig.bankBeneficiary || "L'CONQ SARL");
+          setFacebookPixelId(brandConfig.fbPixelId || '');
 
           localStorage.setItem('profName', brandConfig.profName || '');
           localStorage.setItem('profPhone', brandConfig.profPhone || '');
@@ -1923,6 +1936,11 @@ export function AuthProvider({ children }) {
           localStorage.setItem('bankName', brandConfig.bankName || 'CIH Bank (Maroc)');
           localStorage.setItem('bankRIB', brandConfig.bankRIB || '230 780 4567890123 0001 89');
           localStorage.setItem('bankBeneficiary', brandConfig.bankBeneficiary || "L'CONQ SARL");
+          localStorage.setItem('facebook_pixel_id', brandConfig.fbPixelId || '');
+
+          if (brandConfig.fbPixelId) {
+            import('../utils/facebookPixel').then(m => m.initFacebookPixel());
+          }
         } else {
           // Seed if not exists in DB
           try {
@@ -2415,7 +2433,7 @@ export function AuthProvider({ children }) {
       syncStudentsList,
       trackDownload,
       loading,
-      profName, profPhone, profSite, bankName, bankRIB, bankBeneficiary, updateBrandingConfig, updateFlashcardSettingsConfig, updatePdfSettingsConfig, updateOmrScannerSettingsConfig,
+      profName, profPhone, profSite, bankName, bankRIB, bankBeneficiary, facebookPixelId, updateBrandingConfig, updateFlashcardSettingsConfig, updatePdfSettingsConfig, updateOmrScannerSettingsConfig,
       whatsappSettings, updateWhatsAppSettingsConfig,
       upgradedPlan, setUpgradedPlan,
       isOnline,

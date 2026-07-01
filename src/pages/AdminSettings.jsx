@@ -13,6 +13,7 @@ export default function AdminSettings() {
     bankName: initialBankName,
     bankRIB: initialBankRIB,
     bankBeneficiary: initialBankBeneficiary,
+    facebookPixelId: initialFacebookPixelId,
     updateBrandingConfig,
     updateFlashcardSettingsConfig,
     updatePdfSettingsConfig,
@@ -106,6 +107,7 @@ export default function AdminSettings() {
   const [bankName, setBankName] = useState(initialBankName || 'CIH Bank (Maroc)');
   const [bankRIB, setBankRIB] = useState(initialBankRIB || '230 780 4567890123 0001 89');
   const [bankBeneficiary, setBankBeneficiary] = useState(initialBankBeneficiary || "L'CONQ SARL");
+  const [fbPixelId, setFbPixelId] = useState(initialFacebookPixelId || '');
   const [brandSaved, setBrandSaved] = useState(false);
 
   // OMR Scanner Settings
@@ -150,8 +152,9 @@ export default function AdminSettings() {
       if (initialBankName !== undefined) setBankName(initialBankName);
       if (initialBankRIB !== undefined) setBankRIB(initialBankRIB);
       if (initialBankBeneficiary !== undefined) setBankBeneficiary(initialBankBeneficiary);
+      if (initialFacebookPixelId !== undefined) setFbPixelId(initialFacebookPixelId);
     });
-  }, [initialProfName, initialProfPhone, initialProfSite, initialBankName, initialBankRIB, initialBankBeneficiary]);
+  }, [initialProfName, initialProfPhone, initialProfSite, initialBankName, initialBankRIB, initialBankBeneficiary, initialFacebookPixelId]);
 
   const saveBranding = async () => {
     await updateBrandingConfig({
@@ -160,7 +163,8 @@ export default function AdminSettings() {
       profSite: profSite.trim() || 'www.lconq.ma',
       bankName: bankName.trim(),
       bankRIB: bankRIB.trim(),
-      bankBeneficiary: bankBeneficiary.trim()
+      bankBeneficiary: bankBeneficiary.trim(),
+      fbPixelId: fbPixelId.trim()
     });
     setBrandSaved(true);
     setTimeout(() => setBrandSaved(false), 2500);
@@ -1129,10 +1133,10 @@ export default function AdminSettings() {
         {/* ── Branding / Identity ── */}
         <div className="col-span-12 glass-panel" style={{ display: activeTab === 'general' ? 'block' : 'none' }}>
           <h3 style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            🎨 Identité & Branding PDF
+            🎨 Identité, Branding & Facebook Pixel
           </h3>
           <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-            Ces informations apparaissent dans l'en-tête et le pied-de-page de tous les PDF générés (E-Books, Sujets, Corrigés).
+            Ces informations configurent l'identité visuelle de votre plateforme, de vos exports PDF et le Pixel de suivi publicitaire.
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
             <div>
@@ -1147,6 +1151,20 @@ export default function AdminSettings() {
               <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>Site web / URL QR</label>
               <input className="input-control" placeholder="www.lconq.ma" value={profSite} onChange={e => setProfSite(e.target.value)} />
             </div>
+          </div>
+          <div style={{ marginTop: '1rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem', marginBottom: '1rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.45rem', fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>ID du Pixel Facebook (Facebook Pixel ID)</label>
+            <input 
+              type="text" 
+              className="input-control" 
+              placeholder="Ex: 123456789012345" 
+              value={fbPixelId} 
+              onChange={e => setFbPixelId(e.target.value)} 
+              style={{ fontFamily: 'monospace', maxWidth: '380px' }}
+            />
+            <p style={{ marginTop: '0.35rem', fontSize: '0.73rem', color: 'var(--text-subtle)', lineHeight: 1.3 }}>
+              💡 Permet de suivre les visites et les conversions de vos étudiants (ex: le trafic d'inscription) pour optimiser vos campagnes publicitaires Facebook Ads.
+            </p>
           </div>
           
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem', marginTop: '1rem', borderTop: '1px dashed var(--border)', paddingTop: '1rem' }}>

@@ -6,7 +6,7 @@ import {
   CheckCircle2, Lightbulb, Zap, Upload, Trash2,
   Plus, Eye, Lock, Unlock, AlertCircle,
   ChevronLeft, ChevronRight, X, Layers, Download, FileUp,
-  ChevronUp, ChevronDown
+  ChevronUp, ChevronDown, Sparkles
 } from 'lucide-react';
 import { renderWithMath } from '../utils/mathRenderer';
 import { uploadAsset } from '../services/storageService';
@@ -107,6 +107,48 @@ function CardPreview({ question, side, onFlip }) {
             }}>
               <BrainCircuit size={9} /> {q.topic || q.subject || 'Général'}
             </span>
+
+            {/* Context Box */}
+            {q.context && (
+              <div style={{
+                padding: '0.5rem 0.75rem',
+                borderLeft: '3px solid var(--violet)',
+                background: 'var(--bg-glass)',
+                borderRadius: '0 8px 8px 0',
+                fontSize: '0.8rem',
+                color: 'var(--text-muted)',
+                marginBottom: '0.8rem',
+                lineHeight: 1.5
+              }}>
+                <span style={{ fontWeight: 800, display: 'block', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 2 }}>Contexte / Énoncé commun</span>
+                {renderWithMath(q.context)}
+                {(q.imagePosition === 'in_context' || q.imagePosition === 'context') && (() => {
+                  const sizeH = {
+                    small: 90,
+                    medium: 150,
+                    large: 220,
+                    xlarge: 320
+                  }[q.imageSize || 'medium'];
+                  return q.image && (
+                    <div style={{
+                      borderRadius: 10, overflow: 'hidden',
+                      border: { transparent: 'none', white: '1px solid #e2e8f0', dark: '1px solid rgba(255,255,255,0.08)' }[q.imageBg || 'transparent'],
+                      background: { transparent: 'transparent', white: '#ffffff', dark: '#121214' }[q.imageBg || 'transparent'],
+                      padding: q.imageBg === 'transparent' ? 0 : '0.4rem', 
+                      display: 'flex', justifyContent: 'center', alignItems: 'center',
+                      flexShrink: 0, height: sizeH, width: '100%', marginTop: '0.6rem'
+                    }}>
+                      {q.image.startsWith('svg:') ? (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: q.image.slice(4) }} />
+                      ) : (
+                        <img src={q.image} alt="Figure" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
+
             {(() => {
               const pos = q.imagePosition || 'below_statement';
               const sizeH = {
@@ -116,7 +158,9 @@ function CardPreview({ question, side, onFlip }) {
                 xlarge: 320
               }[q.imageSize || 'medium'];
 
-              const imageEl = q.image && (
+              const showOnFront = pos !== 'in_context' && pos !== 'context' && pos !== 'in_correction' && pos !== 'below_options';
+
+              const imageEl = q.image && showOnFront && (
                 <div style={{
                   borderRadius: 10, overflow: 'hidden',
                   border: {
@@ -135,7 +179,14 @@ function CardPreview({ question, side, onFlip }) {
                   marginBottom: pos === 'side_by_side' ? 0 : '0.85rem',
                   marginTop: pos === 'below_statement' ? '0.85rem' : 0
                 }}>
-                  <img src={q.image} alt="Figure" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  {q.image.startsWith('svg:') ? (
+                    <div 
+                      style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }} 
+                      dangerouslySetInnerHTML={{ __html: q.image.slice(4) }} 
+                    />
+                  ) : (
+                    <img src={q.image} alt="Figure" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  )}
                 </div>
               );
 
@@ -188,6 +239,30 @@ function CardPreview({ question, side, onFlip }) {
                 );
               })}
             </div>
+            {q.imagePosition === 'below_options' && (() => {
+              const sizeH = {
+                small: 90,
+                medium: 150,
+                large: 220,
+                xlarge: 320
+              }[q.imageSize || 'medium'];
+              return q.image && (
+                <div style={{
+                  borderRadius: 10, overflow: 'hidden',
+                  border: { transparent: 'none', white: '1px solid #e2e8f0', dark: '1px solid rgba(255,255,255,0.08)' }[q.imageBg || 'transparent'],
+                  background: { transparent: 'transparent', white: '#ffffff', dark: '#121214' }[q.imageBg || 'transparent'],
+                  padding: q.imageBg === 'transparent' ? 0 : '0.4rem', 
+                  display: 'flex', justifyContent: 'center', alignItems: 'center',
+                  flexShrink: 0, height: sizeH, width: '100%', marginTop: '0.85rem'
+                }}>
+                  {q.image.startsWith('svg:') ? (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: q.image.slice(4) }} />
+                  ) : (
+                    <img src={q.image} alt="Figure" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                  )}
+                </div>
+              );
+            })()}
           </>
         ) : (
           <>
@@ -208,6 +283,30 @@ function CardPreview({ question, side, onFlip }) {
                 </div>
                 <div style={{ fontSize: '0.78rem', padding: '0.4rem 0.6rem', borderLeft: '2px solid var(--violet)', background: 'rgba(124,58,237,0.05)', borderRadius: '0 6px 6px 0' }}>
                   {renderWithMath(q.astuce)}
+                  {q.imagePosition === 'in_correction' && (() => {
+                    const sizeH = {
+                      small: 90,
+                      medium: 150,
+                      large: 220,
+                      xlarge: 320
+                    }[q.imageSize || 'medium'];
+                    return q.image && (
+                      <div style={{
+                        borderRadius: 10, overflow: 'hidden',
+                        border: { transparent: 'none', white: '1px solid #e2e8f0', dark: '1px solid rgba(255,255,255,0.08)' }[q.imageBg || 'transparent'],
+                        background: { transparent: 'transparent', white: '#ffffff', dark: '#121214' }[q.imageBg || 'transparent'],
+                        padding: q.imageBg === 'transparent' ? 0 : '0.4rem', 
+                        display: 'flex', justifyContent: 'center', alignItems: 'center',
+                        flexShrink: 0, height: sizeH, width: '100%', marginTop: '0.6rem'
+                      }}>
+                        {q.image.startsWith('svg:') ? (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: q.image.slice(4) }} />
+                        ) : (
+                          <img src={q.image} alt="Figure" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
             )}
@@ -258,6 +357,7 @@ export default function AdminExamEdit() {
   const [saved, setSaved] = useState(false);
   const [hasUnsaved, setHasUnsaved] = useState(false);
   const [isUploadingImg, setIsUploadingImg] = useState(false);
+  const [isGeneratingAiFigure, setIsGeneratingAiFigure] = useState(false);
 
   const [editName, setEditName] = useState('');
   const [editSchool, setEditSchool] = useState('');
@@ -362,6 +462,100 @@ export default function AdminExamEdit() {
       return { ...q, options: opts };
     }));
     markDirty();
+  };
+
+  const handleGenerateFigureWithAi = async () => {
+    const apiKey = localStorage.getItem('geminiApiKey');
+    if (!apiKey) {
+      alert("Clé API Gemini manquante. Veuillez configurer votre clé API dans les Paramètres de l'importateur IA ou dans l'application.");
+      return;
+    }
+
+    setIsGeneratingAiFigure(true);
+
+    try {
+      const model = localStorage.getItem('geminiModel') || 'gemini-2.5-flash';
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+      const prompt = `Tu es un expert en conception de figures scientifiques vectorielles en SVG pour des QCM de mathématiques, physique et chimie.
+Voici la question pour laquelle tu dois concevoir une figure/illustration :
+Sujet/Thème: ${q.topic || q.subject || 'Général'}
+Énoncé: ${q.question}
+Options possibles: ${q.options.map(opt => typeof opt === 'string' ? opt : opt.id + ') ' + opt.text).join(' | ')}
+Explication: ${q.astuce || ''}
+
+Tu dois analyser la question et :
+1. Déterminer si la question nécessite RÉELLEMENT une figure scientifique (comme un graphe de courbe, un schéma de montage électrique, ou une figure géométrique). Si la question est purement textuelle ou calculatoire (sans référence à des courbes, circuits ou géométrie spécifique), tu dois renvoyer STRICTEMENT et UNIQUEMENT le texte : "NO_ILLUSTRATION_REQUIRED" (sans aucun autre texte autour).
+2. Ne génère JAMAIS d'illustrations symboliques, décoratives ou hors-sujet (comme un chapeau de diplômé, une ampoule d'idée, ou un logo abstrait).
+3. Si une figure scientifique est nécessaire, génère uniquement le code SVG brut de celle-ci (sans texte d'introduction/conclusion, et sans bloc de code markdown). Les dimensions doivent être adaptées, utilise viewBox="0 0 400 240" ou similaire.
+4. IMPORTANT: Pour le texte, les axes et les grilles du SVG, utilise stroke="currentColor" et fill="currentColor" (ainsi ils s'adapteront automatiquement au mode sombre et clair du site). Pour les courbes et éléments physiques importants, utilise des couleurs vives (ex: #7c3aed, #10b981, #f59e0b).`;
+
+      const payload = {
+        contents: [
+          {
+            parts: [
+              {
+                text: prompt
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          temperature: 0.1
+        }
+      };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || ("Erreur API Gemini " + res.status));
+      }
+
+      const data = await res.json();
+      let rawSvg = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!rawSvg) {
+        throw new Error("Aucun contenu généré.");
+      }
+
+      rawSvg = rawSvg.trim();
+      
+      // Check if AI determined that no illustration is required
+      if (rawSvg.toUpperCase().includes("NO_ILLUSTRATION_REQUIRED")) {
+        alert("Cette question n'a pas besoin de figure d'après l'analyse de l'IA (question textuelle/calculatoire simple).");
+        setIsGeneratingAiFigure(false);
+        return;
+      }
+
+      // Clean up any markdown blocks if generated
+      if (rawSvg.startsWith('```')) {
+        rawSvg = rawSvg.replace(/^```(?:xml|svg|html)?\s*/i, '').replace(/```\s*$/i, '').trim();
+      }
+
+      // Ensure it starts with <svg
+      const svgStart = rawSvg.indexOf('<svg');
+      if (svgStart === -1) {
+        throw new Error("L'IA n'a pas retourné de code SVG valide. Veuillez réessayer.");
+      }
+      rawSvg = rawSvg.slice(svgStart);
+
+      // Update the question's image property with the svg: prefix
+      updateQField(selectedIdx, 'image', 'svg:' + rawSvg);
+      updateQField(selectedIdx, 'imagePosition', 'below_statement');
+      updateQField(selectedIdx, 'imageSize', 'large');
+      updateQField(selectedIdx, 'imageBg', 'transparent');
+      
+    } catch (err) {
+      alert("Erreur lors de la génération de la figure : " + err.message);
+    } finally {
+      setIsGeneratingAiFigure(false);
+    }
   };
 
   const insertLatex = (textareaId, latex, field) => {
@@ -1068,6 +1262,44 @@ export default function AdminExamEdit() {
                               style={{ padding: '0.38rem 0.85rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: 5, cursor: isUploadingImg ? 'not-allowed' : 'pointer', margin: 0, borderRadius: 8, opacity: isUploadingImg ? 0.6 : 1 }}>
                               <Upload size={12} /> {isUploadingImg ? 'Envoi...' : q.image ? 'Remplacer' : "Importer"}
                             </label>
+
+                            <button
+                              type="button"
+                              onClick={handleGenerateFigureWithAi}
+                              disabled={isGeneratingAiFigure || !q.question}
+                              className="btn"
+                              style={{
+                                padding: '0.38rem 0.85rem',
+                                fontSize: '0.72rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 5,
+                                cursor: (isGeneratingAiFigure || !q.question) ? 'not-allowed' : 'pointer',
+                                margin: 0,
+                                borderRadius: 8,
+                                opacity: (isGeneratingAiFigure || !q.question) ? 0.6 : 1,
+                                background: 'linear-gradient(135deg, var(--violet), #6366f1)',
+                                border: 'none',
+                                color: '#fff',
+                                fontWeight: 700
+                              }}
+                            >
+                              {isGeneratingAiFigure ? (
+                                <>
+                                  <span style={{
+                                    display: 'inline-block', width: 10, height: 10,
+                                    border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff',
+                                    borderRadius: '50%', animation: 'spin 0.7s linear infinite', flexShrink: 0
+                                  }} />
+                                  Génération...
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles size={12} /> Générer avec l'IA
+                                </>
+                              )}
+                            </button>
+
                             {q.image && (
                               <button type="button" onClick={() => { 
                                 updateQField(selectedIdx, 'image', null); 
@@ -1083,7 +1315,14 @@ export default function AdminExamEdit() {
                         </div>
                         {q.image && (
                           <div style={{ width: 120, height: 80, borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)', background: '#000', flexShrink: 0 }}>
-                            <img src={q.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            {q.image.startsWith('svg:') ? (
+                              <div 
+                                style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden', padding: '4px' }} 
+                                dangerouslySetInnerHTML={{ __html: q.image.slice(4) }} 
+                              />
+                            ) : (
+                              <img src={q.image} alt="Preview" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                            )}
                           </div>
                         )}
                       </div>
@@ -1100,6 +1339,9 @@ export default function AdminExamEdit() {
                               <option value="below_statement">Sous l'énoncé (Défaut)</option>
                               <option value="above_statement">Au-dessus de l'énoncé</option>
                               <option value="side_by_side">Côte à côte (Énoncé à gauche, Image à droite)</option>
+                              <option value="in_context">Dans le texte d'introduction (Contexte)</option>
+                              <option value="below_options">Sous les choix de réponse (Options)</option>
+                              <option value="in_correction">Dans l'explication (Correction/Astuce)</option>
                             </select>
                           </div>
                           <div>

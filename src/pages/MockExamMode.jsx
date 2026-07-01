@@ -410,6 +410,29 @@ export default function MockExamMode() {
                 fontFamily: "'Computer Modern Serif', 'STIX Two Text', Georgia, serif"
               }}>
                 {renderWithMath(currentQuestion.context)}
+                {(currentQuestion.imagePosition === 'in_context' || currentQuestion.imagePosition === 'context') && currentQuestion.image && (
+                  <div style={{ 
+                    borderRadius: '10px', 
+                    overflow: 'hidden', 
+                    border: { transparent: 'none', white: '1px solid #e2e8f0', dark: '1px solid rgba(255,255,255,0.08)' }[currentQuestion.imageBg || 'transparent'],
+                    background: { transparent: 'transparent', white: '#ffffff', dark: '#121214' }[currentQuestion.imageBg || 'transparent'],
+                    padding: currentQuestion.imageBg === 'transparent' ? 0 : '0.4rem', 
+                    maxWidth: '100%', 
+                    display: 'flex', 
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    flexShrink: 0,
+                    height: { small: '90px', medium: '150px', large: '220px', xlarge: '320px' }[currentQuestion.imageSize || 'medium'],
+                    width: '100%',
+                    marginTop: '1.25rem'
+                  }}>
+                    {currentQuestion.image.startsWith('svg:') ? (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: currentQuestion.image.slice(4) }} />
+                    ) : (
+                      <img src={currentQuestion.image} alt="Question diagram" style={{ height: '100%', maxWidth: '100%', borderRadius: '6px', objectFit: 'contain', cursor: 'pointer', transition: 'transform 0.2s' }} onClick={() => setSelectedImageZoom(currentQuestion.image)} />
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -442,6 +465,7 @@ export default function MockExamMode() {
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', paddingRight: '4px', marginBottom: '0.5rem' }}>
               {(() => {
                 const pos = currentQuestion.imagePosition || 'below_statement';
+                const showOnFront = pos !== 'in_context' && pos !== 'context' && pos !== 'below_options' && pos !== 'in_correction';
                 const sizeH = {
                   small: '90px',
                   medium: '150px',
@@ -449,7 +473,7 @@ export default function MockExamMode() {
                   xlarge: '320px'
                 }[currentQuestion.imageSize || 'medium'];
 
-                const imageEl = currentQuestion.image && (
+                const imageEl = currentQuestion.image && showOnFront && (
                   <div style={{ 
                     borderRadius: '10px', 
                     overflow: 'hidden', 
@@ -474,22 +498,29 @@ export default function MockExamMode() {
                     marginBottom: pos === 'side_by_side' ? 0 : '1.25rem',
                     marginTop: pos === 'below_statement' ? '1.25rem' : 0
                   }}>
-                    <img 
-                      src={currentQuestion.image} 
-                      alt="Question diagram" 
-                      style={{ 
-                        height: '100%', 
-                        maxWidth: '100%', 
-                        borderRadius: '6px', 
-                        objectFit: 'contain',
-                        cursor: 'pointer',
-                        transition: 'transform 0.2s'
-                      }} 
-                      onClick={() => setSelectedImageZoom(currentQuestion.image)}
-                      title="Cliquez pour agrandir"
-                      onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
-                      onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
-                    />
+                    {currentQuestion.image.startsWith('svg:') ? (
+                      <div 
+                        style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }} 
+                        dangerouslySetInnerHTML={{ __html: currentQuestion.image.slice(4) }} 
+                      />
+                    ) : (
+                      <img 
+                        src={currentQuestion.image} 
+                        alt="Question diagram" 
+                        style={{ 
+                          height: '100%', 
+                          maxWidth: '100%', 
+                          borderRadius: '6px', 
+                          objectFit: 'contain',
+                          cursor: 'pointer',
+                          transition: 'transform 0.2s'
+                        }} 
+                        onClick={() => setSelectedImageZoom(currentQuestion.image)}
+                        title="Cliquez pour agrandir"
+                        onMouseEnter={(e) => e.currentTarget.style.transform = 'scale(1.02)'}
+                        onMouseLeave={(e) => e.currentTarget.style.transform = 'none'}
+                      />
+                    )}
                   </div>
                 );
 
@@ -541,6 +572,38 @@ export default function MockExamMode() {
                   );
                 })}
               </div>
+
+              {currentQuestion.imagePosition === 'below_options' && currentQuestion.image && (() => {
+                const sizeH = {
+                  small: '90px',
+                  medium: '150px',
+                  large: '220px',
+                  xlarge: '320px'
+                }[currentQuestion.imageSize || 'medium'];
+                return (
+                  <div style={{ 
+                    borderRadius: '10px', 
+                    overflow: 'hidden', 
+                    border: { transparent: 'none', white: '1px solid #e2e8f0', dark: '1px solid rgba(255,255,255,0.08)' }[currentQuestion.imageBg || 'transparent'],
+                    background: { transparent: 'transparent', white: '#ffffff', dark: '#121214' }[currentQuestion.imageBg || 'transparent'],
+                    padding: currentQuestion.imageBg === 'transparent' ? 0 : '0.4rem', 
+                    maxWidth: '100%', 
+                    display: 'flex', 
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    flexShrink: 0,
+                    height: sizeH,
+                    width: '100%',
+                    marginTop: '1.25rem'
+                  }}>
+                    {currentQuestion.image.startsWith('svg:') ? (
+                      <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: currentQuestion.image.slice(4) }} />
+                    ) : (
+                      <img src={currentQuestion.image} alt="Question diagram" style={{ height: '100%', maxWidth: '100%', borderRadius: '6px', objectFit: 'contain', cursor: 'pointer', transition: 'transform 0.2s' }} onClick={() => setSelectedImageZoom(currentQuestion.image)} />
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Pinned Nav Footer */}
@@ -936,6 +999,29 @@ export default function MockExamMode() {
               fontFamily: "'Computer Modern Serif', 'STIX Two Text', Georgia, serif"
             }}>
               {renderWithMath(currentQuestion.context)}
+              {(currentQuestion.imagePosition === 'in_context' || currentQuestion.imagePosition === 'context') && currentQuestion.image && (
+                <div style={{ 
+                  borderRadius: '10px', 
+                  overflow: 'hidden', 
+                  border: { transparent: 'none', white: '1px solid #e2e8f0', dark: '1px solid rgba(255,255,255,0.08)' }[currentQuestion.imageBg || 'transparent'],
+                  background: { transparent: 'transparent', white: '#ffffff', dark: '#121214' }[currentQuestion.imageBg || 'transparent'],
+                  padding: currentQuestion.imageBg === 'transparent' ? 0 : '0.4rem', 
+                  maxWidth: '100%', 
+                  display: 'flex', 
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  flexShrink: 0,
+                  height: { small: '90px', medium: '150px', large: '220px', xlarge: '320px' }[currentQuestion.imageSize || 'medium'],
+                  width: '100%',
+                  marginTop: '1.25rem'
+                }}>
+                  {currentQuestion.image.startsWith('svg:') ? (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center', overflow: 'hidden' }} dangerouslySetInnerHTML={{ __html: currentQuestion.image.slice(4) }} />
+                  ) : (
+                    <img src={currentQuestion.image} alt="Question diagram" style={{ height: '100%', maxWidth: '100%', borderRadius: '6px', objectFit: 'contain', cursor: 'pointer', transition: 'transform 0.2s' }} onClick={() => setSelectedImageZoom(currentQuestion.image)} />
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </>
@@ -959,18 +1045,35 @@ export default function MockExamMode() {
           onClick={() => setSelectedImageZoom(null)}
         >
           <div style={{ position: 'relative', maxWidth: '90%', maxHeight: '90%' }} onClick={(e) => e.stopPropagation()}>
-            <img 
-              src={selectedImageZoom} 
-              alt="Zoomed diagram" 
-              style={{ 
-                maxWidth: '100%', 
-                maxHeight: '85vh', 
-                borderRadius: '12px', 
-                boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
-                border: '2px solid rgba(255,255,255,0.1)',
-                display: 'block'
-              }} 
-            />
+            {selectedImageZoom.startsWith('svg:') ? (
+              <div 
+                style={{ 
+                  maxWidth: '100%', 
+                  background: 'var(--bg-card)', 
+                  padding: '2rem', 
+                  borderRadius: '12px', 
+                  boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+                  border: '2px solid rgba(255,255,255,0.1)',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+                dangerouslySetInnerHTML={{ __html: selectedImageZoom.slice(4) }}
+              />
+            ) : (
+              <img 
+                src={selectedImageZoom} 
+                alt="Zoomed diagram" 
+                style={{ 
+                  maxWidth: '100%', 
+                  maxHeight: '85vh', 
+                  borderRadius: '12px', 
+                  boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+                  border: '2px solid rgba(255,255,255,0.1)',
+                  display: 'block'
+                }} 
+              />
+            )}
             <p style={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', fontSize: '0.8rem', marginTop: '1rem', fontWeight: 600 }}>
               Cliquez n'importe où pour fermer
             </p>

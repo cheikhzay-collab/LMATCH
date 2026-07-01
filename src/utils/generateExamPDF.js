@@ -395,6 +395,12 @@ const renderMath = (text) => {
     return `<div style="text-align: center; margin: 1rem 0;"><img src="${url}" alt="Question illustration" style="max-width: 100%; max-height: 240px; border-radius: 10px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); object-fit: contain;" /></div>`;
   }
 
+  // ── SVG shorthand (for physics/chemistry curves, graphs, and schemas) ──
+  if (raw.trim().startsWith('svg:')) {
+    const svgCode = raw.trim().slice(4).trim();
+    return `<div style="display: flex; justify-content: center; align-items: center; margin: 1rem 0; width: 100%; overflow-x: auto; padding: 1rem;">${svgCode}</div>`;
+  }
+
   // ── Normalise line endings ──
   const normalisedTemp = raw
     .replace(/\r\n/g, '\n')                // Windows CRLF → LF
@@ -471,6 +477,9 @@ const renderQuestionImageHTML = (q, placement) => {
   if (placement === 'side' && pos !== 'side_by_side') return '';
   if (placement === 'above' && pos !== 'above_statement') return '';
   if (placement === 'below' && pos !== 'below_statement' && pos !== 'top' && pos !== 'bottom') return '';
+  if (placement === 'context' && pos !== 'in_context') return '';
+  if (placement === 'options' && pos !== 'below_options') return '';
+  if (placement === 'correction' && pos !== 'in_correction') return '';
 
   const sizeH = {
     small: '90px',
@@ -486,10 +495,15 @@ const renderQuestionImageHTML = (q, placement) => {
     bgCSS = 'background-color: #0f172a; padding: 6px; border-radius: 8px; border: 1px solid #334155; box-sizing: border-box;';
   }
 
+  const isSvg = q.image.startsWith('svg:');
+  const innerContent = isSvg
+    ? q.image.slice(4).trim()
+    : `<img src="${q.image}" style="max-height: ${sizeH}; max-width: 100%; display: inline-block; object-fit: contain;" />`;
+
   if (pos === 'side_by_side') {
-    return `<div style="float: right; margin-left: 15px; margin-bottom: 10px; max-width: 35%; display: block; text-align: center; ${bgCSS}"><img src="${q.image}" style="max-height: ${sizeH}; max-width: 100%; display: inline-block; object-fit: contain;" /></div>`;
+    return `<div style="float: right; margin-left: 15px; margin-bottom: 10px; max-width: 35%; display: block; text-align: center; ${bgCSS}">${innerContent}</div>`;
   }
-  return `<div style="margin: 8px 0 10px 0; display: block; text-align: center; clear: both; ${bgCSS}"><img src="${q.image}" style="max-height: ${sizeH}; max-width: 100%; display: inline-block; object-fit: contain;" /></div>`;
+  return `<div style="margin: 8px 0 10px 0; display: block; text-align: center; clear: both; ${bgCSS}">${innerContent}</div>`;
 };
 
 /* ── Normalize option text ── */
@@ -726,11 +740,12 @@ export const generateSubjectHTML = async (examTitle, school, year, questions, se
           <span class="ws-ans-tag">${subject.toUpperCase()}</span>
         </div>
         <div class="ws-ex-body">
-          ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)}</div>` : ''}
+          ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)} ${renderQuestionImageHTML(q, 'context')}</div>` : ''}
           ${renderQuestionImageHTML(q, 'above')}
           <div class="ws-qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
           ${renderQuestionImageHTML(q, 'below')}
           <div class="ws-opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
+          ${renderQuestionImageHTML(q, 'options')}
         </div>
       </div>
     </div>`;
@@ -1838,11 +1853,12 @@ printWhenReady();
           <span class="ws-ans-tag">👁️ Réponse : <strong>${q.correct_answer || '?'}</strong></span>
         </div>
         <div class="ws-ex-body">
-          ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)}</div>` : ''}
+          ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)} ${renderQuestionImageHTML(q, 'context')}</div>` : ''}
           ${renderQuestionImageHTML(q, 'above')}
           <div class="ws-qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
           ${renderQuestionImageHTML(q, 'below')}
           <div class="ws-opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
+          ${renderQuestionImageHTML(q, 'options')}
         </div>
       </div>
       ${q.astuce ? `<div class="ws-tip-card">
@@ -1851,7 +1867,10 @@ printWhenReady();
           <span class="ws-tip-title">Règle de l'Art</span>
           <span class="ws-tip-accent">Astuce & Méthode Rapide</span>
         </div>
-        <div class="ws-tip-body">${renderMath(q.astuce)}</div>
+        <div class="ws-tip-body">
+          ${renderMath(q.astuce)}
+          ${renderQuestionImageHTML(q, 'correction')}
+        </div>
       </div>` : ''}
       ${showTricks && q.trick ? `<div class="ws-trick-card">
         <div class="ws-trick-header">
@@ -2567,13 +2586,18 @@ printWhenReady();
         ${sourceTag}
         <span class="ans-badge">Réponse : ${q.correct_answer || '?'}</span>
       </div>
+      ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px;">📋 ${renderMath(q.context)} ${renderQuestionImageHTML(q, 'context')}</div>` : ''}
       ${renderQuestionImageHTML(q, 'above')}
       <div class="qtext">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
       ${renderQuestionImageHTML(q, 'below')}
       <div class="opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
+      ${renderQuestionImageHTML(q, 'options')}
       ${q.astuce ? `<div class="rule-box">
         <div class="rule-title">⭐ RÈGLE DE L'ART</div>
-        <div class="rule-body">${renderMath(q.astuce)}</div>
+        <div class="rule-body">
+          ${renderMath(q.astuce)}
+          ${renderQuestionImageHTML(q, 'correction')}
+        </div>
       </div>` : ''}
       ${showTricks && q.trick ? `<div class="trick-box">
         <div class="trick-title">⚡ COUP DE GRÂCE</div>
@@ -3650,11 +3674,12 @@ export const generateCompilationEbookHTML = (config, examsData, settings = {}) =
           <span class="ws-ans-tag" style="font-size:0.75rem; font-weight:700; color:#1e3a8a; background:#dbeafe; padding:2px 6px; border-radius:4px; text-transform:uppercase;">${(q.subject || q.topic || 'Général').toUpperCase()}</span>
         </div>
         <div class="ws-ex-body">
-          ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px; font-size:0.95rem; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px;">📋 ${renderMath(q.context)}</div>` : ''}
+          ${q.context ? `<div class="ctx-box" style="margin-bottom: 8px; font-size:0.95rem; color:#475569; background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:8px 12px;">📋 ${renderMath(q.context)} ${renderQuestionImageHTML(q, 'context')}</div>` : ''}
           ${renderQuestionImageHTML(q, 'above')}
           <div class="ws-qtext" style="font-size:0.95rem; font-weight:500; color:#1e293b; margin-bottom:12px;">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
           ${renderQuestionImageHTML(q, 'below')}
           <div class="ws-opts ${getOptionsLayoutClass(q.options)}" style="display:grid; gap:8px;">${optionsHtml}</div>
+          ${renderQuestionImageHTML(q, 'options')}
         </div>
       </div>`;
     }).join('');
@@ -3683,9 +3708,13 @@ export const generateCompilationEbookHTML = (config, examsData, settings = {}) =
         <div class="qtext" style="font-size:0.95rem; font-weight:500; color:#1e293b; margin-bottom:12px;">${renderQuestionImageHTML(q, 'side')}${renderMath(q.question || '')}</div>
         ${renderQuestionImageHTML(q, 'below')}
         <div class="opts ${getOptionsLayoutClass(q.options)}">${optionsHtml}</div>
+        ${renderQuestionImageHTML(q, 'options')}
         ${q.astuce ? `<div class="rule-box" style="margin-top:12px; padding:10px; border-left:4px solid #10b981; background:#f0fdf4; border-radius:4px;">
           <div class="rule-title" style="font-size:0.75rem; font-weight:800; color:#065f46; margin-bottom:4px;">⭐ RÈGLE DE L'ART</div>
-          <div class="rule-body" style="font-size:0.85rem;">${renderMath(q.astuce)}</div>
+          <div class="rule-body" style="font-size:0.85rem;">
+            ${renderMath(q.astuce)}
+            ${renderQuestionImageHTML(q, 'correction')}
+          </div>
         </div>` : ''}
         ${showTricks && q.trick ? `<div class="trick-box" style="margin-top:8px; padding:10px; border-left:4px solid #f59e0b; background:#fffbeb; border-radius:4px;">
           <div class="trick-title" style="font-size:0.75rem; font-weight:800; color:#b45309; margin-bottom:4px;">⚡ COUP DE GRÂCE</div>

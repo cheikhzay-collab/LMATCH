@@ -7,6 +7,9 @@ import {
 } from 'lucide-react';
 import { addLesson } from '../services/lessonService';
 import { SafeInlineMath } from '../utils/mathRenderer';
+import * as pdfjsLib from 'pdfjs-dist';
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.mjs', import.meta.url).href;
 
 // Attempt to repair a truncated JSON string by closing all open structures
 const repairTruncatedJson = (str) => {
@@ -51,9 +54,9 @@ const sanitizeLatexJson = (str) => {
         result += '\\\\';
         i += 2;
       } else if (next === 'n') {
-        // Check if it's a LaTeX command starting with \n
-        const rest = str.slice(i + 2, i + 12);
-        if (/^(u|eq|eg|earrow|abla|onumber|ewline)([^a-zA-Z]|$)/.test(rest)) {
+        // Check if it's a LaTeX command starting with \n (like \nu, \neq, \neg, \nearrow, \nabla, \notin, \nexists, \norm, etc.)
+        const rest = str.slice(i + 2, i + 12); // lookahead
+        if (/^(u|eq|eg|earrow|abla|onumber|ewline|otin|exists|orm|mid|cong|sim|parallel|subseteq|supseteq|left|right)([^a-zA-Z]|$)/i.test(rest)) {
           result += '\\\\';
           i += 1;
         } else {
@@ -258,8 +261,17 @@ export default function AdminLessonsImport() {
   const fileInputRef = useRef();
 
   // Setup state
+  const [provider, setProvider] = useState(() => localStorage.getItem('aiImportProvider') || 'gemini');
   const [geminiKey, setGeminiKey] = useState(() => localStorage.getItem('geminiApiKey') || '');
   const [geminiModel, setGeminiModel] = useState(() => localStorage.getItem('geminiModel') || 'gemini-3.5-flash');
+
+  const [claudeKey, setClaudeKey] = useState(() => localStorage.getItem('claudeApiKey') || '');
+  const [claudeModel, setClaudeModel] = useState(() => localStorage.getItem('claudeModel') || 'claude-3-5-sonnet-20241022');
+  const [proxyUrl, setProxyUrl] = useState(() => localStorage.getItem('claudeProxyUrl') || '');
+
+  const [deepseekKey, setDeepseekKey] = useState(() => localStorage.getItem('deepseekApiKey') || '');
+  const [deepseekUrl, setDeepseekUrl] = useState(() => localStorage.getItem('deepseekApiUrl') || 'https://api.deepseek.com');
+  const [deepseekModel, setDeepseekModel] = useState(() => localStorage.getItem('deepseekModel') || 'deepseek-chat');
   
   const [uploadFile, setUploadFile] = useState(null);
   const [fileName, setFileName] = useState('');
@@ -283,7 +295,15 @@ export default function AdminLessonsImport() {
   // Load API key from settings if updated
   useEffect(() => {
     const sync = () => {
+      setProvider(localStorage.getItem('aiImportProvider') || 'gemini');
       setGeminiKey(localStorage.getItem('geminiApiKey') || '');
+      setGeminiModel(localStorage.getItem('geminiModel') || 'gemini-3.5-flash');
+      setClaudeKey(localStorage.getItem('claudeApiKey') || '');
+      setClaudeModel(localStorage.getItem('claudeModel') || 'claude-3-5-sonnet-20241022');
+      setProxyUrl(localStorage.getItem('claudeProxyUrl') || '');
+      setDeepseekKey(localStorage.getItem('deepseekApiKey') || '');
+      setDeepseekUrl(localStorage.getItem('deepseekApiUrl') || 'https://api.deepseek.com');
+      setDeepseekModel(localStorage.getItem('deepseekModel') || 'deepseek-chat');
     };
     window.addEventListener('storage', sync);
     return () => window.removeEventListener('storage', sync);
@@ -297,9 +317,190 @@ export default function AdminLessonsImport() {
     setError('');
   };
 
+  const fetchGeminiWithPdf = async (base64Data, fileType) => {
+    const modelToUse = geminiModel || 'gemini-3.5-flash';
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${geminiKey}`;
+    
+    const payload = {
+      contents: [
+        {
+          parts: [
+            {
+              inlineData: {
+                mimeType: fileType,
+                data: base64Data
+              }
+            },
+            {
+              text: "Transcris et extrais l'intégralité absolue de ce document. Analyse chaque paragraphe, formule et exercice. Ne résume rien, ne laisse aucun élément de côté, et génère le JSON complet selon le schéma exigé."
+            }
+          ]
+        }
+      ],
+      systemInstruction: {
+        parts: [{ text: SYSTEM_PROMPT }]
+      },
+      generationConfig: {
+        responseMimeType: "application/json",
+        maxOutputTokens: 65536,
+        temperature: 0.1
+      }
+    };
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err?.error?.message || `Erreur HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  };
+
+  const streamClaudeWithPdf = async (base64Data, fileType) => {
+    const endpoint = proxyUrl || 'https://api.anthropic.com/v1/messages';
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (proxyUrl) {
+      if (claudeKey) headers['x-api-key'] = claudeKey;
+    } else {
+      headers['x-api-key'] = claudeKey;
+      headers['anthropic-version'] = '2023-06-01';
+      headers['anthropic-dangerous-direct-browser-access'] = 'true';
+    }
+
+    const isPdf = fileType === 'application/pdf';
+    const sourceBlock = isPdf
+      ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: base64Data } }
+      : { type: 'image', source: { type: 'base64', media_type: fileType, data: base64Data } };
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: claudeModel,
+        max_tokens: 16000,
+        stream: true,
+        system: SYSTEM_PROMPT,
+        messages: [{
+          role: 'user',
+          content: [
+            sourceBlock,
+            { type: 'text', text: "Transcris et extrais l'intégralité absolue de ce document. Analyse chaque paragraphe, formule et exercice. Ne résume rien, ne laisse aucun élément de côté, et génère le JSON complet selon le schéma exigé." }
+          ]
+        }]
+      })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || err?.message || JSON.stringify(err);
+      throw new Error(`Erreur Claude ${res.status}: ${msg}`);
+    }
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let accumulated = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const dataStr = line.slice(6).trim();
+        if (dataStr === '[DONE]') break;
+        try {
+          const evt = JSON.parse(dataStr);
+          if (evt.type === 'content_block_delta' && evt.delta?.type === 'text_delta') {
+            accumulated += evt.delta.text;
+            const secCount = (accumulated.match(/"id"/g) || []).length;
+            setProgress(`⚡ Réception en cours... ${secCount > 0 ? `${secCount} sections détectées` : ''} (${(accumulated.length/1000).toFixed(1)}k caractères)`);
+          }
+        } catch { /* skip */ }
+      }
+    }
+
+    return accumulated;
+  };
+
+  const extractTextFromPdf = async (file) => {
+    const arrayBuffer = await file.arrayBuffer();
+    const doc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    let fullText = '';
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = textContent.items.map(item => item.str).join(' ');
+      fullText += `--- PAGE ${i} ---\n${pageText}\n\n`;
+    }
+    return fullText;
+  };
+
+  const fetchDeepSeekWithText = async (pdfText) => {
+    const modelToUse = deepseekModel || 'deepseek-chat';
+    const cleanUrl = deepseekUrl.trim().replace(/\/$/, '');
+    const endpoint = `${cleanUrl}/v1/chat/completions`;
+    
+    const payload = {
+      model: modelToUse,
+      messages: [
+        {
+          role: "system",
+          content: SYSTEM_PROMPT
+        },
+        {
+          role: "user",
+          content: `TEXTE DU DOCUMENT :
+${pdfText}
+
+Transcris et extrais l'intégralité absolue de ce texte. Analyse chaque paragraphe, formule et exercice. Ne résume rien, ne laisse aucun élément de côté, et génère le JSON complet selon le schéma exigé.`
+        }
+      ],
+      response_format: modelToUse === 'deepseek-chat' ? { type: 'json_object' } : undefined,
+      temperature: 0.1
+    };
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${deepseekKey}`
+    };
+
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      const msg = err?.error?.message || err?.message || JSON.stringify(err);
+      throw new Error(`Erreur DeepSeek ${res.status}: ${msg}`);
+    }
+
+    const data = await res.json();
+    return data?.choices?.[0]?.message?.content;
+  };
+
   const handleAnalyze = async () => {
-    if (!geminiKey) {
-      setError('Clé API Gemini manquante. Veuillez la configurer dans les Paramètres.');
+    if (provider === 'gemini' && !geminiKey) {
+      setError('Clé API Gemini manquante. Veuillez la configurer.');
+      return;
+    }
+    if (provider === 'claude' && !claudeKey) {
+      setError('Clé API Claude manquante. Veuillez la configurer.');
+      return;
+    }
+    if (provider === 'deepseek' && !deepseekKey) {
+      setError('Clé API DeepSeek manquante. Veuillez la configurer.');
       return;
     }
     if (!uploadFile) {
@@ -319,7 +520,7 @@ export default function AdminLessonsImport() {
           setProgress('Lecture et encodage du document...');
           return prev + 5;
         } else if (prev < 65) {
-          setProgress('Envoi à Gemini AI & traitement des images...');
+          setProgress('Envoi à l\'IA & traitement...');
           return prev + 3;
         } else if (prev < 92) {
           setProgress('Génération de la fiche structurée LaTeX...');
@@ -330,88 +531,48 @@ export default function AdminLessonsImport() {
     }, 800);
 
     try {
-      const base64Data = await fileToBase64(uploadFile);
-      setProgress('Envoi du fichier à Gemini AI...');
-
-      const modelToUse = geminiModel || 'gemini-3.5-flash';
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${geminiKey}`;
+      let rawText = '';
       
-      const payload = {
-        contents: [
-          {
-            parts: [
-              {
-                inlineData: {
-                  mimeType: uploadFile.type,
-                  data: base64Data
-                }
-              },
-              {
-                text: "Transcris et extrais l'intégralité absolue de ce document. Analyse chaque paragraphe, formule et exercice. Ne résume rien, ne laisse aucun élément de côté, et génère le JSON complet selon le schéma exigé."
-              }
-            ]
-          }
-        ],
-        systemInstruction: {
-          parts: [{ text: SYSTEM_PROMPT }]
-        },
-        generationConfig: {
-          responseMimeType: "application/json",
-          maxOutputTokens: 65536,
-          temperature: 0.1
+      if (provider === 'claude') {
+        const base64Data = await fileToBase64(uploadFile);
+        setProgress('Envoi du document à Anthropic Claude...');
+        rawText = await streamClaudeWithPdf(base64Data, uploadFile.type);
+      } else if (provider === 'deepseek') {
+        const isPdf = uploadFile.type === 'application/pdf';
+        if (!isPdf) {
+          throw new Error("DeepSeek ne prend en charge que les fichiers textuels (PDF). Veuillez utiliser Gemini ou Claude pour les images.");
         }
-      };
-
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error?.message || `Erreur HTTP ${res.status}`);
+        setProgress('Extraction du texte du PDF...');
+        const pdfText = await extractTextFromPdf(uploadFile);
+        setProgress('Envoi du texte à DeepSeek...');
+        rawText = await fetchDeepSeekWithText(pdfText);
+      } else {
+        const base64Data = await fileToBase64(uploadFile);
+        setProgress('Envoi du fichier à Google Gemini...');
+        rawText = await fetchGeminiWithPdf(base64Data, uploadFile.type);
       }
-
-      const data = await res.json();
-      const candidate = data?.candidates?.[0];
-      const rawText = candidate?.content?.parts?.[0]?.text;
-      const finishReason = candidate?.finishReason;
 
       if (!rawText) {
-        throw new Error("L'API Gemini n'a retourné aucun contenu.");
-      }
-
-      // Warn if truncated due to token limit
-      if (finishReason === 'MAX_TOKENS') {
-        console.warn('[Gemini] Response was truncated (MAX_TOKENS). Attempting JSON repair...');
-        setProgress('Réponse tronquée — réparation du JSON en cours...');
+        throw new Error("L'API n'a retourné aucun contenu.");
       }
 
       let parsed;
-      // Try 1: Extract JSON block + direct parse
       try {
         const extracted = extractJsonFromText(rawText);
         parsed = JSON.parse(extracted);
       } catch (firstErr) {
         console.warn('[JSON Parse] Step 1 failed, trying repair...', firstErr.message);
-        // Try 2: Extract + escape newlines + parse
         try {
           const extracted = extractJsonFromText(rawText);
           const escaped = escapeLiteralNewlinesInJson(extracted);
           parsed = JSON.parse(escaped);
         } catch (secondErr) {
-          // Try 3: Extract + repair truncated structure + parse
           try {
             const extracted = extractJsonFromText(rawText);
             const escaped = escapeLiteralNewlinesInJson(extracted);
             const repaired = repairTruncatedJson(escaped);
             parsed = JSON.parse(repaired);
-            if (finishReason === 'MAX_TOKENS') {
-              setProgress('⚠️ Contenu partiel récupéré — le document était trop long.');
-            }
           } catch (thirdErr) {
-            // Try 4: Full sanitize pipeline
             try {
               const sanitized = sanitizeLatexJson(rawText.trim());
               const escaped = escapeLiteralNewlinesInJson(sanitized);
@@ -419,21 +580,20 @@ export default function AdminLessonsImport() {
               parsed = JSON.parse(repaired);
             } catch (fourthErr) {
               console.error('[JSON Parse] All strategies failed.', { firstErr, secondErr, thirdErr, fourthErr });
-              console.error('[Raw response preview]:', rawText.slice(0, 500));
               throw new Error(
-                `Impossible de lire la réponse JSON de Gemini.\n` +
+                `Impossible de lire la réponse JSON.\n` +
                 `Erreur : ${firstErr.message}\n\n` +
                 `💡 Solutions :\n` +
-                `• Essayez Gemini 1.5 Pro (plus stable pour les longs documents)\n` +
+                `• Essayez un autre modèle/moteur d'IA\n` +
                 `• Découpez le document en sections plus courtes\n` +
-                `• Vérifiez votre clé API Gemini dans les Paramètres`
+                `• Vérifiez ou saisissez votre clé API`
               );
             }
           }
         }
       }
 
-      console.log('[Gemini Extraction Response]:', parsed);
+      console.log('[Extraction Response]:', parsed);
 
       // Populate form state
       setFicheTitle(parsed.header.fiche_title || '');
@@ -444,7 +604,6 @@ export default function AdminLessonsImport() {
       setSelectedSchools(parsed.header.schools || []);
       setSections(parsed.sections || []);
       
-      // Auto-extract chapter number from title (e.g. "Fiche 01" -> "01")
       const numMatch = (parsed.header.fiche_title || '').match(/Fiche\s*(\d+)/i);
       if (numMatch) setChapterNumber(numMatch[1]);
 
@@ -462,22 +621,6 @@ export default function AdminLessonsImport() {
       setLoading(false);
       console.error(e);
       let diagMsg = `Erreur lors de l'extraction : ${e.message}`;
-      let modelsList = [];
-      if (geminiKey) {
-        try {
-          const diagRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${geminiKey}`);
-          if (diagRes.ok) {
-            const diagData = await diagRes.json();
-            modelsList = (diagData.models || []).map(m => m.name.replace('models/', ''));
-          } else {
-            const diagErr = await diagRes.json().catch(() => ({}));
-            diagMsg += ` (Diagnostic: ${diagErr?.error?.message || diagRes.statusText})`;
-          }
-        } catch (diagErr) {
-          console.error('[Diagnostic] Failed to list models:', diagErr);
-        }
-      }
-      setDetectedModels(modelsList);
       setError(diagMsg);
     }
   };
@@ -703,22 +846,108 @@ export default function AdminLessonsImport() {
       {/* ── PHASE 1: Upload and Parse ── */}
       {phase === 1 && (
         <div className="glass-panel" style={{ padding: '3rem', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-          <div className="input-group">
-            <label>Modèle de traitement IA</label>
-            <select 
-              className="input-control" 
-              value={geminiModel} 
-              onChange={e => { setGeminiModel(e.target.value); localStorage.setItem('geminiModel', e.target.value); }}
-              style={{ maxWidth: '280px' }}
-            >
-              <option value="gemini-3.5-flash">Gemini 3.5 Flash (Recommandé)</option>
-              <option value="gemini-3.1-pro">Gemini 3.1 Pro (Haute précision)</option>
-              <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-              <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
-              <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
-              <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
-            </select>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1.5rem', marginBottom: '0.5rem' }}>
+            <div className="input-group" style={{ flex: 1 }}>
+              <label>Moteur d'intelligence artificielle</label>
+              <select
+                className="input-control"
+                value={provider}
+                onChange={e => {
+                  const val = e.target.value;
+                  setProvider(val);
+                  localStorage.setItem('aiImportProvider', val);
+                }}
+              >
+                <option value="gemini">Google Gemini (Sécurisé & Rapide)</option>
+                <option value="claude">Anthropic Claude (Modèle d'Examen)</option>
+                <option value="deepseek">DeepSeek AI (Super Économique)</option>
+              </select>
+            </div>
+
+            <div className="input-group" style={{ flex: 1 }}>
+              <label>Modèle de traitement IA</label>
+              {provider === 'claude' ? (
+                <select
+                  className="input-control"
+                  value={claudeModel}
+                  onChange={e => { setClaudeModel(e.target.value); localStorage.setItem('claudeModel', e.target.value); }}
+                >
+                  <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet (Recommandé)</option>
+                  <option value="claude-3-5-haiku-20241022">Claude 3.5 Haiku (Rapide)</option>
+                  <option value="claude-3-opus-20240229">Claude 3 Opus (Haute précision)</option>
+                </select>
+              ) : provider === 'deepseek' ? (
+                <select
+                  className="input-control"
+                  value={deepseekModel}
+                  onChange={e => { setDeepseekModel(e.target.value); localStorage.setItem('deepseekModel', e.target.value); }}
+                >
+                  <option value="deepseek-chat">deepseek-chat (V3 - Rapide/Éco)</option>
+                  <option value="deepseek-reasoner">deepseek-reasoner (R1 - Réflexion)</option>
+                </select>
+              ) : (
+                <select
+                  className="input-control"
+                  value={geminiModel}
+                  onChange={e => { setGeminiModel(e.target.value); localStorage.setItem('geminiModel', e.target.value); }}
+                >
+                  <option value="gemini-3.5-flash">Gemini 3.5 Flash (Recommandé)</option>
+                  <option value="gemini-3.1-pro">Gemini 3.1 Pro (Haute précision)</option>
+                  <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
+                  <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+                  <option value="gemini-1.5-flash">Gemini 1.5 Flash (Legacy)</option>
+                  <option value="gemini-1.5-pro">Gemini 1.5 Pro (Legacy)</option>
+                </select>
+              )}
+            </div>
           </div>
+
+          {/* Quick API Key configurator */}
+          {provider === 'claude' && !claudeKey && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '1rem', borderRadius: 10, background: 'rgba(124,58,237,0.06)', border: '1px solid rgba(124,58,237,0.15)', fontSize: '0.8rem' }}>
+              <span style={{ fontWeight: 700, color: '#7c3aed' }}>⚠️ Clé API Claude manquante</span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="password"
+                  placeholder="Collez votre clé API Anthropic (sk-ant-...)"
+                  className="input-control"
+                  value={claudeKey}
+                  onChange={e => { setClaudeKey(e.target.value); localStorage.setItem('claudeApiKey', e.target.value); }}
+                  style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
+                />
+              </div>
+            </div>
+          )}
+          {provider === 'deepseek' && !deepseekKey && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '1rem', borderRadius: 10, background: 'rgba(0,186,124,0.06)', border: '1px solid rgba(0,186,124,0.15)', fontSize: '0.8rem' }}>
+              <span style={{ fontWeight: 700, color: '#00BA7C' }}>⚠️ Clé API DeepSeek manquante</span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="password"
+                  placeholder="Collez votre clé API DeepSeek (sk-...)"
+                  className="input-control"
+                  value={deepseekKey}
+                  onChange={e => { setDeepseekKey(e.target.value); localStorage.setItem('deepseekApiKey', e.target.value); }}
+                  style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
+                />
+              </div>
+            </div>
+          )}
+          {provider === 'gemini' && !geminiKey && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', padding: '1rem', borderRadius: 10, background: 'rgba(66,133,244,0.06)', border: '1px solid rgba(66,133,244,0.15)', fontSize: '0.8rem' }}>
+              <span style={{ fontWeight: 700, color: '#4285F4' }}>⚠️ Clé API Gemini manquante</span>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <input
+                  type="password"
+                  placeholder="Collez votre clé API Google Gemini (AIzaSy...)"
+                  className="input-control"
+                  value={geminiKey}
+                  onChange={e => { setGeminiKey(e.target.value); localStorage.setItem('geminiApiKey', e.target.value); }}
+                  style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem' }}
+                />
+              </div>
+            </div>
+          )}
 
           <div className="input-group">
             <label>Sélectionnez la fiche de cours (PDF ou Image)</label>
