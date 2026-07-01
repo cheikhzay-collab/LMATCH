@@ -230,6 +230,41 @@ export const saveWhatsAppSettingsConfig = async (settings) => {
   }
 };
 
+/**
+ * Fetch dynamic Arabic sales page config from Supabase.
+ */
+export const getLandingArConfig = async () => {
+  if (!supabase) return null;
+  const { data, error } = await supabase
+    .from('config')
+    .select('value')
+    .eq('key', 'landing_ar_settings')
+    .maybeSingle();
+
+  if (error || !data) return null;
+  return data.value;
+};
+
+/**
+ * Save dynamic Arabic sales page config to Supabase.
+ */
+export const saveLandingArConfig = async (config) => {
+  if (!supabase) return;
+  const { error } = await supabase
+    .from('config')
+    .upsert({
+      key: 'landing_ar_settings',
+      value: config,
+      updated_at: new Date().toISOString(),
+    });
+
+  if (error) {
+    console.error('[Supabase] Failed to save landing AR settings:', error);
+    throw error;
+  }
+};
+
+
 
 
 

@@ -317,11 +317,11 @@ const testimonials = [
   }
 ];
 
-export default function LandingPage() {
+export default function LandingPageAr() {
   const { theme, toggleTheme, plans, user } = useAuth();
   const isLight = theme === 'light';
   
-  const [lang, setLang] = useState('fr');
+  const [lang, setLang] = useState('ar');
   const [openFaq, setOpenFaq] = useState(null);
   
   const isRtl = lang === 'ar';

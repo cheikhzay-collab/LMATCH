@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Plus, Trash2, Settings, School, KeyRound, Eye, EyeOff, CheckCircle2, Sparkles, Image, RefreshCw, Layers, MousePointerClick, Crown, Download, Sliders, FileText, Camera, MessageCircle, Volume2 } from 'lucide-react';
+import { getLandingArConfig, saveLandingArConfig } from '../services/schoolService';
+import { uploadAsset } from '../services/storageService';
 
 export default function AdminSettings() {
   const { 
@@ -194,6 +196,112 @@ export default function AdminSettings() {
     setTimeout(() => setPdfSaved(false), 2500);
   };
 
+  // States and load/save logic for Landing Page AR Editor
+  const [heroBadgeAr, setHeroBadgeAr] = useState("مدعوم بالذكاء الاصطناعي ⚡");
+  const [heroTitlePart1Ar, setHeroTitlePart1Ar] = useState("حضّر لكونكور كليات النخبة بذكاء،");
+  const [heroTitlePart2Ar, setHeroTitlePart2Ar] = useState("واضمن بلاصتك مع L'CONQ.");
+  const [heroSubtitleAr, setHeroSubtitleAr] = useState("Médecine · ENSA · ENSAM. حوّل الامتحانات السابقة إلى حصص تفاعلية ذكية مع حلول سريعة (Cheat Codes) وخوارزمية تكرار متباعد تتكيف مع مستوى الحفظ ديالك.");
+  
+  const [featuresAr, setFeaturesAr] = useState([
+    {
+      title: "خوارزمية المراجعة الذكية (SRS)",
+      desc: "نظام علمي متكامل يعيد جدولة الأسئلة الصعبة بناءً على إجاباتك. راجع فقط ما تحتاجه وفي الوقت المناسب تماماً لمنع النسيان.",
+      image: "/study_mockup.png",
+      url: "lconq.ma/study-srs",
+      ctaText: "ابدأ المراجعة الذكية مجاناً"
+    },
+    {
+      title: "شروحات وحلول سريعة بالذكاء الاصطناعي (Cheat Codes)",
+      desc: "بلاش تضييع الوقت في الحلول التقليدية الطويلة. زر 'Astuce IA' يعطيك أسرار الحل السريع لحل المسائل المعقدة في أقل من دقيقة.",
+      image: "/dashboard_mockup.png",
+      url: "lconq.ma/ai-tutor",
+      ctaText: "جرب حلول الذكاء الاصطناعي مجاناً"
+    },
+    {
+      title: "المحاكاة والترتيب الوطني المباشر",
+      desc: "تدرب في ظروف حقيقية مع عداد تنازلي، وقارن مستواك فوراً مع آلاف المترشحين على الصعيد الوطني لتعرف أين تقف بدقة.",
+      image: "/ranking_mockup.png",
+      url: "lconq.ma/leaderboard",
+      ctaText: "دوز امتحان تجريبي واعرف ترتيبك"
+    }
+  ]);
+  
+  const [landingSaved, setLandingSaved] = useState(false);
+
+  const [showPainPoints, setShowPainPoints] = useState(true);
+  const [showPayments, setShowPayments] = useState(true);
+  const [showPricing, setShowPricing] = useState(true);
+  const [showFaqs, setShowFaqs] = useState(true);
+  const [showTestimonials, setShowTestimonials] = useState(true);
+
+  useEffect(() => {
+    const loadLandingConfig = async () => {
+      try {
+        const cfg = await getLandingArConfig();
+        if (cfg) {
+          if (cfg.heroBadgeAr) setHeroBadgeAr(cfg.heroBadgeAr);
+          if (cfg.heroTitlePart1Ar) setHeroTitlePart1Ar(cfg.heroTitlePart1Ar);
+          if (cfg.heroTitlePart2Ar) setHeroTitlePart2Ar(cfg.heroTitlePart2Ar);
+          if (cfg.heroSubtitleAr) setHeroSubtitleAr(cfg.heroSubtitleAr);
+          if (cfg.featuresAr) setFeaturesAr(cfg.featuresAr);
+          if (cfg.showPainPoints !== undefined) setShowPainPoints(cfg.showPainPoints);
+          if (cfg.showPayments !== undefined) setShowPayments(cfg.showPayments);
+          if (cfg.showPricing !== undefined) setShowPricing(cfg.showPricing);
+          if (cfg.showFaqs !== undefined) setShowFaqs(cfg.showFaqs);
+          if (cfg.showTestimonials !== undefined) setShowTestimonials(cfg.showTestimonials);
+        }
+      } catch (err) {
+        console.warn("Failed to load landing page config:", err);
+      }
+    };
+    loadLandingConfig();
+  }, []);
+
+  const saveLandingConfig = async () => {
+    try {
+      await saveLandingArConfig({
+        heroBadgeAr,
+        heroTitlePart1Ar,
+        heroTitlePart2Ar,
+        heroSubtitleAr,
+        featuresAr,
+        showPainPoints,
+        showPayments,
+        showPricing,
+        showFaqs,
+        showTestimonials
+      });
+      setLandingSaved(true);
+      setTimeout(() => setLandingSaved(false), 2500);
+    } catch (err) {
+      console.error("Error saving landing page config:", err);
+      alert("Error saving config: " + err.message);
+    }
+  };
+
+  const [uploadingFeat, setUploadingFeat] = useState({});
+
+  const handleImageUpload = async (e, index) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setUploadingFeat(prev => ({ ...prev, [index]: true }));
+    try {
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+      const path = `landing-ar/${Date.now()}_${sanitizedName}`;
+      const url = await uploadAsset(file, path);
+      
+      const newArr = [...featuresAr];
+      newArr[index].image = url;
+      setFeaturesAr(newArr);
+    } catch (err) {
+      console.error("Upload error:", err);
+      alert("Error uploading image: " + err.message);
+    } finally {
+      setUploadingFeat(prev => ({ ...prev, [index]: false }));
+    }
+  };
+
   const handleAdd = (e) => {
     e.preventDefault();
     if (newSchool.trim()) { addSchool(newSchool.trim()); setNewSchool(''); }
@@ -350,6 +458,7 @@ export default function AdminSettings() {
             { id: 'pdf', label: 'Design & Impression PDF', icon: FileText, desc: 'Marges, polices & sauts' },
             { id: 'flashcards', label: 'Méthode Flashcards', icon: Layers, desc: 'Animations & Révélation' },
             { id: 'apis', label: 'Clés API & IA', icon: KeyRound, desc: 'Claude, Gemini' },
+            { id: 'landing_editor', label: 'Page de vente (AR)', icon: Image, desc: 'Modifier images & sections' },
             { id: 'subscriptions', label: 'Baqat & Vouchers', icon: Crown, desc: 'Tarifs & Activation' },
           ].map(tab => {
             const isActive = activeTab === tab.id;
@@ -1234,6 +1343,305 @@ export default function AdminSettings() {
                 <CheckCircle2 size={14} /> Modifications enregistrées avec succès !
               </p>
             )}
+          </div>
+        </div>
+
+        {/* ── Landing Page Editor ── */}
+        <div className="col-span-12 glass-panel" style={{ display: activeTab === 'landing_editor' ? 'block' : 'none', direction: 'rtl', textAlign: 'right' }}>
+          <h3 style={{ marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Image size={20} /> تعديل الصفحة المبيعية باللغة العربية (Sales Page Editor)
+          </h3>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.88rem' }}>
+            يمكنك هنا تعديل محتويات الصفحة المبيعية باللغة العربية، تغيير النصوص والروابط وإضافة أو حذف الخصائص.
+          </p>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {/* Hero Inputs */}
+            <div style={{ background: 'var(--bg-glass)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <h4 style={{ margin: '0 0 1rem 0', fontWeight: 800, color: 'var(--violet)' }}>قسم العنوان الرئيسي (Hero Section)</h4>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)' }}>شارة الإعلان (Hero Badge)</label>
+                  <input type="text" className="input-control" value={heroBadgeAr} onChange={e => setHeroBadgeAr(e.target.value)} />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)' }}>العنوان الجزء 1</label>
+                    <input type="text" className="input-control" value={heroTitlePart1Ar} onChange={e => setHeroTitlePart1Ar(e.target.value)} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)' }}>العنوان الجزء 2 (ملون)</label>
+                    <input type="text" className="input-control" value={heroTitlePart2Ar} onChange={e => setHeroTitlePart2Ar(e.target.value)} />
+                  </div>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.4rem', fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-muted)' }}>الوصف الفرعي (Subtitle)</label>
+                  <textarea className="input-control" rows={3} value={heroSubtitleAr} onChange={e => setHeroSubtitleAr(e.target.value)} style={{ fontFamily: 'inherit', resize: 'vertical' }} />
+                </div>
+              </div>
+            </div>
+
+            {/* Features List Section */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <h4 style={{ margin: 0, fontWeight: 800, color: 'var(--violet)' }}>خصائص المنصة (Features & Screenshots)</h4>
+                <button
+                  type="button"
+                  className="btn-outline"
+                  onClick={() => setFeaturesAr([...featuresAr, { title: "خاصية جديدة", desc: "وصف الخاصية الجديدة هنا بالتفصيل...", image: "/study_mockup.png", url: "lconq.ma/new-route", ctaText: "سجل وجرب الآن" }])}
+                  style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  <Plus size={14} /> إضافة خاصية
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {featuresAr.map((feat, index) => (
+                  <div key={index} style={{ background: 'var(--bg-glass)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)', position: 'relative' }}>
+                    
+                    {/* Delete & Reorder Buttons */}
+                    <div style={{ position: 'absolute', top: '1rem', left: '1rem', display: 'flex', gap: '0.35rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (index > 0) {
+                            const newArr = [...featuresAr];
+                            const temp = newArr[index - 1];
+                            newArr[index - 1] = newArr[index];
+                            newArr[index] = temp;
+                            setFeaturesAr(newArr);
+                          }
+                        }}
+                        disabled={index === 0}
+                        style={{ background: 'transparent', border: '1px solid var(--border)', padding: '4px 6px', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-main)', opacity: index === 0 ? 0.3 : 1 }}
+                        title="Move Up"
+                      >
+                        ▲
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (index < featuresAr.length - 1) {
+                            const newArr = [...featuresAr];
+                            const temp = newArr[index + 1];
+                            newArr[index + 1] = newArr[index];
+                            newArr[index] = temp;
+                            setFeaturesAr(newArr);
+                          }
+                        }}
+                        disabled={index === featuresAr.length - 1}
+                        style={{ background: 'transparent', border: '1px solid var(--border)', padding: '4px 6px', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-main)', opacity: index === featuresAr.length - 1 ? 0.3 : 1 }}
+                        title="Move Down"
+                      >
+                        ▼
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newArr = featuresAr.filter((_, i) => i !== index);
+                          setFeaturesAr(newArr);
+                        }}
+                        style={{ background: 'transparent', border: '1px solid rgba(239,68,68,0.3)', padding: '4px 6px', borderRadius: '4px', cursor: 'pointer', color: 'var(--rose)' }}
+                        title="Supprimer"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+
+                    <h5 style={{ margin: '0 0 1rem 0', fontWeight: 800 }}>الخاصية #{index + 1}: {feat.title}</h5>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>عنوان الخاصية</label>
+                          <input type="text" className="input-control" value={feat.title} onChange={e => {
+                            const newArr = [...featuresAr];
+                            newArr[index].title = e.target.value;
+                            setFeaturesAr(newArr);
+                          }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>نص زر التسجيل المرافق</label>
+                          <input type="text" className="input-control" value={feat.ctaText} onChange={e => {
+                            const newArr = [...featuresAr];
+                            newArr[index].ctaText = e.target.value;
+                            setFeaturesAr(newArr);
+                          }} />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>الوصف</label>
+                        <textarea className="input-control" rows={2} value={feat.desc} onChange={e => {
+                          const newArr = [...featuresAr];
+                          newArr[index].desc = e.target.value;
+                          setFeaturesAr(newArr);
+                        }} style={{ fontFamily: 'inherit', resize: 'vertical' }} />
+                      </div>
+
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>رابط المحاكاة (URL)</label>
+                          <input type="text" className="input-control" value={feat.url || ''} onChange={e => {
+                            const newArr = [...featuresAr];
+                            newArr[index].url = e.target.value;
+                            setFeaturesAr(newArr);
+                          }} />
+                        </div>
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '0.3rem', fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)' }}>صورة المعاينة (Screenshot URL)</label>
+                          <input type="text" className="input-control" value={feat.image} onChange={e => {
+                            const newArr = [...featuresAr];
+                            newArr[index].image = e.target.value;
+                            setFeaturesAr(newArr);
+                          }} />
+                          <div style={{ display: 'flex', gap: '0.3rem', marginTop: '0.3rem' }}>
+                            <span onClick={() => {
+                              const newArr = [...featuresAr];
+                              newArr[index].image = "/study_mockup.png";
+                              setFeaturesAr(newArr);
+                            }} style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-main)' }}>SRS Card</span>
+                            <span onClick={() => {
+                              const newArr = [...featuresAr];
+                              newArr[index].image = "/dashboard_mockup.png";
+                              setFeaturesAr(newArr);
+                            }} style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-main)' }}>Dashboard</span>
+                            <span onClick={() => {
+                              const newArr = [...featuresAr];
+                              newArr[index].image = "/ranking_mockup.png";
+                              setFeaturesAr(newArr);
+                            }} style={{ fontSize: '0.65rem', padding: '2px 6px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '4px', cursor: 'pointer', color: 'var(--text-main)' }}>Leaderboard</span>
+                          </div>
+
+                          {/* Custom File Upload Uploader */}
+                          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginTop: '0.5rem' }}>
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={e => handleImageUpload(e, index)} 
+                              style={{ display: 'none' }} 
+                              id={`file-upload-${index}`}
+                            />
+                            <label 
+                              htmlFor={`file-upload-${index}`} 
+                              className="btn-outline" 
+                              style={{ 
+                                padding: '4px 8px', 
+                                fontSize: '0.72rem', 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '4px', 
+                                cursor: 'pointer',
+                                margin: 0
+                              }}
+                            >
+                              <Camera size={12} />
+                              {uploadingFeat[index] ? 'جاري الرفع...' : 'رفع صورة مخصصة'}
+                            </label>
+                            {uploadingFeat[index] && (
+                              <span style={{ fontSize: '0.7rem', color: 'var(--violet)' }}>جاري الرفع...</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                    </div>
+
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Section Visibility toggles */}
+            <div style={{ background: 'var(--bg-glass)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <h4 style={{ margin: '0 0 1rem 0', fontWeight: 800, color: 'var(--violet)' }}>إعدادات ظهور أقسام الصفحة (Section Visibility Settings)</h4>
+              <p style={{ color: 'var(--text-subtle)', fontSize: '0.8rem', marginBottom: '1.25rem' }}>
+                قم بتنشيط أو إخفاء الأقسام الثانوية في الصفحة المبيعية باللغة العربية للتحكم الكامل في طول الصفحة وتوجيه تركيز الزوار:
+              </p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.88rem' }}>مقارنة الباك والكونكور</strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)' }}>قسم المقارنة والـ Pain Points</span>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={showPainPoints} 
+                    onChange={e => setShowPainPoints(e.target.checked)} 
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--violet)' }} 
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.88rem' }}>طرق الدفع المحلية</strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)' }}>معلومات الحسابات البنكية والواتساب</span>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={showPayments} 
+                    onChange={e => setShowPayments(e.target.checked)} 
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--violet)' }} 
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.88rem' }}>باقات الاشتراك والأسعار</strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)' }}>جدول الباقات والاشتراكات</span>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={showPricing} 
+                    onChange={e => setShowPricing(e.target.checked)} 
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--violet)' }} 
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.88rem' }}>آراء وقصص نجاح الطلبة</strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)' }}>آراء المقبولين في كليات النخبة</span>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={showTestimonials} 
+                    onChange={e => setShowTestimonials(e.target.checked)} 
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--violet)' }} 
+                  />
+                </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <div>
+                    <strong style={{ display: 'block', fontSize: '0.88rem' }}>الأسئلة الشائعة (FAQ)</strong>
+                    <span style={{ fontSize: '0.72rem', color: 'var(--text-subtle)' }}>الأسئلة المطروحة بشكل متكرر</span>
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    checked={showFaqs} 
+                    onChange={e => setShowFaqs(e.target.checked)} 
+                    style={{ width: '18px', height: '18px', cursor: 'pointer', accentColor: 'var(--violet)' }} 
+                  />
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+            <button
+              onClick={saveLandingConfig}
+              className="btn"
+              style={{
+                padding: '0.75rem 2rem',
+                background: landingSaved ? 'linear-gradient(135deg,var(--emerald),#34d399)' : undefined,
+                boxShadow: landingSaved ? '0 4px 16px rgba(16,185,129,0.35)' : undefined,
+                transition: 'all 0.3s'
+              }}
+            >
+              {landingSaved ? <><CheckCircle2 size={16} /> تم الحفظ بنجاح !</> : 'حفظ التعديلات'}
+            </button>
           </div>
         </div>
 

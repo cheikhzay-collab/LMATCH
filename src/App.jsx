@@ -6,6 +6,7 @@ import { initFacebookPixel, trackPixelEvent } from './utils/facebookPixel';
 
 // Core pages kept statically for instant initial render
 import LandingPage from './pages/LandingPage';
+import LandingPageAr from './pages/LandingPageAr';
 import Login from './pages/Login';
 import Layout from './components/Layout';
 import StudentDashboard from './pages/StudentDashboard';
@@ -80,6 +81,8 @@ function AppContent() {
 
     if (path === '/') {
       title = "L'CONQ — Préparation aux Concours Grandes Écoles du Maroc";
+    } else if (path === '/ar') {
+      title = "L'CONQ — التحضير لمباريات المدارس العليا بالمغرب";
     } else if (path === '/login') {
       title = "Connexion — L'CONQ";
     } else if (path === '/register') {
@@ -143,6 +146,7 @@ function AppContent() {
       <Suspense fallback={<LoadingFallback />}>
         <Routes>
           <Route path="/" element={<LandingPage />} />
+          <Route path="/ar" element={<LandingPageAr />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Login />} />
           <Route path="/auth/callback" element={<AuthCallback />} />

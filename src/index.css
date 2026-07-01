@@ -826,6 +826,50 @@ body.light-theme .sidebar-float-toggle:hover {
 
 .btn-ghost:hover { color: var(--text-main); background: var(--bg-hover); }
 
+/* Premium High-Converting Emerald Button & Shimmer Sweep */
+.btn-emerald {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3) !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-emerald:hover {
+  background: linear-gradient(135deg, #34d399 0%, #059669 100%) !important;
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45) !important;
+  transform: translateY(-2px);
+}
+
+.btn-emerald::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -60%;
+  width: 30%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.3) 50%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(25deg);
+  animation: shimmer-sweep 3s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes shimmer-sweep {
+  0% {
+    left: -60%;
+  }
+  30% {
+    left: 140%;
+  }
+  100% {
+    left: 140%;
+  }
+}
+
 /* Additional Standard Buttons */
 .btn-danger {
   background: var(--danger-soft);
